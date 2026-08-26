@@ -1,0 +1,34 @@
+import { create } from 'zustand';
+import api from '../services/api';
+
+const useResourceStore = create((set) => ({
+  resources: [],
+  isLoading: false,
+
+  fetchGroupResources: async (groupId, params = {}) => {
+    set({ isLoading: true });
+    try {
+      const res = await api.get(`/resources/group/${groupId}`, { params });
+      set({ resources: res.data.resources, isLoading: false });
+    } catch { set({ isLoading: false }); }
+  },
+
+  uploadResource: async (formData) => {
+    const res = await api.post('/resources', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    set((state) => ({ resources: [res.data.resource, ...state.resources] }));
+    return res.data.resource;
+  },
+
+  trackDownload: async (id) => {
+    await api.put(`/resources/${id}/download`);
+  },
+
+  deleteResource: async (id) => {
+    await api.delete(`/resources/${id}`);
+    set((state) => ({ resources: state.resources.filter(r => r._id !== id) }));
+  },
+}));
+
+export default useResourceStore;
