@@ -71,21 +71,23 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="card-base p-8 space-y-5">
-          {/* Demo credentials hint */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-primary-50 rounded-xl p-3 text-sm text-primary-700 border border-primary-100"
-          >
-            <p className="font-semibold mb-1 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              بيانات تجريبية:
-            </p>
-            <p className="text-xs opacity-80">Admin: admin@quran.com / Admin123!</p>
-            <p className="text-xs opacity-80">معلم: teacher1@quran.com / Teacher123!</p>
-            <p className="text-xs opacity-80">طالب: student1@quran.com / Student123!</p>
-          </motion.div>
+          {/* Demo credentials hint (visible in dev mode only) */}
+          {!import.meta.env.PROD && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-primary-50 rounded-xl p-3 text-sm text-primary-700 border border-primary-100"
+            >
+              <p className="font-semibold mb-1 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                بيانات تجريبية (بيئة التطوير):
+              </p>
+              <p className="text-xs opacity-80">Admin: admin@quran.com / Admin123!</p>
+              <p className="text-xs opacity-80">معلم: teacher1@quran.com / Teacher123!</p>
+              <p className="text-xs opacity-80">طالب: student1@quran.com / Student123!</p>
+            </motion.div>
+          )}
 
           {/* Email field */}
           <div>

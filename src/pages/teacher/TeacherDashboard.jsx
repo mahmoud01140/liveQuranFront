@@ -13,7 +13,7 @@ import api from '../../services/api';
 export default function TeacherDashboard() {
   const { user } = useAuthStore();
   const { groups, fetchAllGroups } = useGroupStore();
-  const [todayStats, setTodayStats] = useState({ students: 0, sessions: 0, pendingReviews: 0 });
+  const [todayStats, setTodayStats] = useState({ students: 0, sessions: 0, pendingReviews: 0, attendanceRate: '—' });
   useNotifications();
 
   useEffect(() => {
@@ -23,8 +23,16 @@ export default function TeacherDashboard() {
 
   const fetchStats = async () => {
     try {
-      const pendingRes = await api.get(`/exams/results/pending-review?teacherId=${user._id}`);
-      setTodayStats(s => ({ ...s, pendingReviews: pendingRes.data.results?.length || 0 }));
+      const [pendingRes, reportsRes] = await Promise.all([
+        api.get(`/exams/results/pending-review?teacherId=${user._id}`),
+        api.get('/reports/analytics').catch(() => null),
+      ]);
+      const attendanceRate = reportsRes?.data?.summary?.attendanceRate;
+      setTodayStats(s => ({
+        ...s,
+        pendingReviews: pendingRes.data.results?.length || 0,
+        attendanceRate: attendanceRate || '100%',
+      }));
     } catch {}
   };
 
@@ -49,7 +57,7 @@ export default function TeacherDashboard() {
           { icon: Users, label: 'طلابي', value: totalStudents, bg: 'bg-primary-50', color: 'text-primary-400' },
           { icon: Calendar, label: 'مجموعاتي', value: myGroups.length, bg: 'bg-blue-50', color: 'text-blue-500' },
           { icon: Bell, label: 'بانتظار المراجعة', value: todayStats.pendingReviews, bg: 'bg-amber-50', color: 'text-amber-500' },
-          { icon: TrendingUp, label: 'معدل الحضور', value: '87%', bg: 'bg-purple-50', color: 'text-purple-500' },
+          { icon: TrendingUp, label: 'معدل الحضور', value: todayStats.attendanceRate, bg: 'bg-purple-50', color: 'text-purple-500' },
         ].map((s, i) => (
           <motion.div key={i} whileHover={{ y: -2 }} className="card-base p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3 cursor-default">
             <div className={`w-10 h-10 sm:w-12 sm:h-12 ${s.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>

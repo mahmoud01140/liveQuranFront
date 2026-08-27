@@ -134,40 +134,78 @@ export default function WrittenExamPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                {question.options.map((opt, i) => {
-                  const isSelected = answers[currentQ] === i;
-                  const isAnswered = locked[currentQ];
-                  const isCorrect = isAnswered && i === question.correctAnswer;
-                  const isWrong = isAnswered && isSelected && !isCorrect;
+              {/* True/False Question */}
+              {question.type === 'true_false' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { value: true, label: 'صحيح (صح)', emoji: '✅', color: 'emerald' },
+                    { value: false, label: 'خطأ', emoji: '❌', color: 'rose' },
+                  ].map((item) => {
+                    const isSelected = answers[currentQ] === item.value;
+                    const isAnswered = locked[currentQ];
+                    const isCorrect = isAnswered && item.value === question.correctAnswerBool;
+                    const isWrong = isAnswered && isSelected && !isCorrect;
 
-                  return (
-                    <motion.button
-                      key={i}
-                      whileHover={!isAnswered ? { scale: 1.01 } : {}}
-                      whileTap={!isAnswered ? { scale: 0.99 } : {}}
-                      onClick={() => handleAnswer(currentQ, i)}
-                      disabled={!!locked[currentQ]}
-                      className={`w-full text-right px-5 py-4 rounded-2xl border-2 transition-all duration-200 font-medium ${
-                        isCorrect ? 'border-green-400 bg-green-50 text-green-700'
-                        : isWrong ? 'border-red-400 bg-red-50 text-red-700'
-                        : isSelected ? 'border-primary-400 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/30'
-                      } ${locked[currentQ] ? 'cursor-default' : 'cursor-pointer'}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {isCorrect ? <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                          : isWrong ? <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                          : <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 ${
-                              isSelected ? 'border-primary-400 bg-primary-400' : 'border-gray-300'
-                            }`} />
-                        }
-                        {opt}
-                      </div>
-                    </motion.button>
-                  );
-                })}
-              </div>
+                    return (
+                      <motion.button
+                        key={String(item.value)}
+                        whileHover={!isAnswered ? { scale: 1.02 } : {}}
+                        whileTap={!isAnswered ? { scale: 0.98 } : {}}
+                        onClick={() => handleAnswer(currentQ, item.value)}
+                        disabled={!!locked[currentQ]}
+                        className={`flex items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all font-bold text-lg ${
+                          isCorrect
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20'
+                            : isWrong
+                            ? 'border-rose-500 bg-rose-50 text-rose-800 ring-2 ring-rose-500/20'
+                            : isSelected
+                            ? 'border-primary-500 bg-primary-50 text-primary-700'
+                            : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-primary-200 hover:bg-primary-50/30'
+                        } ${locked[currentQ] ? 'cursor-default' : 'cursor-pointer'}`}
+                      >
+                        <span className="text-2xl">{item.emoji}</span>
+                        <span>{item.label}</span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* MCQ Options */
+                <div className="space-y-3">
+                  {(question.options || []).map((opt, i) => {
+                    const isSelected = answers[currentQ] === i;
+                    const isAnswered = locked[currentQ];
+                    const isCorrect = isAnswered && i === question.correctAnswer;
+                    const isWrong = isAnswered && isSelected && !isCorrect;
+
+                    return (
+                      <motion.button
+                        key={i}
+                        whileHover={!isAnswered ? { scale: 1.01 } : {}}
+                        whileTap={!isAnswered ? { scale: 0.99 } : {}}
+                        onClick={() => handleAnswer(currentQ, i)}
+                        disabled={!!locked[currentQ]}
+                        className={`w-full text-right px-5 py-4 rounded-2xl border-2 transition-all duration-200 font-medium ${
+                          isCorrect ? 'border-green-400 bg-green-50 text-green-700'
+                          : isWrong ? 'border-red-400 bg-red-50 text-red-700'
+                          : isSelected ? 'border-primary-400 bg-primary-50 text-primary-700'
+                          : 'border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/30'
+                        } ${locked[currentQ] ? 'cursor-default' : 'cursor-pointer'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {isCorrect ? <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                            : isWrong ? <XCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                            : <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 ${
+                                isSelected ? 'border-primary-400 bg-primary-400' : 'border-gray-300'
+                              }`} />
+                          }
+                          {opt}
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </motion.div>
         </AnimatePresence>

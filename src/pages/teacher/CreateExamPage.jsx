@@ -6,46 +6,29 @@ import {
   Clock, Award, RotateCcw, Users
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Navbar from '../../components/shared/Navbar';
-import Sidebar from '../../components/shared/Sidebar';
+import PageLayout from '../../components/shared/PageLayout';
 import useGroupStore from '../../store/groupStore';
 import useExamStore from '../../store/examStore';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import api from '../../services/api';
+import QURAN_SURAHS from '../../utils/quranData';
 
 const QUESTION_TYPES = [
   { value: 'mcq', label: 'اختيار من متعدد', icon: CheckCircle, color: 'blue', emoji: '🔵' },
+  { value: 'true_false', label: 'صح / خطأ', icon: CheckCircle, color: 'amber', emoji: '✅' },
   { value: 'written', label: 'إكمال / كتابي', icon: PenLine, color: 'purple', emoji: '✏️' },
   { value: 'recitation', label: 'شفهي / تسميع', icon: Mic, color: 'emerald', emoji: '🎙️' },
 ];
 
 const EMPTY_Q = {
   type: 'mcq', text: '', options: ['', '', '', ''], correctAnswer: 0,
-  correctAnswerText: '', points: 1, instruction: '',
+  correctAnswerBool: true, correctAnswerText: '', points: 1, instruction: '',
   surahNumber: '', fromVerse: '', toVerse: '', mode: 'practice',
 };
-
-const SURAHS = [
-  'الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف', 'الأنفال',
-  'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر', 'النحل', 'الإسراء',
-  'الكهف', 'مريم', 'طه', 'الأنبياء', 'الحج', 'المؤمنون', 'النور', 'الفرقان', 'الشعراء',
-  'النمل', 'القصص', 'العنكبوت', 'الروم', 'لقمان', 'السجدة', 'الأحزاب', 'سبأ', 'فاطر',
-  'يس', 'الصافات', 'ص', 'الزمر', 'غافر', 'فصلت', 'الشورى', 'الزخرف', 'الدخان',
-  'الجاثية', 'الأحقاف', 'محمد', 'الفتح', 'الحجرات', 'ق', 'الذاريات', 'الطور', 'النجم',
-  'القمر', 'الرحمن', 'الواقعة', 'الحديد', 'المجادلة', 'الحشر', 'الممتحنة', 'الصف',
-  'الجمعة', 'المنافقون', 'التغابن', 'الطلاق', 'التحريم', 'الملك', 'القلم', 'الحاقة',
-  'المعارج', 'نوح', 'الجن', 'المزمل', 'المدثر', 'القيامة', 'الإنسان', 'المرسلات',
-  'النبأ', 'النازعات', 'عبس', 'التكوير', 'الانفطار', 'المطففين', 'الانشقاق', 'البروج',
-  'الطارق', 'الأعلى', 'الغاشية', 'الفجر', 'البلد', 'الشمس', 'الليل', 'الضحى', 'الشرح',
-  'التين', 'العلق', 'القدر', 'البينة', 'الزلزلة', 'العاديات', 'القارعة', 'التكاثر',
-  'العصر', 'الهمزة', 'الفيل', 'قريش', 'الماعون', 'الكوثر', 'الكافرون', 'النصر',
-  'المسد', 'الإخلاص', 'الفلق', 'الناس',
-];
 
 export default function CreateExamPage() {
   const { groups, fetchAllGroups } = useGroupStore();
   const { createGroupExam } = useExamStore();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [expandedQ, setExpandedQ] = useState(0);
 
@@ -186,6 +169,7 @@ export default function CreateExamPage() {
   const totalPoints = exam.questions.reduce((s, q) => s + (q.points || 1), 0);
   const questionStats = {
     mcq: exam.questions.filter(q => q.type === 'mcq').length,
+    true_false: exam.questions.filter(q => q.type === 'true_false').length,
     written: exam.questions.filter(q => q.type === 'written').length,
     recitation: exam.questions.filter(q => q.type === 'recitation').length,
   };
@@ -193,14 +177,9 @@ export default function CreateExamPage() {
   const getTypeConfig = (type) => QUESTION_TYPES.find(t => t.value === type) || QUESTION_TYPES[0];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar onMenuClick={() => setSidebarOpen(true)} />
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <main className="lg:mr-64 pt-16">
-        <div className="page-container">
-          {/* Header */}
-          <div className="mb-8">
+    <PageLayout>
+      {/* Header */}
+      <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200/50">
                 <Sparkles className="w-6 h-6 text-white" />
@@ -457,6 +436,39 @@ export default function CreateExamPage() {
                                   </div>
                                 )}
 
+                                {/* True / False */}
+                                {q.type === 'true_false' && (
+                                  <div>
+                                    <label className="text-xs font-semibold text-gray-500 mb-2 block">حدد الإجابة الصحيحة لهذا السؤال:</label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => updateQ(qi, 'correctAnswerBool', true)}
+                                        className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 font-bold transition-all ${
+                                          q.correctAnswerBool !== false
+                                            ? 'border-emerald-500 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-400/20'
+                                            : 'border-gray-200 bg-white text-gray-600 hover:border-emerald-200'
+                                        }`}
+                                      >
+                                        <span>✅</span>
+                                        <span>الإجابة: صحيح (صح)</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => updateQ(qi, 'correctAnswerBool', false)}
+                                        className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border-2 font-bold transition-all ${
+                                          q.correctAnswerBool === false
+                                            ? 'border-rose-500 bg-rose-50 text-rose-800 ring-2 ring-rose-400/20'
+                                            : 'border-gray-200 bg-white text-gray-600 hover:border-rose-200'
+                                        }`}
+                                      >
+                                        <span>❌</span>
+                                        <span>الإجابة: خطأ</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
                                 {/* Written Answer */}
                                 {q.type === 'written' && (
                                   <div>
@@ -482,8 +494,8 @@ export default function CreateExamPage() {
                                           onChange={e => updateQ(qi, 'surahNumber', e.target.value)}
                                           className="input-base text-sm">
                                           <option value="">اختر السورة</option>
-                                          {SURAHS.map((s, i) => (
-                                            <option key={i} value={i + 1}>{i + 1}. {s}</option>
+                                          {QURAN_SURAHS.map((s) => (
+                                            <option key={s.number} value={s.number}>{s.number}. {s.name}</option>
                                           ))}
                                         </select>
                                       </div>
@@ -573,6 +585,10 @@ export default function CreateExamPage() {
                       <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{questionStats.mcq}</span>
                     </div>
                     <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-400">✅ صح / خطأ</span>
+                      <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{questionStats.true_false}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
                       <span className="text-xs text-gray-400">✏️ كتابي</span>
                       <span className="text-xs font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{questionStats.written}</span>
                     </div>
@@ -626,8 +642,6 @@ export default function CreateExamPage() {
               </motion.div>
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 }

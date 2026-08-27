@@ -263,10 +263,11 @@ export default function TakeExamPage() {
               <div className="flex items-center gap-2 sm:gap-3">
                 <span className={`text-[11px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full ${
                   q.type === 'mcq' ? 'bg-blue-50 text-blue-600' :
+                  q.type === 'true_false' ? 'bg-amber-50 text-amber-600' :
                   q.type === 'written' ? 'bg-purple-50 text-purple-600' :
                   'bg-emerald-50 text-emerald-600'
                 }`}>
-                  {q.type === 'mcq' ? '🔵 اختياري' : q.type === 'written' ? '✏️ كتابي' : '🎙️ شفهي'}
+                  {q.type === 'mcq' ? '🔵 اختياري' : q.type === 'true_false' ? '✅ صح / خطأ' : q.type === 'written' ? '✏️ كتابي' : '🎙️ شفهي'}
                 </span>
                 <span className="text-xs sm:text-sm text-gray-500 font-semibold">{currentQuestion + 1} / {total}</span>
               </div>
@@ -307,6 +308,36 @@ export default function TakeExamPage() {
                           <span className="text-sm sm:text-base">{opt}</span>
                         </button>
                       ))}
+                    </div>
+                  )}
+
+                  {/* True / False */}
+                  {q.type === 'true_false' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-2">
+                      <button
+                        type="button"
+                        onClick={() => setAnswer(currentQuestion, true)}
+                        className={`flex items-center justify-center gap-3 py-6 px-6 rounded-2xl border-2 transition-all font-bold text-lg active:scale-[0.98] ${
+                          answers[currentQuestion] === true
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-800 shadow-md shadow-emerald-100 ring-2 ring-emerald-500/20'
+                            : 'border-gray-100 bg-gray-50 text-gray-700 hover:border-emerald-200 hover:bg-emerald-50/40'
+                        }`}
+                      >
+                        <span className="text-2xl">✅</span>
+                        <span className="text-xl font-bold">صحيح (صح)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAnswer(currentQuestion, false)}
+                        className={`flex items-center justify-center gap-3 py-6 px-6 rounded-2xl border-2 transition-all font-bold text-lg active:scale-[0.98] ${
+                          answers[currentQuestion] === false
+                            ? 'border-rose-500 bg-rose-50 text-rose-800 shadow-md shadow-rose-100 ring-2 ring-rose-500/20'
+                            : 'border-gray-100 bg-gray-50 text-gray-700 hover:border-rose-200 hover:bg-rose-50/40'
+                        }`}
+                      >
+                        <span className="text-2xl">❌</span>
+                        <span className="text-xl font-bold">خطأ</span>
+                      </button>
                     </div>
                   )}
 

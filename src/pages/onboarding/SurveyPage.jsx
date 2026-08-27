@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -6,16 +6,37 @@ import useAuthStore from '../../store/authStore';
 import useExamStore from '../../store/examStore';
 import { SURVEY_QUESTIONS } from '../../utils/constants';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import api from '../../services/api';
+import LoadingSpinner from '../../components/shared/LoadingSpinner';
 
 export default function SurveyPage() {
   const { user } = useAuthStore();
   const { setSurveyAnswer, surveyAnswers } = useExamStore();
   const navigate = useNavigate();
   const [currentQ, setCurrentQ] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   const regType = user?.registrationType || 'student';
-  const questions = SURVEY_QUESTIONS[regType] || SURVEY_QUESTIONS.student;
-  const question = questions[currentQ];
+  const [questions, setQuestions] = useState(SURVEY_QUESTIONS[regType] || SURVEY_QUESTIONS.student);
+
+  useEffect(() => {
+    const fetchSurvey = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get(`/survey/${regType}`);
+        if (res.data?.survey?.questions?.length > 0) {
+          setQuestions(res.data.survey.questions);
+        }
+      } catch (err) {
+        // Fallback already set from SURVEY_QUESTIONS
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSurvey();
+  }, [regType]);
+
+  const question = questions[currentQ] || questions[0];
   const isLast = currentQ === questions.length - 1;
   const selectedOption = surveyAnswers[currentQ];
 
@@ -39,7 +60,15 @@ export default function SurveyPage() {
     if (currentQ > 0) setCurrentQ((c) => c - 1);
   };
 
-  const progress = ((currentQ + 1) / questions.length) * 100;
+  const progress = questions.length > 0 ? ((currentQ + 1) / questions.length) * 100 : 100;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-white">
+        <LoadingSpinner size="lg" text="جارٍ تجهيز الاستبيان..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-white p-4 py-12">

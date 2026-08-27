@@ -49,6 +49,8 @@ export default function MobileBottomNav() {
     : user.role === 'parent' ? parentNavItems
     : studentNavItems;
 
+  if (items.length <= 1) return null;
+
   return (
     <nav
       aria-label="شريط التنقل السفلي للهاتف"

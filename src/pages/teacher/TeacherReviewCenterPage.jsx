@@ -1,20 +1,18 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ClipboardList, CheckCircle, Users, ChevronDown, ChevronLeft, MessageSquare, Clock, Plus, X, Send, Star, Volume2, FileText, Download, Video, Link as LinkIcon, ShieldCheck } from 'lucide-react';
-import Navbar from '../../components/shared/Navbar';
-import Sidebar from '../../components/shared/Sidebar';
+import toast from 'react-hot-toast';
+import PageLayout from '../../components/shared/PageLayout';
 import useAuthStore from '../../store/authStore';
 import useGroupStore from '../../store/groupStore';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import { formatDateAr, getInitials, getAvatarColor } from '../../utils/helpers';
-import toast from 'react-hot-toast';
 import QURAN_SURAHS from '../../utils/quranData';
 
 export default function TeacherReviewCenterPage() {
   const { user } = useAuthStore();
   const { groups, fetchAllGroups } = useGroupStore();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('homework'); // 'homework' | 'oral_exams' | 'recordings'
 
   // State for Homework
@@ -238,14 +236,9 @@ export default function TeacherReviewCenterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar onMenuClick={() => setSidebarOpen(true)} />
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <main className="lg:mr-64 pt-16">
-        <div className="page-container">
-          {/* Header */}
-          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <PageLayout>
+      {/* Header */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="section-title">مركز التصحيح والمراجعة 📝</h1>
               <p className="section-subtitle">إدارة ومراجعة الواجبات، التلاوات الشفهية، وتدقيق التسجيلات في مكان واحد</p>
@@ -623,8 +616,6 @@ export default function TeacherReviewCenterPage() {
               </div>
             )
           )}
-        </div>
-      </main>
 
       {/* ─── Modals ─── */}
       <AnimatePresence>
@@ -692,6 +683,6 @@ export default function TeacherReviewCenterPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </PageLayout>
   );
 }

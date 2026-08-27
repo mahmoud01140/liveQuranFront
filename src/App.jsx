@@ -48,6 +48,7 @@ const TeacherDailyReviewPage = lazy(() => import('./pages/teacher/TeacherDailyRe
 
 // Admin
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminOnboardingSettingsPage = lazy(() => import('./pages/admin/AdminOnboardingSettingsPage'));
 const AdminPaymentsPage = lazy(() => import('./pages/admin/AdminPaymentsPage'));
 const UsersManagement = lazy(() => import('./pages/admin/UsersManagement'));
 const GroupsManagement = lazy(() => import('./pages/admin/GroupsManagement'));
@@ -137,6 +138,7 @@ export default function App() {
 
             {/* Admin routes */}
             <Route path="/admin" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/onboarding-settings" element={<ProtectedRoute role="admin"><AdminOnboardingSettingsPage /></ProtectedRoute>} />
             <Route path="/admin/payments" element={<ProtectedRoute role="admin"><AdminPaymentsPage /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute role="admin"><UsersManagement /></ProtectedRoute>} />
             <Route path="/admin/groups" element={<ProtectedRoute role="admin"><GroupsManagement /></ProtectedRoute>} />

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle, XCircle, Clock, Users, BarChart2, Mic, Eye } from 'lucide-react';
 import Navbar from '../../components/shared/Navbar';
 import Sidebar from '../../components/shared/Sidebar';
+import PageLayout from '../../components/shared/PageLayout';
 import useExamStore from '../../store/examStore';
 import { formatDateAr } from '../../utils/helpers';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
@@ -15,7 +16,6 @@ export default function AdminExamResultsPage() {
   const navigate = useNavigate();
   const { examResults, fetchExamResults, isLoading } = useExamStore();
   const [exam, setExam] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [reviewModal, setReviewModal] = useState(null);
   const [reviewForm, setReviewForm] = useState({ oralScore: '', teacherNotes: '' });
   const [saving, setSaving] = useState(false);
@@ -51,13 +51,9 @@ export default function AdminExamResultsPage() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar onMenuClick={() => setSidebarOpen(true)} />
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <main className="lg:mr-64 pt-16">
-        <div className="page-container">
-          <div className="flex items-center gap-3 mb-6">
-            <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+    <PageLayout>
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
               <ArrowRight className="w-5 h-5 text-gray-400" />
             </button>
             <div>
@@ -152,8 +148,6 @@ export default function AdminExamResultsPage() {
               </table>
             </div>
           )}
-        </div>
-      </main>
 
       {/* Review Modal */}
       {reviewModal && (
@@ -195,6 +189,7 @@ export default function AdminExamResultsPage() {
           </motion.div>
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }
+

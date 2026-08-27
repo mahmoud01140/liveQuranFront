@@ -27,16 +27,19 @@ const teacherLinks = [
   { to: '/teacher/broadcast', icon: Radio, label: 'البث المباشر' },
   { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والمراجعة' },
   { to: '/teacher/create-exam', icon: FileText, label: 'نشاط / تقييم الدرس' },
-  { to: '/teacher/discussion', icon: MessageCircle, label: 'غرفة النقاش' },
   { to: '/teacher/daily-review', icon: CalendarCheck, label: 'مراجعة الحفظ' },
+  { to: '/teacher/discussion', icon: MessageCircle, label: 'غرفة النقاش' },
+  { to: '/student/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },
 ];
 
 const adminLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'الرئيسية', end: true },
+  { to: '/admin/onboarding-settings', icon: Settings, label: 'إعدادات تحديد المستوى والاستبيان' },
   { to: '/admin/payments', icon: CreditCard, label: 'إدارة المدفوعات والاشتراكات' },
   { to: '/admin/groups', icon: BookMarked, label: 'إدارة وتسكين المجموعات' },
   { to: '/admin/live', icon: Radio, label: 'البث المباشر للحلقات' },
   { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والمراجعة' },
+  { to: '/admin/daily-review', icon: CalendarCheck, label: 'مراجعة وتسميع الحفظ' },
   { to: '/admin/users', icon: Users, label: 'إدارة الطلاب والمستخدمين' },
   { to: '/admin/reports', icon: BarChart2, label: 'التقارير والإحصاءات' },
   { to: '/admin/discussions', icon: MessageCircle, label: 'غرفة النقاش' },

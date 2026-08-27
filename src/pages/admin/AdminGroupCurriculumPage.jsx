@@ -6,8 +6,7 @@ import {
   FileText, Eye, X, CheckCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Navbar from '../../components/shared/Navbar';
-import Sidebar from '../../components/shared/Sidebar';
+import PageLayout from '../../components/shared/PageLayout';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import useExamStore from '../../store/examStore';
@@ -38,7 +37,6 @@ export default function AdminGroupCurriculumPage() {
   const [group, setGroup] = useState(null);
   const [plan, setPlan] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Lesson modal
   const [showLessonModal, setShowLessonModal] = useState(false);
@@ -131,18 +129,14 @@ export default function AdminGroupCurriculumPage() {
     catch { toast.error('خطأ في الحذف'); }
   };
 
-  if (isLoading) return (<div className="min-h-screen bg-gray-50"><Navbar onMenuClick={() => setSidebarOpen(true)} /><div className="pt-16 flex justify-center py-20"><LoadingSpinner size="lg" /></div></div>);
+  if (isLoading) return (<PageLayout><div className="flex justify-center py-20"><LoadingSpinner size="lg" /></div></PageLayout>);
   const customLessons = plan?.customLessons || [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar onMenuClick={() => setSidebarOpen(true)} />
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <main className="lg:mr-64 pt-16">
-        <div className="page-container">
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-6">
-            <button onClick={() => navigate('/admin/groups')} className="p-2 hover:bg-gray-100 rounded-xl transition-colors"><ArrowRight className="w-5 h-5 text-gray-400" /></button>
+    <PageLayout>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <button onClick={() => navigate('/admin/groups')} className="p-2 hover:bg-gray-100 rounded-xl transition-colors"><ArrowRight className="w-5 h-5 text-gray-400" /></button>
             <div><h1 className="section-title">إدارة منهج المجموعة</h1><p className="section-subtitle">{group?.name} — {getLevelLabel(group?.level)}</p></div>
           </div>
           <div className="grid lg:grid-cols-5 gap-6">
@@ -214,8 +208,6 @@ export default function AdminGroupCurriculumPage() {
               </div>
             </div>
           </div>
-        </div>
-      </main>
 
       {/* Lesson Modal */}
       <AnimatePresence>
@@ -272,7 +264,7 @@ export default function AdminGroupCurriculumPage() {
                           <span className="text-xs font-bold text-gray-500">سؤال {qi + 1}</span>
                           <div className="flex items-center gap-2">
                             <select value={q.type} onChange={e => updateQ(qi, 'type', e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white">
-                              <option value="mcq">🔵 اختياري</option><option value="written">✏️ إكمال</option><option value="recitation">🎙️ شفهي</option>
+                              <option value="mcq">🔵 اختياري</option><option value="true_false">✅ صح/خطأ</option><option value="written">✏️ إكمال</option><option value="recitation">🎙️ شفهي</option>
                             </select>
                             <input type="number" min={1} max={10} value={q.points} onChange={e => updateQ(qi, 'points', parseInt(e.target.value) || 1)} className="text-xs border border-gray-200 rounded-lg px-2 py-1 w-16 bg-white" placeholder="نقاط" />
                             {examForm.questions.length > 1 && <button onClick={() => removeQuestion(qi)} className="text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>}
@@ -290,6 +282,15 @@ export default function AdminGroupCurriculumPage() {
                                 <input value={opt} onChange={e => updateOption(qi, oi, e.target.value)} className="input-base text-sm flex-1 py-1.5" placeholder={`الخيار ${oi + 1}`} />
                               </div>
                             ))}
+                          </div>
+                        )}
+                        {q.type === 'true_false' && (
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium mb-2">الإجابة الصحيحة:</p>
+                            <div className="flex gap-3">
+                              <button type="button" onClick={() => updateQ(qi, 'correctAnswerBool', true)} className={`px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all ${q.correctAnswerBool !== false ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-gray-200 bg-white'}`}>✅ صحيح (صح)</button>
+                              <button type="button" onClick={() => updateQ(qi, 'correctAnswerBool', false)} className={`px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all ${q.correctAnswerBool === false ? 'border-rose-500 bg-rose-50 text-rose-800' : 'border-gray-200 bg-white'}`}>❌ خطأ</button>
+                            </div>
                           </div>
                         )}
                         {q.type === 'written' && (
@@ -311,6 +312,6 @@ export default function AdminGroupCurriculumPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </PageLayout>
   );
 }

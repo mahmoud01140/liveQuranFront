@@ -112,7 +112,7 @@ export default function LandingPage() {
                 <div className="font-quran text-3xl mb-6 leading-loose opacity-90">
                   ﴿ وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا ﴾
                 </div>
-                <p className="text-primary-100 text-sm mb-8">ادكر الله</p>
+                <p className="text-primary-100 text-sm mb-8">اذكر الله</p>
 
                 {/* Platform features */}
                 <div className="grid grid-cols-2 gap-4">

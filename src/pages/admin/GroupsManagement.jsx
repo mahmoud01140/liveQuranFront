@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Edit2, Trash2, Users, BookOpen, CalendarDays, UserPlus, Check, RefreshCw, AlertCircle, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Navbar from '../../components/shared/Navbar';
-import Sidebar from '../../components/shared/Sidebar';
+import PageLayout from '../../components/shared/PageLayout';
 import useGroupStore from '../../store/groupStore';
 import api from '../../services/api';
 import { getLevelLabel, getLevelColor, getInitials, getAvatarColor } from '../../utils/helpers';
@@ -17,7 +16,6 @@ const LEVELS = ['foundation', 'memorization', 'teacher_prep', 'senior'];
 export default function GroupsManagement() {
   const { groups, fetchAllGroups, deleteGroup, updateDays, isLoading } = useGroupStore();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('groups'); // 'groups' | 'assign'
 
   // Groups state
@@ -154,14 +152,9 @@ export default function GroupsManagement() {
     level ? groups.filter(g => g.level === level) : groups;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar onMenuClick={() => setSidebarOpen(true)} />
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <main className="lg:mr-64 pt-16">
-        <div className="page-container">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+    <PageLayout>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
             <div>
               <h1 className="section-title">إدارة وتسكين المجموعات 📚</h1>
               <p className="section-subtitle">إدارة المجموعات الدراسية وتوزيع الطلاب الجدد</p>
@@ -385,8 +378,6 @@ export default function GroupsManagement() {
               )}
             </div>
           )}
-        </div>
-      </main>
 
       {/* Group Create/Edit Modal */}
       {showModal && (
@@ -434,6 +425,6 @@ export default function GroupsManagement() {
           </div>
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }

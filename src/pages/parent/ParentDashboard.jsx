@@ -6,14 +6,12 @@ import {
   TrendingUp, BookOpen, AlertCircle, RefreshCw, Volume2, ShieldAlert
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
-import Navbar from '../../components/shared/Navbar';
-import Sidebar from '../../components/shared/Sidebar';
+import PageLayout from '../../components/shared/PageLayout';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { timeAgoAr, getInitials, getAvatarColor, getLevelLabel, getLevelColor } from '../../utils/helpers';
 
 export default function ParentDashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [children, setChildren] = useState([]);
   const [selectedChildId, setSelectedChildId] = useState(null);
   const [childProgress, setChildProgress] = useState(null);
@@ -154,15 +152,10 @@ export default function ParentDashboard() {
   const chartData = getChartData();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar onMenuClick={() => setSidebarOpen(true)} />
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <main className="lg:mr-64 pt-16">
-        <div className="page-container">
-          
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <PageLayout>
+      <div>
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
               <h1 className="section-title flex items-center gap-2">
                 👨‍👩‍👦 لوحة ولي الأمر
@@ -717,9 +710,7 @@ export default function ParentDashboard() {
 
             </div>
           )}
-
-        </div>
-      </main>
+      </div>
 
       {/* Link Child Modal */}
       <AnimatePresence>
@@ -813,7 +804,6 @@ export default function ParentDashboard() {
           </div>
         )}
       </AnimatePresence>
-
-    </div>
+    </PageLayout>
   );
 }

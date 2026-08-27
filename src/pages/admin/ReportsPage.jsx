@@ -8,15 +8,13 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, Legend
 } from 'recharts';
-import Navbar from '../../components/shared/Navbar';
-import Sidebar from '../../components/shared/Sidebar';
+import PageLayout from '../../components/shared/PageLayout';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import useGroupStore from '../../store/groupStore';
 import { getAvatarColor, getInitials } from '../../utils/helpers';
 
 export default function ReportsPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'attendance'
 
   // Overview analytics
@@ -141,18 +139,12 @@ export default function ReportsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 text-right" dir="rtl">
-      <Navbar onMenuClick={() => setSidebarOpen(true)} />
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <main className="lg:mr-64 pt-16">
-        <div className="page-container py-6">
-          {/* Header & Tabs */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <h1 className="section-title">التقارير والإحصاءات 📊</h1>
-              <p className="section-subtitle">نظرة تحليلية شاملة وكشوفات الحضور والغياب المباشرة من قاعدة البيانات</p>
-            </div>
+    <PageLayout>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="section-title">التقارير والإحصاءات 📊</h1>
+          <p className="section-subtitle">نظرة تحليلية شاملة وكشوفات الحضور والغياب المباشرة من قاعدة البيانات</p>
+        </div>
 
             {/* Tab Switcher */}
             <div className="flex items-center bg-gray-200/80 p-1 rounded-2xl gap-1 self-start sm:self-auto">
@@ -460,8 +452,6 @@ export default function ReportsPage() {
               </div>
             </div>
           )}
-        </div>
-      </main>
-    </div>
+    </PageLayout>
   );
 }

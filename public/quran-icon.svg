@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="16" fill="url(#quran_grad)"/>
+  <defs>
+    <linearGradient id="quran_grad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1D9E75"/>
+      <stop offset="100%" stop-color="#0F5740"/>
+    </linearGradient>
+  </defs>
+  <!-- Book Spine & Pages -->
+  <path d="M32 18V48M32 18C28 15 20 15 14 17V47C20 45 28 45 32 48M32 18C36 15 44 15 50 17V47C44 45 36 45 32 48" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Decorative Star/Sparkle -->
+  <circle cx="32" cy="14" r="2.5" fill="#C9A227"/>
+  <path d="M32 8L33 11L36 12L33 13L32 16L31 13L28 12L31 11Z" fill="#C9A227"/>
+</svg>
