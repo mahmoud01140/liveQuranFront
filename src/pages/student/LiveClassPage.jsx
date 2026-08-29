@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Video, PhoneOff, Bell, CheckCircle2, Clock, Sparkles, Lock, CreditCard, Gift, AlertTriangle } from 'lucide-react';
+import { Video, PhoneOff, Bell, CheckCircle2, Clock, Sparkles, Lock, CreditCard, Gift, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Navbar from '../../components/shared/Navbar';
@@ -11,6 +11,8 @@ import useSocket from '../../hooks/useSocket';
 import { joinGroupRoom } from '../../services/socket';
 import api from '../../services/api';
 import { formatCountdown } from '../../utils/helpers';
+
+const POLL_INTERVAL_MS = 10_000; // فحص كل 10 ثوانٍ
 
 export default function LiveClassPage() {
   const { user } = useAuthStore();
@@ -23,6 +25,8 @@ export default function LiveClassPage() {
   const [confirmingPong, setConfirmingPong] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [accessDeniedInfo, setAccessDeniedInfo] = useState(null);
+  const [isPolling, setIsPolling] = useState(false);
+  const pollingRef = useRef(null);
 
   useSocket({
     'broadcast-started': async ({ sessionId, groupId }) => {
@@ -75,9 +79,9 @@ export default function LiveClassPage() {
     return () => clearInterval(interval);
   }, [pingActive]);
 
-  const handleJoin = async (sessionId) => {
+  const handleJoin = useCallback(async (sessionId) => {
     try {
-      const joinRes = await api.put(`/live/${sessionId}/join`);
+      await api.put(`/live/${sessionId}/join`);
       joinSession(sessionId);
       setAccessDeniedInfo(null);
     } catch (err) {
@@ -88,51 +92,84 @@ export default function LiveClassPage() {
         }
       }
     }
-  };
+  }, [joinSession]);
 
-  // On mount or user change: join group room + fetch active session
+  // ─── fetchActiveSession: يُجلب الجلسة النشطة من الـ API ────────────────────
+  const fetchActiveSession = useCallback(async ({ silent = false } = {}) => {
+    const groupId = user?.group?._id || user?.group;
+    try {
+      // 1. محاولة جلب الجلسة النشطة للمستخدم الحالي
+      const resActive = await api.get('/live/active/me').catch(() => null);
+      if (resActive?.data) {
+        if (resActive.data.subscription) setSubscriptionStatus(resActive.data.subscription);
+
+        if (resActive.data.session) {
+          const liveSession = resActive.data.session;
+          setSession(liveSession);
+          setIsLive(true);
+          await handleJoin(liveSession._id);
+          if (liveSession.group?._id) joinGroupRoom(liveSession.group._id);
+          if (!silent) toast.success('🔴 هناك حصة مباشرة الآن! جارٍ الانضمام...');
+          return;
+        }
+      }
+
+      // 2. احتياطي: جلب جلسات المجموعة مباشرةً
+      if (groupId) {
+        const res = await api.get(`/live/group/${groupId}`);
+        const sessions = res.data.sessions || [];
+        const liveSession = sessions.find(s => s.status === 'live');
+        const latestSession = liveSession || sessions.find(s => s.status === 'scheduled');
+        if (liveSession) {
+          setSession(liveSession);
+          setIsLive(true);
+          await handleJoin(liveSession._id);
+          if (!silent) toast.success('🔴 انضممت للحصة المباشرة!');
+        } else if (latestSession) {
+          setSession(latestSession);
+        }
+      }
+    } catch (_) {}
+  }, [user, handleJoin, setSession, setIsLive]);
+
+  // ─── On mount: join group room + initial fetch ──────────────────────────────
   useEffect(() => {
     const groupId = user?.group?._id || user?.group;
-    if (groupId) {
-      joinGroupRoom(groupId);
+    if (groupId) joinGroupRoom(groupId);
+    fetchActiveSession({ silent: true });
+  }, [user, fetchActiveSession]);
+
+  // ─── Polling: فحص كل 10 ثوانٍ إذا لم تبدأ الجلسة بعد ─────────────────────
+  // هذا يضمن عمل الإشعار حتى بدون Socket.io (مثل Vercel)
+  useEffect(() => {
+    const isSessionLiveNow = isLive || session?.status === 'live';
+
+    // أوقف الـ polling إذا بدأ البث
+    if (isSessionLiveNow) {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+        setIsPolling(false);
+      }
+      return;
     }
 
-    const fetchActiveSession = async () => {
-      try {
-        // 1. Try fetching active session for current user
-        const resActive = await api.get('/live/active/me').catch(() => null);
-        if (resActive?.data) {
-          if (resActive.data.subscription) setSubscriptionStatus(resActive.data.subscription);
+    // ابدأ الـ polling إذا لم يكن يعمل
+    if (!pollingRef.current) {
+      setIsPolling(true);
+      pollingRef.current = setInterval(() => {
+        fetchActiveSession({ silent: true });
+      }, POLL_INTERVAL_MS);
+    }
 
-          if (resActive.data.session) {
-            const liveSession = resActive.data.session;
-            setSession(liveSession);
-            setIsLive(true);
-            await handleJoin(liveSession._id);
-            if (liveSession.group?._id) joinGroupRoom(liveSession.group._id);
-            return;
-          }
-        }
-
-        // 2. Fallback: fetch group sessions if student has group
-        if (groupId) {
-          const res = await api.get(`/live/group/${groupId}`);
-          const sessions = res.data.sessions || [];
-          const liveSession = sessions.find(s => s.status === 'live');
-          const latestSession = liveSession || sessions.find(s => s.status === 'scheduled');
-          if (liveSession) {
-            setSession(liveSession);
-            setIsLive(true);
-            await handleJoin(liveSession._id);
-          } else if (latestSession) {
-            setSession(latestSession);
-          }
-        }
-      } catch (_) {}
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+        setIsPolling(false);
+      }
     };
-
-    fetchActiveSession();
-  }, [user]);
+  }, [isLive, session?.status, fetchActiveSession]);
 
   useEffect(() => {
     if (isLive || session?.status === 'live') {
@@ -225,12 +262,27 @@ export default function LiveClassPage() {
           <div className="card-base p-12 text-center max-w-md mx-4 shadow-sm">
             <Video className="w-16 h-16 text-gray-200 mx-auto mb-4" />
             <h2 className="text-xl font-black text-gray-900 mb-2">لا توجد جلسة مباشرة حالياً</h2>
-            <p className="text-gray-500 text-sm">سيصلك إشعار فوري عند بدء المعلم أو المدير الجلسة المباشرة</p>
+            <p className="text-gray-500 text-sm mb-6">عند بدء المعلم الجلسة ستنضم تلقائياً خلال ثوانٍ</p>
+
+            {/* Polling indicator */}
+            <div className="flex items-center justify-center gap-2 text-xs text-primary-500 font-semibold mb-4">
+              <RefreshCw className={`w-3.5 h-3.5 ${isPolling ? 'animate-spin' : ''}`} />
+              <span>{isPolling ? 'يبحث تلقائياً كل 10 ثوانٍ...' : 'البحث متوقف مؤقتاً'}</span>
+            </div>
+
+            <button
+              onClick={() => fetchActiveSession({ silent: false })}
+              className="inline-flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-primary-500 bg-gray-100 hover:bg-primary-50 px-4 py-2 rounded-xl transition-all"
+            >
+              <RefreshCw className="w-4 h-4" />
+              تحديث يدوي
+            </button>
           </div>
         </div>
       </div>
     );
   }
+
 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col h-screen overflow-hidden font-sans" dir="rtl">
@@ -277,9 +329,9 @@ export default function LiveClassPage() {
 
       {/* Main meeting area */}
       <div className="flex-1 relative bg-black">
-        {session?.roomId && (
+        {session?._id && (
           <JitsiMeeting
-            roomName={session.group?.liveRoomId || session.roomId}
+            roomName={`QuranPlatform_${session._id}`}
             displayName={`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'طالب'}
             userEmail={user?.email}
             onLeave={handleLeave}

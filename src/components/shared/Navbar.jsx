@@ -184,6 +184,7 @@ export default function Navbar({ onMenuClick }) {
           <Link to="/login" onClick={() => setMenuOpen(false)} className="text-gray-700 font-semibold hover:text-primary-500 transition-colors py-1 sm:hidden">تسجيل الدخول</Link>
         </motion.div>
       )}
+
     </nav>
   );
 }

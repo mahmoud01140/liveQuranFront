@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BookOpen, Users, Award, Video, ChevronLeft, Star, Check, Play, Headphones, GraduationCap, BarChart3, Smartphone, Building2, ShieldCheck } from 'lucide-react';
+import { BookOpen, Users, Award, Video, ChevronLeft, Star, Check, Play, Headphones, GraduationCap, BarChart3, Smartphone, Building2, ShieldCheck, LayoutDashboard } from 'lucide-react';
 import Navbar from '../components/shared/Navbar';
+import useAuthStore from '../store/authStore';
 
 const features = [
   { title: 'بث مباشر تفاعلي', desc: 'جلسات حية مع المعلم وجهاً لوجه', icon: Video },
@@ -41,6 +42,8 @@ const unifiedPlan = {
 
 export default function LandingPage() {
   const [currency, setCurrency] = useState('EGP');
+  const { user } = useAuthStore();
+  const isStudent = user?.role === 'student';
 
   return (
     <div className="min-h-screen bg-white" dir="rtl">
@@ -70,10 +73,17 @@ export default function LandingPage() {
               منصة متكاملة لتحفيظ القرآن الكريم وتعليم أحكام التجويد عبر الإنترنت مع بث مباشر وإدارة مجموعات دراسية منظمة.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link to="/register" className="btn-primary text-base px-8 py-3.5 rounded-2xl shadow-green">
-                ابدأ رحلتك الآن
-                <ChevronLeft className="w-5 h-5" />
-              </Link>
+              {isStudent ? (
+                <Link to="/student" className="btn-primary text-base px-8 py-3.5 rounded-2xl shadow-green inline-flex items-center gap-2">
+                  <LayoutDashboard className="w-5 h-5" />
+                  لوحة التحكم
+                </Link>
+              ) : (
+                <Link to="/register" className="btn-primary text-base px-8 py-3.5 rounded-2xl shadow-green">
+                  ابدأ رحلتك الآن
+                  <ChevronLeft className="w-5 h-5" />
+                </Link>
+              )}
               <a href="#how-it-works" className="btn-outline text-base px-8 py-3.5 rounded-2xl">
                 <Play className="w-5 h-5" />
                 كيف يعمل؟
