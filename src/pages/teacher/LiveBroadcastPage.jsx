@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Radio, ClipboardList, PhoneOff, UserCheck, Mic } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -15,7 +16,8 @@ import { formatCountdown } from '../../utils/helpers';
 
 export default function LiveBroadcastPage() {
   const { user } = useAuthStore();
-  const { groups } = useGroupStore();
+  const location = useLocation();
+  const { groups, fetchAllGroups } = useGroupStore();
   const {
     isBroadcasting,
     setIsBroadcasting,
@@ -37,7 +39,26 @@ export default function LiveBroadcastPage() {
   const [session, setSession] = useState(null);
 
   const socket = getSocket();
-  const myGroups = groups.filter(g => g.teacher?._id === user?._id || g.teacher === user?._id);
+  // Single teacher / Admin owns all groups
+  const myGroups = (user?.role === 'admin' || user?.role === 'teacher')
+    ? groups
+    : groups.filter(g => g.teacher?._id === user?._id || g.teacher === user?._id);
+
+  useEffect(() => {
+    fetchAllGroups();
+  }, []);
+
+  // Pre-select group & title if navigated from group cards or curriculum
+  useEffect(() => {
+    if (location.state?.groupId) {
+      setSelectedGroup(location.state.groupId);
+      if (location.state.lessonTitle) {
+        setSessionTitle(location.state.lessonTitle);
+      } else if (location.state.groupName) {
+        setSessionTitle(`حصة مباشرة — ${location.state.groupName}`);
+      }
+    }
+  }, [location.state]);
 
   useEffect(() => {
     if (isBroadcasting) {

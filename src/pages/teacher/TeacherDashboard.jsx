@@ -17,7 +17,11 @@ export default function TeacherDashboard() {
   useNotifications();
 
   useEffect(() => {
-    fetchAllGroups({ teacher: user?._id });
+    if (user?.role === 'admin') {
+      fetchAllGroups();
+    } else {
+      fetchAllGroups({ teacher: user?._id });
+    }
     fetchStats();
   }, []);
 
@@ -36,7 +40,9 @@ export default function TeacherDashboard() {
     } catch {}
   };
 
-  const myGroups = groups.filter(g => g.teacher?._id === user?._id || g.teacher === user?._id);
+  const myGroups = (user?.role === 'admin' || user?.role === 'teacher')
+    ? groups
+    : groups.filter(g => g.teacher?._id === user?._id || g.teacher === user?._id);
   const totalStudents = myGroups.reduce((sum, g) => sum + (g.students?.length || 0), 0);
 
   return (

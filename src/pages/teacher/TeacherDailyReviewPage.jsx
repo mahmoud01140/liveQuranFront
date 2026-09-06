@@ -84,7 +84,9 @@ export default function TeacherDailyReviewPage() {
 
   useEffect(() => { fetchAllGroups(); }, []);
 
-  const myGroups = groups.filter(g => g.teacher?._id === user?._id || g.teacher === user?._id);
+  const myGroups = (user?.role === 'admin' || user?.role === 'teacher')
+    ? groups
+    : groups.filter(g => g.teacher?._id === user?._id || g.teacher === user?._id);
 
   // Pagination hooks
   const groupsPagination = usePagination(myGroups, 6);

@@ -35,17 +35,18 @@ const teacherLinks = [
 ];
 
 const adminLinks = [
-  { to: '/admin', icon: LayoutDashboard, label: 'الرئيسية', end: true },
-  { to: '/admin/onboarding-settings', icon: Settings, label: 'إعدادات تحديد المستوى والاستبيان' },
-  { to: '/admin/payments', icon: CreditCard, label: 'إدارة المدفوعات والاشتراكات' },
-  { to: '/admin/groups', icon: BookMarked, label: 'إدارة وتسكين المجموعات' },
-  { to: '/admin/live', icon: Radio, label: 'البث المباشر للحلقات' },
-  { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والمراجعة' },
-  { to: '/admin/daily-review', icon: CalendarCheck, label: 'مراجعة وتسميع الحفظ' },
+  { to: '/admin', icon: LayoutDashboard, label: 'الرئيسية (لوحة التحكم)', end: true },
+  { to: '/admin/groups', icon: BookMarked, label: 'إدارة وتسكين الحلقات' },
+  { to: '/teacher/broadcast', icon: Radio, label: 'البث المباشر للحلقات' },
+  { to: '/teacher/daily-review', icon: CalendarCheck, label: 'طابور التسميع والورد اليومي' },
+  { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والتسجيلات' },
+  { to: '/teacher/create-exam', icon: FileText, label: 'نشاط / تقييم الدرس' },
   { to: '/admin/users', icon: Users, label: 'إدارة الطلاب والمستخدمين' },
+  { to: '/admin/payments', icon: CreditCard, label: 'الاشتراكات والمدفوعات' },
   { to: '/admin/reports', icon: BarChart2, label: 'التقارير والإحصاءات' },
   { to: '/admin/discussions', icon: MessageCircle, label: 'غرفة النقاش' },
   { to: '/admin/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },
+  { to: '/admin/onboarding-settings', icon: Settings, label: 'إعدادات تحديد المستوى' },
 ];
 
 const parentLinks = [
@@ -56,18 +57,15 @@ export default function Sidebar({ isOpen, onClose }) {
   const { user } = useAuthStore();
   const navigate = useNavigate();
 
-  const links = user?.role === 'admin' ? adminLinks
-    : user?.role === 'teacher' ? teacherLinks
+  const links = (user?.role === 'admin' || user?.role === 'teacher') ? adminLinks
     : user?.role === 'parent' ? parentLinks
     : studentLinks;
 
-  const roleLabel = user?.role === 'admin' ? 'مدير النظام'
-    : user?.role === 'teacher' ? 'معلم'
+  const roleLabel = (user?.role === 'admin' || user?.role === 'teacher') ? 'المعلم والمدير'
     : user?.role === 'parent' ? 'ولي أمر'
     : `طالب — ${getLevelLabel(user?.assignedLevel)}`;
 
-  const roleColor = user?.role === 'admin' ? 'badge-gold'
-    : user?.role === 'teacher' ? 'badge-purple'
+  const roleColor = (user?.role === 'admin' || user?.role === 'teacher') ? 'badge-gold'
     : user?.role === 'parent' ? 'badge-blue'
     : 'badge-green';
 

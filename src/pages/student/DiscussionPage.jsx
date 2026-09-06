@@ -31,7 +31,7 @@ export default function DiscussionPage() {
   const typingTimeout = useRef(null);
 
   const groupId = user?.group?._id || user?.group;
-  const isTeacher = user?.role === 'teacher';
+  const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
   const isAdmin = user?.role === 'admin';
   const canModerate = isTeacher || isAdmin;
 
@@ -299,8 +299,10 @@ export default function DiscussionPage() {
                           <span className="text-xs font-bold text-gray-700">
                             {msg.sender?.firstName} {msg.sender?.lastName}
                           </span>
-                          {msg.sender?.role === 'teacher' && (
-                            <span className="badge-purple text-[10px] py-0.5 px-1.5">معلم</span>
+                          {(msg.sender?.role === 'teacher' || msg.sender?.role === 'admin') && (
+                            <span className="badge-gold text-[10px] py-0.5 px-1.5 font-bold">
+                              {msg.sender?.role === 'admin' ? 'المعلم والمدير 👑' : 'معلم'}
+                            </span>
                           )}
                           <span className="text-[10px] text-gray-300">{timeAgoAr(msg.createdAt)}</span>
                         </div>

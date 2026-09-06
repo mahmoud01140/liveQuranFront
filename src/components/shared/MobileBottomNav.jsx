@@ -24,10 +24,10 @@ const teacherNavItems = [
 
 const adminNavItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'الرئيسية', end: true },
-  { to: '/admin/groups', icon: BookMarked, label: 'المجموعات' },
-  { to: '/admin/users', icon: Users, label: 'المستخدمين' },
-  { to: '/admin/reports', icon: BarChart2, label: 'التقارير' },
-  { to: '/admin/discussions', icon: MessageCircle, label: 'النقاش' },
+  { to: '/admin/groups', icon: BookMarked, label: 'الحلقات' },
+  { to: '/teacher/broadcast', icon: Radio, label: 'البث المباشر' },
+  { to: '/teacher/daily-review', icon: ClipboardList, label: 'التسميع والورد' },
+  { to: '/admin/users', icon: Users, label: 'الطلاب' },
 ];
 
 const parentNavItems = [
@@ -44,8 +44,7 @@ export default function MobileBottomNav() {
   const isTakingExam = location.pathname.includes('/take') || location.pathname.startsWith('/onboarding');
   if (isTakingExam) return null;
 
-  const items = user.role === 'admin' ? adminNavItems
-    : user.role === 'teacher' ? teacherNavItems
+  const items = (user.role === 'admin' || user.role === 'teacher') ? adminNavItems
     : user.role === 'parent' ? parentNavItems
     : studentNavItems;
 

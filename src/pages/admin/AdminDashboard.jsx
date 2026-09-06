@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, BookOpen, Clock, TrendingUp, UserCheck, Radio } from 'lucide-react';
+import { Users, BookOpen, Clock, TrendingUp, UserCheck, Radio, ClipboardList, FileText } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import PageLayout from '../../components/shared/PageLayout';
 import api from '../../services/api';
@@ -136,22 +136,24 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick shortcuts */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'إدارة المستخدمين', path: '/admin/users', icon: Users, color: 'bg-primary-500' },
-          { label: 'إدارة المجموعات', path: '/admin/groups', icon: BookOpen, color: 'bg-purple-500' },
-          { label: 'مراجعة وتسميع الحفظ', path: '/admin/daily-review', icon: Clock, color: 'bg-amber-500' },
-          { label: 'البث المباشر', path: '/admin/live', icon: Radio, color: 'bg-red-500' },
+          { label: 'البث المباشر', path: '/teacher/broadcast', icon: Radio, color: 'bg-red-500' },
+          { label: 'طابور التسميع والورد', path: '/teacher/daily-review', icon: Clock, color: 'bg-amber-500' },
+          { label: 'مركز التصحيح', path: '/teacher/review', icon: ClipboardList, color: 'bg-emerald-500' },
+          { label: 'إدارة الحلقات', path: '/admin/groups', icon: BookOpen, color: 'bg-purple-500' },
+          { label: 'إدارة الطلاب', path: '/admin/users', icon: Users, color: 'bg-primary-500' },
+          { label: 'نشاط / تقييم درس', path: '/teacher/create-exam', icon: FileText, color: 'bg-blue-500' },
         ].map((action, i) => (
           <Link
             key={i}
             to={action.path}
-            className="card-base p-4 flex items-center gap-3 hover:shadow-md transition-all group cursor-pointer"
+            className="card-base p-3.5 flex flex-col items-center text-center gap-2 hover:shadow-md transition-all group cursor-pointer"
           >
-            <div className={`w-10 h-10 ${action.color} text-white rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform`}>
+            <div className={`w-10 h-10 ${action.color} text-white rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm`}>
               <action.icon className="w-5 h-5" />
             </div>
-            <span className="text-xs font-bold text-gray-800">{action.label}</span>
+            <span className="text-xs font-bold text-gray-800 line-clamp-1">{action.label}</span>
           </Link>
         ))}
       </div>

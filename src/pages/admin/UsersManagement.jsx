@@ -112,11 +112,11 @@ export default function UsersManagement() {
             <input value={search} onChange={e => setSearch(e.target.value)}
               className="input-base pr-10" placeholder="بحث بالاسم أو البريد..." />
           </div>
-          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="input-base w-40">
-            <option value="">الكل</option>
-            <option value="student">طالب</option>
-            <option value="teacher">معلم</option>
-            <option value="admin">مدير</option>
+          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="input-base w-44">
+            <option value="">جميع الأدوار</option>
+            <option value="student">الطلاب</option>
+            <option value="parent">أولياء الأمور</option>
+            <option value="admin">المعلم والمدير</option>
           </select>
         </div>
       )}
@@ -150,10 +150,17 @@ export default function UsersManagement() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-bold text-gray-900">{user.firstName} {user.lastName}</h3>
+                      {user.role === 'admin' ? (
+                        <span className="badge-gold text-xs">المعلم والمدير 👑</span>
+                      ) : user.role === 'parent' ? (
+                        <span className="badge-blue text-xs">ولي أمر</span>
+                      ) : (
+                        <span className="badge-green text-xs">طالب</span>
+                      )}
                       {user.registrationType && (
                         <span className="badge-gray text-xs">{
-                          user.registrationType === 'student' ? 'طالب' :
-                          user.registrationType === 'teacher' ? 'معلم' : 'كبار السن'
+                          user.registrationType === 'student' ? 'مسار التأسيس' :
+                          user.registrationType === 'teacher' ? 'مسار إعداد معلمين' : 'مسار كبار السن'
                         }</span>
                       )}
                       {user.assignedLevel && (

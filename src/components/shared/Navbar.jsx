@@ -44,8 +44,8 @@ export default function Navbar({ onMenuClick }) {
 
   const isLanding = location.pathname === '/';
 
-  const roleLabel = user?.role === 'admin' ? 'مدير' 
-    : user?.role === 'teacher' ? 'معلم' : 'طالب';
+  const roleLabel = (user?.role === 'admin' || user?.role === 'teacher') ? 'المعلم والمدير' 
+    : user?.role === 'parent' ? 'ولي أمر' : 'طالب';
 
   return (
     <nav className={`fixed top-0 right-0 left-0 z-40 h-16 transition-all duration-300 ${

@@ -25,8 +25,7 @@ export default function GroupsManagement() {
   const [showDaysModal, setShowDaysModal] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [editGroup, setEditGroup] = useState(null);
-  const [teachers, setTeachers] = useState([]);
-  const [form, setForm] = useState({ name: '', description: '', level: 'foundation', maxStudents: 15, teacher: '' });
+  const [form, setForm] = useState({ name: '', description: '', level: 'foundation', maxStudents: 15 });
   const [selectedDays, setSelectedDays] = useState([]);
   const [saving, setSaving] = useState(false);
 
@@ -44,9 +43,6 @@ export default function GroupsManagement() {
 
   useEffect(() => {
     fetchAllGroups();
-    api.get('/users', { params: { role: 'teacher', limit: 50 } })
-      .then(r => setTeachers(r.data.users || []))
-      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -92,14 +88,14 @@ export default function GroupsManagement() {
 
   const openCreate = () => {
     setEditGroup(null);
-    setForm({ name: '', description: '', level: 'foundation', maxStudents: 15, teacher: '' });
+    setForm({ name: '', description: '', level: 'foundation', maxStudents: 15 });
     setSelectedDays([]);
     setShowModal(true);
   };
 
   const openEdit = (group) => {
     setEditGroup(group);
-    setForm({ name: group.name, description: group.description || '', level: group.level, maxStudents: group.maxStudents, teacher: group.teacher?._id || '' });
+    setForm({ name: group.name, description: group.description || '', level: group.level, maxStudents: group.maxStudents });
     setSelectedDays(group.days || []);
     setShowModal(true);
   };
@@ -135,12 +131,10 @@ export default function GroupsManagement() {
     try {
       if (editGroup) {
         await api.put(`/groups/${editGroup._id}`, { ...form, days: selectedDays });
-        if (form.teacher) await api.put(`/groups/${editGroup._id}/assign-teacher`, { teacherId: form.teacher });
-        toast.success('تم تحديث المجموعة');
+        toast.success('تم تحديث المجموعة بنجاح');
       } else {
-        const res = await api.post('/groups', { ...form, days: selectedDays });
-        if (form.teacher) await api.put(`/groups/${res.data.group._id}/assign-teacher`, { teacherId: form.teacher });
-        toast.success('تم إنشاء المجموعة');
+        await api.post('/groups', { ...form, days: selectedDays });
+        toast.success('تم إنشاء المجموعة بنجاح');
       }
       fetchAllGroups();
       setShowModal(false);
@@ -246,7 +240,7 @@ export default function GroupsManagement() {
                               style={{ backgroundColor: getAvatarColor(`${group.teacher.firstName}${group.teacher.lastName}`) }}>
                               {getInitials(group.teacher.firstName, group.teacher.lastName)}
                             </div>
-                            <span>أ. {group.teacher.firstName} {group.teacher.lastName}</span>
+                            <span>المعلم المشرف: {group.teacher.firstName} {group.teacher.lastName}</span>
                           </div>
                         )}
 

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PageLayout from '../../components/shared/PageLayout';
 import useGroupStore from '../../store/groupStore';
@@ -6,7 +7,11 @@ import { DAYS_AR } from '../../utils/constants';
 import { Users, Video, Calendar } from 'lucide-react';
 
 export default function MyGroupsPage() {
-  const { groups } = useGroupStore();
+  const { groups, fetchAllGroups } = useGroupStore();
+
+  useEffect(() => {
+    fetchAllGroups();
+  }, []);
 
   return (
     <PageLayout>
