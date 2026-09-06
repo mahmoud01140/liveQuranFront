@@ -10,6 +10,8 @@ import PageLayout from '../../components/shared/PageLayout';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { timeAgoAr, getInitials, getAvatarColor, getLevelLabel, getLevelColor } from '../../utils/helpers';
+import Pagination from '../../components/shared/Pagination';
+import usePagination from '../../hooks/usePagination';
 
 export default function ParentDashboard() {
   const [children, setChildren] = useState([]);
@@ -17,6 +19,9 @@ export default function ParentDashboard() {
   const [childProgress, setChildProgress] = useState(null);
   const [loadingProgress, setLoadingProgress] = useState(false);
   const [loadingChildren, setLoadingChildren] = useState(false);
+
+  const homeworkPagination = usePagination(childProgress?.homework || [], 4);
+  const recordsPagination = usePagination(childProgress?.recentRecords || [], 5);
   
   // Link child states
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -564,62 +569,77 @@ export default function ParentDashboard() {
                       {!childProgress.homework || childProgress.homework.length === 0 ? (
                         <p className="text-xs text-gray-400 text-center py-8">لا توجد واجبات دراسية مسجلة بعد</p>
                       ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {childProgress.homework.map((hw) => {
-                            return (
-                              <div key={hw.sessionId} className={`p-4 bg-white rounded-xl border border-gray-100 flex flex-col justify-between hover:shadow-sm transition-shadow border-r-4 ${
-                                hw.submitted ? 'border-r-green-400' : hw.overdue ? 'border-r-red-400' : 'border-r-amber-400'
-                              }`}>
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <p className="text-xs font-bold text-gray-800 truncate">{hw.title}</p>
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                      hw.submitted
-                                        ? 'bg-green-50 text-green-600'
-                                        : hw.overdue
-                                          ? 'bg-red-50 text-red-600'
-                                          : 'bg-amber-50 text-amber-600'
-                                    }`}>
-                                      {hw.submitted ? 'مكتمل' : hw.overdue ? 'متأخر' : 'بانتظار التسليم'}
-                                    </span>
-                                  </div>
-                                  <p className="text-[11px] text-gray-600 line-clamp-2">{hw.homework}</p>
-                                  
-                                  {/* Quranic structured homework */}
-                                  {hw.quranHomework && hw.quranHomework.surahNumber && (
-                                    <div className="bg-primary-50/50 p-2 rounded-lg border border-primary-50 text-[10px] text-primary-700">
-                                      📖 <strong>الواجب القرآني:</strong> سورة {hw.quranHomework.surahName} (الآيات {hw.quranHomework.fromVerse} - {hw.quranHomework.toVerse})
+                        <div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {homeworkPagination.paginatedItems.map((hw) => {
+                              return (
+                                <div key={hw.sessionId} className={`p-4 bg-white rounded-xl border border-gray-100 flex flex-col justify-between hover:shadow-sm transition-shadow border-r-4 ${
+                                  hw.submitted ? 'border-r-green-400' : hw.overdue ? 'border-r-red-400' : 'border-r-amber-400'
+                                }`}>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <p className="text-xs font-bold text-gray-800 truncate">{hw.title}</p>
+                                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                        hw.submitted
+                                          ? 'bg-green-50 text-green-600'
+                                          : hw.overdue
+                                            ? 'bg-red-50 text-red-600'
+                                            : 'bg-amber-50 text-amber-600'
+                                      }`}>
+                                        {hw.submitted ? 'مكتمل' : hw.overdue ? 'متأخر' : 'بانتظار التسليم'}
+                                      </span>
                                     </div>
-                                  )}
-                                </div>
-
-                                <div className="mt-3 pt-2 border-t border-gray-50 flex items-center justify-between text-[10px] text-gray-400">
-                                  <span>📅 الموعد: {hw.deadline ? new Date(hw.deadline).toLocaleDateString('ar-EG') : 'غير محدد'}</span>
-                                  {hw.submitted && (
-                                    <span className="text-green-600">✓ تم التسليم في {new Date(hw.submittedAt).toLocaleDateString('ar-EG')}</span>
-                                  )}
-                                </div>
-
-                                {hw.submitted && hw.isChecked && (
-                                  <div className="mt-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-[10px]">
-                                    <div className="flex items-center justify-between">
-                                      <span className="font-bold text-gray-700">تقييم المعلم:</span>
-                                      {hw.rating && (
-                                        <div className="flex gap-0.5">
-                                          {[1, 2, 3, 4, 5].map(star => (
-                                            <Star key={star} className={`w-3 h-3 ${star <= hw.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                    {hw.teacherFeedback && (
-                                      <p className="text-gray-600 mt-1 leading-relaxed">💬 {hw.teacherFeedback}</p>
+                                    <p className="text-[11px] text-gray-600 line-clamp-2">{hw.homework}</p>
+                                    
+                                    {/* Quranic structured homework */}
+                                    {hw.quranHomework && hw.quranHomework.surahNumber && (
+                                      <div className="bg-primary-50/50 p-2 rounded-lg border border-primary-50 text-[10px] text-primary-700">
+                                        📖 <strong>الواجب القرآني:</strong> سورة {hw.quranHomework.surahName} (الآيات {hw.quranHomework.fromVerse} - {hw.quranHomework.toVerse})
+                                      </div>
                                     )}
                                   </div>
-                                )}
-                              </div>
-                            );
-                          })}
+
+                                  <div className="mt-3 pt-2 border-t border-gray-50 flex items-center justify-between text-[10px] text-gray-400">
+                                    <span>📅 الموعد: {hw.deadline ? new Date(hw.deadline).toLocaleDateString('ar-EG') : 'غير محدد'}</span>
+                                    {hw.submitted && (
+                                      <span className="text-green-600">✓ تم التسليم في {new Date(hw.submittedAt).toLocaleDateString('ar-EG')}</span>
+                                    )}
+                                  </div>
+
+                                  {hw.submitted && hw.isChecked && (
+                                    <div className="mt-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-[10px]">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-bold text-gray-700">تقييم المعلم:</span>
+                                        {hw.rating && (
+                                          <div className="flex gap-0.5">
+                                            {[1, 2, 3, 4, 5].map(star => (
+                                              <Star key={star} className={`w-3 h-3 ${star <= hw.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                      {hw.teacherFeedback && (
+                                        <p className="text-gray-600 mt-1 leading-relaxed">💬 {hw.teacherFeedback}</p>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <Pagination
+                            currentPage={homeworkPagination.currentPage}
+                            totalPages={homeworkPagination.totalPages}
+                            totalItems={homeworkPagination.totalItems}
+                            pageSize={homeworkPagination.pageSize}
+                            onPageChange={homeworkPagination.setCurrentPage}
+                            onPageSizeChange={homeworkPagination.setPageSize}
+                            showPageSize={true}
+                            pageSizeOptions={[2, 4, 8, 16]}
+                            itemName="واجب"
+                            className="mt-4"
+                          />
                         </div>
                       )}
                     </div>
@@ -628,67 +648,82 @@ export default function ParentDashboard() {
                     <div className="card-base p-5">
                       <h3 className="font-bold text-gray-900 text-sm mb-4">سجل نشاطات الحفظ والتسميع التفصيلي</h3>
                       
-                      {childProgress.recentRecords && childProgress.recentRecords.length === 0 ? (
+                      {!childProgress.recentRecords || childProgress.recentRecords.length === 0 ? (
                         <p className="text-xs text-gray-400 text-center py-8">لا توجد سجلات حفظ يومية مسجلة بعد</p>
                       ) : (
-                        <div className="space-y-3">
-                          {childProgress.recentRecords.map((record) => {
-                            const dateStr = new Date(record.date).toLocaleDateString('ar-EG', {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            });
-                            
-                            return (
-                              <div key={record._id} className="p-4 bg-white rounded-xl border border-gray-100 space-y-3 hover:shadow-sm transition-shadow">
-                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-50 pb-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-xs text-gray-800">سورة {record.surahName}</span>
-                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
-                                      الآيات: {record.fromVerse} - {record.toVerse}
+                        <div>
+                          <div className="space-y-3">
+                            {recordsPagination.paginatedItems.map((record) => {
+                              const dateStr = new Date(record.date).toLocaleDateString('ar-EG', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              });
+                              
+                              return (
+                                <div key={record._id} className="p-4 bg-white rounded-xl border border-gray-100 space-y-3 hover:shadow-sm transition-shadow">
+                                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-50 pb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-bold text-xs text-gray-800">سورة {record.surahName}</span>
+                                      <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md">
+                                        الآيات: {record.fromVerse} - {record.toVerse}
+                                      </span>
+                                    </div>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                      record.status === 'pending'
+                                        ? 'bg-amber-50 text-amber-600'
+                                        : record.status === 'approved'
+                                          ? 'bg-green-50 text-green-600'
+                                          : 'bg-red-50 text-red-600'
+                                    }`}>
+                                      {record.status === 'pending' ? 'قيد المراجعة' : record.status === 'approved' ? 'تم الاعتماد' : 'تطلب المراجعة'}
                                     </span>
                                   </div>
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                    record.status === 'pending'
-                                      ? 'bg-amber-50 text-amber-600'
-                                      : record.status === 'approved'
-                                        ? 'bg-green-50 text-green-600'
-                                        : 'bg-red-50 text-red-600'
-                                  }`}>
-                                    {record.status === 'pending' ? 'قيد المراجعة' : record.status === 'approved' ? 'تم الاعتماد' : 'تطلب المراجعة'}
-                                  </span>
-                                </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-[10px] text-gray-500">
-                                  <p>📅 التاريخ: {dateStr}</p>
-                                  <p>📌 النوع: {record.activityType === 'memorization' ? 'حفظ جديد' : record.activityType === 'review' ? 'مراجعة' : 'تجويد'}</p>
-                                  {record.rating && (
-                                    <div className="flex items-center gap-0.5">
-                                      <span>⭐ التقييم:</span>
-                                      <div className="flex gap-0.5">
-                                        {[1, 2, 3, 4, 5].map(star => (
-                                          <Star key={star} className={`w-3 h-3 ${star <= record.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
-                                        ))}
+                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-[10px] text-gray-500">
+                                    <p>📅 التاريخ: {dateStr}</p>
+                                    <p>📌 النوع: {record.activityType === 'memorization' ? 'حفظ جديد' : record.activityType === 'review' ? 'مراجعة' : 'تجويد'}</p>
+                                    {record.rating && (
+                                      <div className="flex items-center gap-0.5">
+                                        <span>⭐ التقييم:</span>
+                                        <div className="flex gap-0.5">
+                                          {[1, 2, 3, 4, 5].map(star => (
+                                            <Star key={star} className={`w-3 h-3 ${star <= record.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
+                                          ))}
+                                        </div>
                                       </div>
-                                    </div>
+                                    )}
+                                  </div>
+
+                                  {record.studentNotes && (
+                                    <p className="text-[10px] text-slate-500 bg-slate-50 p-2 rounded-lg">
+                                      📝 <strong>ملاحظة الطالب:</strong> {record.studentNotes}
+                                    </p>
+                                  )}
+
+                                  {record.teacherNotes && (
+                                    <p className="text-[10px] text-primary-700 bg-primary-50/50 p-2 rounded-lg border border-primary-50">
+                                      👨‍🏫 <strong>ملاحظات المعلم:</strong> {record.teacherNotes}
+                                    </p>
                                   )}
                                 </div>
+                              );
+                            })}
+                          </div>
 
-                                {record.studentNotes && (
-                                  <p className="text-[10px] text-slate-500 bg-slate-50 p-2 rounded-lg">
-                                    📝 <strong>ملاحظة الطالب:</strong> {record.studentNotes}
-                                  </p>
-                                )}
-
-                                {record.teacherNotes && (
-                                  <p className="text-[10px] text-primary-700 bg-primary-50/50 p-2 rounded-lg border border-primary-50">
-                                    👨‍🏫 <strong>ملاحظات المعلم:</strong> {record.teacherNotes}
-                                  </p>
-                                )}
-                              </div>
-                            );
-                          })}
+                          <Pagination
+                            currentPage={recordsPagination.currentPage}
+                            totalPages={recordsPagination.totalPages}
+                            totalItems={recordsPagination.totalItems}
+                            pageSize={recordsPagination.pageSize}
+                            onPageChange={recordsPagination.setCurrentPage}
+                            onPageSizeChange={recordsPagination.setPageSize}
+                            showPageSize={true}
+                            pageSizeOptions={[3, 5, 10, 20]}
+                            itemName="سجل حفظ"
+                            className="mt-4"
+                          />
                         </div>
                       )}
                     </div>

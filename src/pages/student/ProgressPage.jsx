@@ -18,23 +18,6 @@ import { getJuzPercentage, getCirclePath, getLevelLabel, timeAgoAr } from '../..
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
-const weeklyProgress = [
-  { week: 'أسبوع 1', pages: 5, lessons: 2 },
-  { week: 'أسبوع 2', pages: 7, lessons: 3 },
-  { week: 'أسبوع 3', pages: 6, lessons: 2 },
-  { week: 'أسبوع 4', pages: 9, lessons: 4 },
-  { week: 'أسبوع 5', pages: 8, lessons: 3 },
-  { week: 'أسبوع 6', pages: 11, lessons: 5 },
-];
-
-const skillsData = [
-  { skill: 'القراءة', score: 80 },
-  { skill: 'الحفظ', score: 65 },
-  { skill: 'التجويد', score: 70 },
-  { skill: 'الفهم', score: 85 },
-  { skill: 'الإملاء', score: 60 },
-];
-
 const JUZ = Array.from({ length: 30 }, (_, i) => i + 1);
 
 export default function ProgressPage() {
@@ -48,6 +31,14 @@ export default function ProgressPage() {
   // Ijazah state
   const [ijazah, setIjazah] = useState(null);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
+
+  // Dynamic weekly progress state
+  const [weeklyProgress, setWeeklyProgress] = useState([
+    { week: 'الأسبوع 1', pages: 0, verses: 0 },
+    { week: 'الأسبوع 2', pages: 0, verses: 0 },
+    { week: 'الأسبوع 3', pages: 0, verses: 0 },
+    { week: 'الأسبوع 4', pages: 0, verses: 0 },
+  ]);
 
   useEffect(() => {
     const groupId = user?.group?._id || user?.group;
@@ -64,12 +55,46 @@ export default function ProgressPage() {
       .then(res => setIjazah(res.data.ijazah))
       .catch(() => {});
 
+    // Fetch real weekly memorization logs
+    api.get('/daily-records/my')
+      .then(res => {
+        const records = res.data.records || [];
+        if (records.length > 0) {
+          const now = new Date();
+          const weeksMap = {};
+          for (let i = 3; i >= 0; i--) {
+            weeksMap[i] = { week: `الأسبوع ${4 - i}`, pages: 0, verses: 0 };
+          }
+          records.forEach(r => {
+            const rDate = new Date(r.date || r.createdAt);
+            const diffDays = Math.floor((now - rDate) / (1000 * 60 * 60 * 24));
+            const weekIdx = Math.floor(diffDays / 7);
+            if (weekIdx >= 0 && weekIdx < 4) {
+              const count = r.versesCount || (r.toVerse && r.fromVerse ? (r.toVerse - r.fromVerse + 1) : 1);
+              weeksMap[weekIdx].verses += count;
+              weeksMap[weekIdx].pages += Math.max(1, Math.round(count / 15));
+            }
+          });
+          setWeeklyProgress(Object.values(weeksMap).reverse());
+        }
+      })
+      .catch(() => {});
+
     // Fetch weak points
     api.get('/exams/weak-points/my')
       .then(res => setWeakPoints(res.data.weakPoints || []))
       .catch(() => {})
       .finally(() => setLoadingWeakPoints(false));
   }, [user?.group]);
+
+  // Dynamic skills radar computed from actual teacher ratings and attendance
+  const skillsData = [
+    { skill: 'التلاوة والأداء', score: avgRatings?.recitation ? Math.round(avgRatings.recitation * 20) : Math.min(100, (user?.placementExamScore || 80)) },
+    { skill: 'الحفظ والضبط', score: avgRatings?.memorization ? Math.round(avgRatings.memorization * 20) : Math.min(100, (user?.placementExamScore || 75)) },
+    { skill: 'التجويد', score: avgRatings?.recitation ? Math.min(100, Math.round(avgRatings.recitation * 18 + 10)) : 75 },
+    { skill: 'الحضور والالتزام', score: attendanceStats?.attendanceRate || 100 },
+    { skill: 'الانتباه والتفاعل', score: avgRatings?.attention ? Math.round(avgRatings.attention * 20) : 85 },
+  ];
 
   const handleMarkMastered = async (id) => {
     try {
@@ -133,7 +158,7 @@ export default function ProgressPage() {
           {[
             { icon: BookOpen, label: 'الدروس المكتملة', value: user?.completedLessons?.length || 0, color: 'text-primary-500', bg: 'bg-primary-50' },
             { icon: TrendingUp, label: 'معدل الحضور', value: `${attendanceStats.attendanceRate}%`, color: 'text-blue-500', bg: 'bg-blue-50' },
-            { icon: Award, label: 'الشهادات المحققة', value: 2, color: 'text-yellow-500', bg: 'bg-yellow-50' },
+            { icon: Award, label: 'الشهادات المحققة', value: ijazah?.status === 'awarded' ? 1 : 0, color: 'text-yellow-500', bg: 'bg-yellow-50' },
           ].map((s, i) => (
             <div key={i} className="flex items-center gap-3">
               <div className={`w-10 h-10 ${s.bg} rounded-xl flex items-center justify-center`}>

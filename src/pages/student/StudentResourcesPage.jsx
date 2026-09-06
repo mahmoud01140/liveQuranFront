@@ -8,6 +8,8 @@ import useAuthStore from '../../store/authStore';
 import useResourceStore from '../../store/resourceStore';
 import { timeAgoAr, formatFileSize } from '../../utils/helpers';
 import InteractivePdfViewer from '../../components/shared/InteractivePdfViewer';
+import Pagination from '../../components/shared/Pagination';
+import usePagination from '../../hooks/usePagination';
 
 const CATEGORIES = {
   tajweed: { label: 'أحكام التجويد', emoji: '📖' },
@@ -32,6 +34,7 @@ export default function StudentResourcesPage() {
   const [activePdf, setActivePdf] = useState(null); // { fileUrl, title, id }
 
   const groupId = user?.group?._id || user?.group;
+  const pagination = usePagination(resources, 6);
 
   useEffect(() => {
     if (groupId) fetchGroupResources(groupId, { category: categoryFilter !== 'all' ? categoryFilter : undefined });
@@ -85,68 +88,83 @@ export default function StudentResourcesPage() {
           <p className="text-sm mt-1">سيقوم المعلم بإضافة الملفات قريباً 📚</p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 stagger-children">
-          {resources.map(resource => {
-            const fi = FILE_ICONS[resource.fileType] || FILE_ICONS.other;
-            const cat = CATEGORIES[resource.category] || CATEGORIES.other;
-            return (
-              <motion.div key={resource._id} whileHover={{ y: -2 }}
-                className="card-base p-5 hover:shadow-md transition-all">
-                <div className="flex items-start gap-3 mb-3">
-                  <div className={`w-12 h-12 ${fi.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                    <fi.icon className={`w-6 h-6 ${fi.color}`} />
+        <div>
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 stagger-children">
+            {pagination.paginatedItems.map(resource => {
+              const fi = FILE_ICONS[resource.fileType] || FILE_ICONS.other;
+              const cat = CATEGORIES[resource.category] || CATEGORIES.other;
+              return (
+                <motion.div key={resource._id} whileHover={{ y: -2 }}
+                  className="card-base p-5 hover:shadow-md transition-all">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className={`w-12 h-12 ${fi.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                      <fi.icon className={`w-6 h-6 ${fi.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-gray-900 text-sm truncate">{resource.title}</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">{cat.emoji} {cat.label}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 text-sm truncate">{resource.title}</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">{cat.emoji} {cat.label}</p>
+
+                  {resource.description && <p className="text-xs text-gray-500 mb-3 line-clamp-2">{resource.description}</p>}
+
+                  <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+                    <span>رفع بواسطة {resource.uploadedBy?.firstName}</span>
+                    <span>{formatFileSize(resource.fileSize)}</span>
                   </div>
-                </div>
 
-                {resource.description && <p className="text-xs text-gray-500 mb-3 line-clamp-2">{resource.description}</p>}
-
-                <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
-                  <span>رفع بواسطة {resource.uploadedBy?.firstName}</span>
-                  <span>{formatFileSize(resource.fileSize)}</span>
-                </div>
-
-                <div className="flex items-center gap-2 border-t border-gray-100 pt-3">
-                  {resource.fileType === 'pdf' ? (
-                    <>
-                      <button
-                        onClick={() => {
-                          trackDownload(resource._id);
-                          setActivePdf({
-                            fileUrl: resource.fileUrl,
-                            title: resource.title,
-                            id: resource._id
-                          });
-                        }}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-primary-400 hover:bg-primary-500 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
-                      >
-                        <Eye className="w-4 h-4" /> عرض الملف
-                      </button>
+                  <div className="flex items-center gap-2 border-t border-gray-100 pt-3">
+                    {resource.fileType === 'pdf' ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            trackDownload(resource._id);
+                            setActivePdf({
+                              fileUrl: resource.fileUrl,
+                              title: resource.title,
+                              id: resource._id
+                            });
+                          }}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-primary-400 hover:bg-primary-500 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+                        >
+                          <Eye className="w-4 h-4" /> عرض الملف
+                        </button>
+                        <button
+                          onClick={() => handleDownload(resource)}
+                          className="px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 rounded-xl text-sm font-bold transition-all"
+                          title="تحميل الملف"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </>
+                    ) : (
                       <button
                         onClick={() => handleDownload(resource)}
-                        className="px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 rounded-xl text-sm font-bold transition-all"
-                        title="تحميل الملف"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-primary-50 hover:bg-primary-100 text-primary-600 rounded-xl text-sm font-bold transition-all"
                       >
-                        <Download className="w-4 h-4" />
+                        <Download className="w-4 h-4" /> تحميل الملف
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => handleDownload(resource)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-primary-50 hover:bg-primary-100 text-primary-600 rounded-xl text-sm font-bold transition-all"
-                    >
-                      <Download className="w-4 h-4" /> تحميل الملف
-                    </button>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                <p className="text-[10px] text-gray-300 text-center mt-2">{timeAgoAr(resource.createdAt)}</p>
-              </motion.div>
-            );
-          })}
+                  <p className="text-[10px] text-gray-300 text-center mt-2">{timeAgoAr(resource.createdAt)}</p>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            pageSize={pagination.pageSize}
+            onPageChange={pagination.setCurrentPage}
+            onPageSizeChange={pagination.setPageSize}
+            showPageSize={true}
+            pageSizeOptions={[6, 12, 24]}
+            itemName="ملف تعليمي"
+            className="mt-6"
+          />
         </div>
       )}
 

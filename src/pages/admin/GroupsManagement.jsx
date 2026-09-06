@@ -9,6 +9,8 @@ import api from '../../services/api';
 import { getLevelLabel, getLevelColor, getInitials, getAvatarColor } from '../../utils/helpers';
 import { DAYS_AR } from '../../utils/constants';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import Pagination from '../../components/shared/Pagination';
+import usePagination from '../../hooks/usePagination';
 
 const ALL_DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const LEVELS = ['foundation', 'memorization', 'teacher_prep', 'senior'];
@@ -35,6 +37,10 @@ export default function GroupsManagement() {
   const [assignGroupState, setAssignGroupState] = useState({});
   const [assignLevelState, setAssignLevelState] = useState({});
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+
+  // Pagination hooks
+  const groupsPagination = usePagination(groups, 6);
+  const studentsPagination = usePagination(unassignedStudents, 8);
 
   useEffect(() => {
     fetchAllGroups();
@@ -204,82 +210,97 @@ export default function GroupsManagement() {
             isLoading ? (
               <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
             ) : (
-              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
-                {groups.map((group, i) => {
-                  const levelColor = getLevelColor(group.level);
-                  const fillPct = Math.round((group.students?.length / group.maxStudents) * 100);
-                  return (
-                    <motion.div key={group._id}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      className="card-base p-5"
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <span className="text-xs font-bold px-2 py-1 rounded-lg mb-2 inline-block"
-                            style={{ backgroundColor: levelColor.bg, color: levelColor.text }}>
-                            {getLevelLabel(group.level)}
-                          </span>
-                          <h3 className="font-black text-gray-900 text-sm leading-snug">{group.name}</h3>
-                        </div>
-                        <div className="flex gap-1">
-                          <button onClick={() => openEdit(group)} className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 hover:text-primary-400 transition-colors">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => handleDelete(group._id)} className="p-2 hover:bg-red-50 rounded-xl text-gray-400 hover:text-red-400 transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {group.teacher && (
-                        <div className="flex items-center gap-2 mb-3 text-sm text-gray-600">
-                          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-                            style={{ backgroundColor: getAvatarColor(`${group.teacher.firstName}${group.teacher.lastName}`) }}>
-                            {getInitials(group.teacher.firstName, group.teacher.lastName)}
+              <div>
+                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {groupsPagination.paginatedItems.map((group, i) => {
+                    const levelColor = getLevelColor(group.level);
+                    const fillPct = Math.round((group.students?.length / group.maxStudents) * 100);
+                    return (
+                      <motion.div key={group._id}
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="card-base p-5"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div>
+                            <span className="text-xs font-bold px-2 py-1 rounded-lg mb-2 inline-block"
+                              style={{ backgroundColor: levelColor.bg, color: levelColor.text }}>
+                              {getLevelLabel(group.level)}
+                            </span>
+                            <h3 className="font-black text-gray-900 text-sm leading-snug">{group.name}</h3>
                           </div>
-                          <span>أ. {group.teacher.firstName} {group.teacher.lastName}</span>
+                          <div className="flex gap-1">
+                            <button onClick={() => openEdit(group)} className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 hover:text-primary-400 transition-colors">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleDelete(group._id)} className="p-2 hover:bg-red-50 rounded-xl text-gray-400 hover:text-red-400 transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
-                      )}
 
-                      <div className="mb-3">
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                          <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> الطلاب</span>
-                          <span>{group.students?.length}/{group.maxStudents}</span>
-                        </div>
-                        <div className="progress-bar">
-                          <div className="progress-fill" style={{ width: `${fillPct}%` }} />
-                        </div>
-                      </div>
+                        {group.teacher && (
+                          <div className="flex items-center gap-2 mb-3 text-sm text-gray-600">
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                              style={{ backgroundColor: getAvatarColor(`${group.teacher.firstName}${group.teacher.lastName}`) }}>
+                              {getInitials(group.teacher.firstName, group.teacher.lastName)}
+                            </div>
+                            <span>أ. {group.teacher.firstName} {group.teacher.lastName}</span>
+                          </div>
+                        )}
 
-                      {group.days?.length > 0 && (
                         <div className="mb-3">
-                          <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
-                            <CalendarDays className="w-3.5 h-3.5" />
-                            <span>الأيام</span>
+                          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                            <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> الطلاب</span>
+                            <span>{group.students?.length}/{group.maxStudents}</span>
                           </div>
-                          <div className="flex flex-wrap gap-1">
-                            {group.days.map((day, j) => (
-                              <span key={j} className="text-xs bg-primary-50 text-primary-600 px-2 py-1 rounded-lg">
-                                {DAYS_AR[day]}
-                              </span>
-                            ))}
+                          <div className="progress-bar">
+                            <div className="progress-fill" style={{ width: `${fillPct}%` }} />
                           </div>
                         </div>
-                      )}
 
-                      <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
-                        <button onClick={() => openDaysModal(group)} className="flex-1 flex items-center justify-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg transition-colors">
-                          <CalendarDays className="w-3.5 h-3.5" /> الأيام
-                        </button>
-                        <button onClick={() => navigate(`/admin/groups/${group._id}/curriculum`)} className="flex-1 flex items-center justify-center gap-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-600 px-3 py-2 rounded-lg transition-colors font-semibold">
-                          <BookOpen className="w-3.5 h-3.5" /> المنهج
-                        </button>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                        {group.days?.length > 0 && (
+                          <div className="mb-3">
+                            <div className="flex items-center gap-1 text-xs text-gray-500 mb-1">
+                              <CalendarDays className="w-3.5 h-3.5" />
+                              <span>الأيام</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {group.days.map((day, j) => (
+                                <span key={j} className="text-xs bg-primary-50 text-primary-600 px-2 py-1 rounded-lg">
+                                  {DAYS_AR[day]}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                          <button onClick={() => openDaysModal(group)} className="flex-1 flex items-center justify-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg transition-colors">
+                            <CalendarDays className="w-3.5 h-3.5" /> الأيام
+                          </button>
+                          <button onClick={() => navigate(`/admin/groups/${group._id}/curriculum`)} className="flex-1 flex items-center justify-center gap-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-600 px-3 py-2 rounded-lg transition-colors font-semibold">
+                            <BookOpen className="w-3.5 h-3.5" /> المنهج
+                          </button>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                <Pagination
+                  currentPage={groupsPagination.currentPage}
+                  totalPages={groupsPagination.totalPages}
+                  totalItems={groupsPagination.totalItems}
+                  pageSize={groupsPagination.pageSize}
+                  onPageChange={groupsPagination.setCurrentPage}
+                  onPageSizeChange={groupsPagination.setPageSize}
+                  showPageSize={true}
+                  pageSizeOptions={[6, 12, 24]}
+                  itemName="مجموعة"
+                  className="mt-6"
+                />
               </div>
             )
           )}
@@ -313,67 +334,82 @@ export default function GroupsManagement() {
                   <p className="text-gray-400 text-sm">جميع الطلاب تم تسكينهم في المجموعات بنجاح</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {unassignedStudents.map((student) => {
-                    const level = student.assignedLevel || assignLevelState[student._id] || '';
-                    const levelColor = getLevelColor(level);
-                    const availableGroups = groupsForLevel(level);
-                    const isPending = !student.isApproved;
+                <div>
+                  <div className="space-y-3">
+                    {studentsPagination.paginatedItems.map((student) => {
+                      const level = student.assignedLevel || assignLevelState[student._id] || '';
+                      const levelColor = getLevelColor(level);
+                      const availableGroups = groupsForLevel(level);
+                      const isPending = !student.isApproved;
 
-                    return (
-                      <div key={student._id} className={`card-base p-5 border-2 transition-all ${isPending ? 'border-amber-200 bg-amber-50/30' : 'border-transparent'}`}>
-                        <div className="flex flex-wrap items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                            style={{ backgroundColor: getAvatarColor(`${student.firstName}${student.lastName}`) }}>
-                            {getInitials(student.firstName, student.lastName)}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                              <h3 className="font-bold text-gray-900">{student.firstName} {student.lastName}</h3>
-                              {isPending ? (
-                                <span className="flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
-                                  <AlertCircle className="w-3 h-3" /> بانتظار الموافقة
-                                </span>
-                              ) : (
-                                <span className="flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">
-                                  <Shield className="w-3 h-3" /> موافَق عليه
-                                </span>
-                              )}
-                              {student.assignedLevel && (
-                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: levelColor.bg, color: levelColor.text }}>
-                                  {getLevelLabel(student.assignedLevel)}
-                                </span>
-                              )}
+                      return (
+                        <div key={student._id} className={`card-base p-5 border-2 transition-all ${isPending ? 'border-amber-200 bg-amber-50/30' : 'border-transparent'}`}>
+                          <div className="flex flex-wrap items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                              style={{ backgroundColor: getAvatarColor(`${student.firstName}${student.lastName}`) }}>
+                              {getInitials(student.firstName, student.lastName)}
                             </div>
-                            <p className="text-sm text-gray-500">{student.email}</p>
-                          </div>
 
-                          <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-                            {!student.assignedLevel && (
-                              <select value={assignLevelState[student._id] || ''} onChange={e => setAssignLevelState(prev => ({ ...prev, [student._id]: e.target.value }))} className="input-base text-sm py-2 w-40">
-                                <option value="">— المستوى —</option>
-                                {LEVELS.map(l => <option key={l} value={l}>{getLevelLabel(l)}</option>)}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                                <h3 className="font-bold text-gray-900">{student.firstName} {student.lastName}</h3>
+                                {isPending ? (
+                                  <span className="flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
+                                    <AlertCircle className="w-3 h-3" /> بانتظار الموافقة
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">
+                                    <Shield className="w-3 h-3" /> موافَق عليه
+                                  </span>
+                                )}
+                                {student.assignedLevel && (
+                                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: levelColor.bg, color: levelColor.text }}>
+                                    {getLevelLabel(student.assignedLevel)}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-500">{student.email}</p>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                              {!student.assignedLevel && (
+                                <select value={assignLevelState[student._id] || ''} onChange={e => setAssignLevelState(prev => ({ ...prev, [student._id]: e.target.value }))} className="input-base text-sm py-2 w-40">
+                                  <option value="">— المستوى —</option>
+                                  {LEVELS.map(l => <option key={l} value={l}>{getLevelLabel(l)}</option>)}
+                                </select>
+                              )}
+
+                              <select value={assignGroupState[student._id] || ''} onChange={e => setAssignGroupState(prev => ({ ...prev, [student._id]: e.target.value }))} className="input-base text-sm py-2 w-48">
+                                <option value="">— اختر المجموعة —</option>
+                                {availableGroups.map(g => (
+                                  <option key={g._id} value={g._id} disabled={(g.students?.length || 0) >= g.maxStudents}>
+                                    {g.name} ({g.students?.length || 0}/{g.maxStudents})
+                                  </option>
+                                ))}
                               </select>
-                            )}
 
-                            <select value={assignGroupState[student._id] || ''} onChange={e => setAssignGroupState(prev => ({ ...prev, [student._id]: e.target.value }))} className="input-base text-sm py-2 w-48">
-                              <option value="">— اختر المجموعة —</option>
-                              {availableGroups.map(g => (
-                                <option key={g._id} value={g._id} disabled={(g.students?.length || 0) >= g.maxStudents}>
-                                  {g.name} ({g.students?.length || 0}/{g.maxStudents})
-                                </option>
-                              ))}
-                            </select>
-
-                            <button onClick={() => handleAssignStudent(student)} disabled={assigningId === student._id || !assignGroupState[student._id]} className="btn-primary text-sm py-2 px-4 disabled:opacity-50">
-                              {assigningId === student._id ? <LoadingSpinner size="sm" color="white" /> : <><UserPlus className="w-4 h-4" /> {isPending ? 'موافقة وتعين' : 'تعيين'}</>}
-                            </button>
+                              <button onClick={() => handleAssignStudent(student)} disabled={assigningId === student._id || !assignGroupState[student._id]} className="btn-primary text-sm py-2 px-4 disabled:opacity-50">
+                                {assigningId === student._id ? <LoadingSpinner size="sm" color="white" /> : <><UserPlus className="w-4 h-4" /> {isPending ? 'موافقة وتعين' : 'تعيين'}</>}
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+
+                  <Pagination
+                    currentPage={studentsPagination.currentPage}
+                    totalPages={studentsPagination.totalPages}
+                    totalItems={studentsPagination.totalItems}
+                    pageSize={studentsPagination.pageSize}
+                    onPageChange={studentsPagination.setCurrentPage}
+                    onPageSizeChange={studentsPagination.setPageSize}
+                    showPageSize={true}
+                    pageSizeOptions={[8, 16, 32]}
+                    itemName="طالب"
+                    className="mt-6"
+                  />
                 </div>
               )}
             </div>

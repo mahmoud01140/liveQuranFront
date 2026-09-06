@@ -11,6 +11,8 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import api from '../../services/api';
 import { formatDateAr } from '../../utils/helpers';
 import useAuthStore from '../../store/authStore';
+import Pagination from '../../components/shared/Pagination';
+import usePagination from '../../hooks/usePagination';
 
 export default function SubscriptionPage() {
   const { user } = useAuthStore();
@@ -24,6 +26,7 @@ export default function SubscriptionPage() {
   const [supportInfo, setSupportInfo] = useState({});
   const [subscription, setSubscription] = useState(null);
   const [payments, setPayments] = useState([]);
+  const paymentsPagination = usePagination(payments, 5);
 
   // Modal states
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
@@ -525,7 +528,8 @@ export default function SubscriptionPage() {
                     <p className="text-xs text-gray-400 mt-1">عند قيامك بالتحويل ورفع صورة الإيصال ستظهر تفاصيل العملية هنا</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <>
+                    <div className="overflow-x-auto">
                     <table className="w-full text-right text-sm">
                       <thead>
                         <tr className="border-b border-gray-100 text-gray-400 text-xs font-bold">
@@ -538,7 +542,7 @@ export default function SubscriptionPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50 text-gray-700">
-                        {payments.map((p) => {
+                        {paymentsPagination.paginatedItems.map((p) => {
                           const isVodafone = p.method === 'vodafone_cash';
                           return (
                             <tr key={p._id} className="hover:bg-gray-50/50 transition-colors">
@@ -602,6 +606,20 @@ export default function SubscriptionPage() {
                       </tbody>
                     </table>
                   </div>
+
+                  <Pagination
+                    currentPage={paymentsPagination.currentPage}
+                    totalPages={paymentsPagination.totalPages}
+                    totalItems={paymentsPagination.totalItems}
+                    pageSize={paymentsPagination.pageSize}
+                    onPageChange={paymentsPagination.setCurrentPage}
+                    onPageSizeChange={paymentsPagination.setPageSize}
+                    showPageSize={true}
+                    pageSizeOptions={[5, 10, 20]}
+                    itemName="عملية"
+                    className="mt-6"
+                  />
+                </>
                 )}
               </div>
 

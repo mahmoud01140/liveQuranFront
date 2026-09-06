@@ -37,6 +37,7 @@ const StudentResourcesPage = lazy(() => import('./pages/student/StudentResources
 const LessonPage = lazy(() => import('./pages/student/LessonPage'));
 const QuranViewerPage = lazy(() => import('./pages/student/QuranViewerPage'));
 const SubscriptionPage = lazy(() => import('./pages/student/SubscriptionPage'));
+const DailyTrackerPage = lazy(() => import('./pages/student/DailyTrackerPage'));
 
 // Teacher
 const TeacherDashboard = lazy(() => import('./pages/teacher/TeacherDashboard'));
@@ -117,10 +118,10 @@ export default function App() {
             <Route path="/student/exams" element={<ProtectedRoute role="student"><ExamsPage /></ProtectedRoute>} />
             <Route path="/student/progress" element={<ProtectedRoute role="student"><ProgressPage /></ProtectedRoute>} />
             <Route path="/student/subscription" element={<ProtectedRoute role="student"><SubscriptionPage /></ProtectedRoute>} />
-            <Route path="/student/homework" element={<ProtectedRoute role="student"><Navigate to="/student/curriculum" replace /></ProtectedRoute>} />
+            <Route path="/student/homework" element={<ProtectedRoute role="student"><HomeworkPage /></ProtectedRoute>} />
             <Route path="/student/exams/:examId/take" element={<ProtectedRoute role="student"><TakeExamPage /></ProtectedRoute>} />
             <Route path="/student/discussion" element={<ProtectedRoute role="student"><DiscussionPage /></ProtectedRoute>} />
-            <Route path="/student/daily-tracker" element={<ProtectedRoute role="student"><Navigate to="/student/exams" replace /></ProtectedRoute>} />
+            <Route path="/student/daily-tracker" element={<ProtectedRoute role="student"><DailyTrackerPage /></ProtectedRoute>} />
             <Route path="/student/resources" element={<ProtectedRoute role="student"><StudentResourcesPage /></ProtectedRoute>} />
             <Route path="/student/quran" element={<ProtectedRoute role="student"><QuranViewerPage /></ProtectedRoute>} />
             <Route path="/student/lessons/:lessonId" element={<ProtectedRoute role="student"><LessonPage /></ProtectedRoute>} />

@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Video, PhoneOff, Bell, CheckCircle2, Clock, Sparkles, Lock, CreditCard, Gift, AlertTriangle, RefreshCw } from 'lucide-react';
+import {
+  Video, PhoneOff, Bell, CheckCircle2, Clock, Sparkles, Lock, CreditCard,
+  Gift, AlertTriangle, RefreshCw, Mic, Hand, BookOpen, Star, Award,
+  ChevronDown, ChevronUp, Check, X
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import Navbar from '../../components/shared/Navbar';
@@ -27,6 +31,15 @@ export default function LiveClassPage() {
   const [accessDeniedInfo, setAccessDeniedInfo] = useState(null);
   const [isPolling, setIsPolling] = useState(false);
   const pollingRef = useRef(null);
+
+  // Recitation Queue & Personalized Wird State (Vercel HTTP Polling)
+  const [queue, setQueue] = useState([]);
+  const [currentSpeaker, setCurrentSpeaker] = useState(null);
+  const [tasksMap, setTasksMap] = useState({});
+  const [raisingHand, setRaisingHand] = useState(false);
+  const [showWirdCard, setShowWirdCard] = useState(true);
+  const queuePollingRef = useRef(null);
+  const wasRecitingRef = useRef(false);
 
   useSocket({
     'broadcast-started': async ({ sessionId, groupId }) => {
@@ -192,6 +205,80 @@ export default function LiveClassPage() {
     }
   };
 
+  // ─── Fetch Recitation Queue & Personalized Wird via Polling ─────────────────
+  const fetchQueueData = useCallback(async () => {
+    if (!session?._id) return;
+    try {
+      const res = await api.get(`/live/${session._id}/queue`);
+      const { queue: q = [], currentSpeaker: speaker, tasks = {} } = res.data;
+      setQueue(q);
+      setCurrentSpeaker(speaker);
+      setTasksMap(tasks);
+
+      const myId = user?._id?.toString();
+      const myTurn = q.find(item => (item.student?._id || item.student)?.toString() === myId);
+      const isMyTurnReciting = speaker?._id?.toString() === myId || myTurn?.status === 'reciting';
+
+      if (isMyTurnReciting && !wasRecitingRef.current) {
+        wasRecitingRef.current = true;
+        try {
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+          osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.12); // E5
+          osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.24); // G5
+          gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.4);
+        } catch (_) {}
+        toast.success('🎙️ حان دورك في التسميع الآن مع المعلم!', { duration: 6000 });
+      } else if (!isMyTurnReciting) {
+        wasRecitingRef.current = false;
+      }
+    } catch (_) {}
+  }, [session?._id, user?._id]);
+
+  // Polling every 3.5s when session is live (Zero socket.io, fully Vercel compliant)
+  useEffect(() => {
+    const isSessionLiveNow = isLive || session?.status === 'live';
+    if (!session?._id || !isSessionLiveNow) {
+      if (queuePollingRef.current) {
+        clearInterval(queuePollingRef.current);
+        queuePollingRef.current = null;
+      }
+      return;
+    }
+
+    fetchQueueData();
+    queuePollingRef.current = setInterval(() => {
+      fetchQueueData();
+    }, 3500);
+
+    return () => {
+      if (queuePollingRef.current) {
+        clearInterval(queuePollingRef.current);
+        queuePollingRef.current = null;
+      }
+    };
+  }, [isLive, session?._id, session?.status, fetchQueueData]);
+
+  const handleToggleHand = async () => {
+    if (!session?._id) return;
+    setRaisingHand(true);
+    try {
+      const res = await api.post(`/live/${session._id}/queue/raise-hand`);
+      toast.success(res.data.message || 'تم تحديث طلب الدور');
+      fetchQueueData();
+    } catch {
+      toast.error('حدث خطأ في طلب الدور');
+    } finally {
+      setRaisingHand(false);
+    }
+  };
+
   const handleLeave = () => {
     resetLive();
     setDuration(0);
@@ -284,11 +371,18 @@ export default function LiveClassPage() {
   }
 
 
+  const myId = user?._id?.toString();
+  const myTurn = queue.find(item => (item.student?._id || item.student)?.toString() === myId);
+  const isMyTurn = currentSpeaker?._id?.toString() === myId || myTurn?.status === 'reciting';
+  const hasHandRaised = myTurn?.status === 'hand_raised';
+  const isCompleted = myTurn?.status === 'completed';
+  const myTask = myId ? tasksMap[myId] : null;
+
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col h-screen overflow-hidden font-sans" dir="rtl">
       {/* Top status bar */}
-      <header className="bg-gray-800/90 backdrop-blur border-b border-gray-700 px-4 py-3 flex items-center justify-between z-20 flex-shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="bg-gray-800/90 backdrop-blur border-b border-gray-700 px-4 py-2.5 flex items-center justify-between z-20 flex-shrink-0 flex-wrap gap-2">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <div className="flex items-center gap-2">
             <div className={`w-3 h-3 rounded-full ${isSessionLive ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
             <span className="text-white font-black text-sm">{session?.title || 'الحلقة المباشرة'}</span>
@@ -300,18 +394,63 @@ export default function LiveClassPage() {
             </span>
           )}
 
-          {/* Trial banner tag */}
-          {subscriptionStatus?.isTrial && (
-            <span className="inline-flex items-center gap-1 text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-bold">
-              <Gift className="w-3 h-3" />
-              أنت تحضر أول جلسة تجريبية مجاناً
+          {/* Turn status badges */}
+          {isMyTurn && (
+            <span className="inline-flex items-center gap-1.5 text-xs bg-emerald-500 text-white px-3 py-1 rounded-xl font-bold animate-pulse shadow-md shadow-emerald-500/30">
+              <Mic className="w-3.5 h-3.5" />
+              أنت تُسمّع الآن مع المعلم! 🎙️
+            </span>
+          )}
+
+          {!isMyTurn && currentSpeaker && (
+            <span className="hidden md:inline-flex items-center gap-1.5 text-xs bg-blue-900/60 text-blue-200 border border-blue-500/30 px-2.5 py-1 rounded-xl">
+              <Mic className="w-3 h-3 text-blue-400" />
+              المعلم يستمع الآن لـ: {currentSpeaker.firstName} {currentSpeaker.lastName || ''}
+            </span>
+          )}
+
+          {isCompleted && !isMyTurn && (
+            <span className="inline-flex items-center gap-1.5 text-xs bg-green-900/60 text-green-300 border border-green-500/30 px-2.5 py-1 rounded-xl font-bold">
+              <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
+              تم تقييمك ({myTurn?.evaluation?.score || 100}%)
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          {/* Hand Raise Toggle Button */}
+          {!isCompleted && !isMyTurn && (
+            <button
+              onClick={handleToggleHand}
+              disabled={raisingHand}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                hasHandRaised
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white animate-bounce'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-200 hover:text-white'
+              }`}
+              title={hasHandRaised ? 'إنزال اليد' : 'طلب دور التسميع'}
+            >
+              <Hand className={`w-3.5 h-3.5 ${hasHandRaised ? 'fill-current' : ''}`} />
+              <span>{hasHandRaised ? 'تم رفع اليد ✋' : 'طلب دور التسميع'}</span>
+            </button>
+          )}
+
+          {/* Toggle My Daily Wird Card */}
+          <button
+            onClick={() => setShowWirdCard(prev => !prev)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              showWirdCard
+                ? 'bg-emerald-600/90 text-white shadow-md shadow-emerald-900/30'
+                : 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white'
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">وردي اليومي</span>
+            {showWirdCard ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+
           {isSessionLive && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-300 bg-gray-700/60 px-3 py-1.5 rounded-xl font-mono">
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-gray-300 bg-gray-700/60 px-3 py-1.5 rounded-xl font-mono">
               <Clock className="w-3.5 h-3.5 text-primary-400" />
               <span>{formatCountdown(duration)}</span>
             </div>
@@ -319,10 +458,10 @@ export default function LiveClassPage() {
 
           <button
             onClick={handleLeave}
-            className="flex items-center gap-1.5 text-xs font-bold bg-red-600/80 hover:bg-red-600 text-white px-3.5 py-1.5 rounded-xl transition-all"
+            className="flex items-center gap-1.5 text-xs font-bold bg-red-600/80 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl transition-all"
           >
             <PhoneOff className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">مغادرة الجلسة</span>
+            <span className="hidden sm:inline">مغادرة</span>
           </button>
         </div>
       </header>
@@ -331,12 +470,126 @@ export default function LiveClassPage() {
       <div className="flex-1 relative bg-black">
         {session?._id && (
           <JitsiMeeting
-            roomName={`QuranPlatform_${session._id}`}
+            roomName={session?.liveRoomName || `QuranPlatform_${session._id}`}
             displayName={`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'طالب'}
             userEmail={user?.email}
             onLeave={handleLeave}
           />
         )}
+
+        {/* Floating / Collapsible Personalized Wird & Live Recitation Card */}
+        <AnimatePresence>
+          {showWirdCard && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className={`absolute top-4 left-4 z-30 max-w-sm w-full rounded-2xl shadow-2xl backdrop-blur-md border p-4 transition-all ${
+                isMyTurn
+                  ? 'bg-gray-900/95 border-emerald-500 ring-2 ring-emerald-500/40'
+                  : 'bg-gray-900/90 border-gray-700/80'
+              }`}
+            >
+              <div className="flex items-center justify-between border-b border-gray-700/80 pb-2 mb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                    isMyTurn ? 'bg-emerald-500 text-white animate-pulse' : 'bg-gray-800 text-emerald-400'
+                  }`}>
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">
+                      {isMyTurn ? '🎙️ المطلوب منك تسميعه الآن' : '📖 وردك القرآني المخصص لليوم'}
+                    </h4>
+                    <span className="text-[10px] text-gray-400">خاص بك وفق وتيرة حفظك</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowWirdCard(false)}
+                  className="w-6 h-6 rounded-lg bg-gray-800 text-gray-400 hover:text-white flex items-center justify-center text-xs"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Tasks breakdown */}
+              <div className="space-y-2 text-xs">
+                {/* New Hifz */}
+                <div className="bg-gray-800/80 rounded-xl p-2.5 border border-emerald-500/20">
+                  <span className="text-[10px] text-emerald-400 font-bold block mb-0.5">
+                    📖 الحفظ الجديد (السبق):
+                  </span>
+                  {myTask?.newHifz?.surahName ? (
+                    <p className="text-white font-bold">
+                      سورة {myTask.newHifz.surahName} (الآيات من {myTask.newHifz.fromVerse} إلى {myTask.newHifz.toVerse})
+                    </p>
+                  ) : (
+                    <p className="text-gray-400 text-[11px]">تابع مع المعلم لتحديد السورة</p>
+                  )}
+                </div>
+
+                {/* Near Revision */}
+                <div className="bg-gray-800/80 rounded-xl p-2.5 border border-blue-500/20">
+                  <span className="text-[10px] text-blue-400 font-bold block mb-0.5">
+                    🔄 الماضي القريب (السبقي):
+                  </span>
+                  {myTask?.nearRevision?.surahName ? (
+                    <p className="text-white font-bold">
+                      سورة {myTask.nearRevision.surahName} (الآيات {myTask.nearRevision.fromVerse} إلى {myTask.nearRevision.toVerse})
+                    </p>
+                  ) : (
+                    <p className="text-gray-400 text-[11px]">مراجعة آخر الأوجه المحفوظة</p>
+                  )}
+                </div>
+
+                {/* Cumulative Revision */}
+                {myTask?.cumulativeRevision?.surahName && (
+                  <div className="bg-gray-800/80 rounded-xl p-2.5 border border-purple-500/20">
+                    <span className="text-[10px] text-purple-400 font-bold block mb-0.5">
+                      🏛️ الورد التمكيني:
+                    </span>
+                    <p className="text-white font-bold">
+                      {myTask.cumulativeRevision.surahName}
+                    </p>
+                  </div>
+                )}
+
+                {/* Additional exercise */}
+                {myTask?.additionalExercise?.details && (
+                  <div className="bg-amber-950/30 rounded-xl p-2 border border-amber-500/20 text-amber-200 text-[11px]">
+                    🎯 <span className="font-bold">تدريب:</span> {myTask.additionalExercise.details}
+                  </div>
+                )}
+
+                {/* Evaluation Result if already reviewed */}
+                {isCompleted && myTurn?.evaluation && (
+                  <div className="bg-gradient-to-r from-emerald-950/60 to-teal-950/60 border border-emerald-500/40 rounded-xl p-3 text-center mt-2">
+                    <div className="flex items-center justify-center gap-1 text-amber-400 mb-1">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <Star
+                          key={star}
+                          className={`w-4 h-4 ${
+                            star <= (myTurn.evaluation.rating || 5)
+                              ? 'fill-amber-400 text-amber-400'
+                              : 'text-gray-600'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm font-black text-emerald-400">
+                      درجة التسميع: {myTurn.evaluation.score || 100}%
+                    </span>
+                    {myTurn.evaluation.notes && (
+                      <p className="text-[11px] text-gray-300 mt-1 italic">
+                        "{myTurn.evaluation.notes}"
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Attendance roll-call ping overlay */}
         <AnimatePresence>

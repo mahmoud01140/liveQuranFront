@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Radio, ClipboardList, PhoneOff, UserCheck } from 'lucide-react';
+import { Radio, ClipboardList, PhoneOff, UserCheck, Mic } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Navbar from '../../components/shared/Navbar';
 import JitsiMeeting from '../../components/shared/JitsiMeeting';
 import LiveAttendanceDrawer from '../../components/shared/LiveAttendanceDrawer';
+import LiveRecitationDrawer from '../../components/shared/LiveRecitationDrawer';
 import useAuthStore from '../../store/authStore';
 import useGroupStore from '../../store/groupStore';
 import useLiveStore from '../../store/liveStore';
@@ -29,6 +30,7 @@ export default function LiveBroadcastPage() {
   const [savingHomework, setSavingHomework] = useState(false);
   const [showHomeworkModal, setShowHomeworkModal] = useState(false);
   const [showAttendanceDrawer, setShowAttendanceDrawer] = useState(false);
+  const [showRecitationDrawer, setShowRecitationDrawer] = useState(false);
   const [liveHomework, setLiveHomework] = useState('');
   const [liveHomeworkDeadline, setLiveHomeworkDeadline] = useState('');
   const [duration, setDuration] = useState(0);
@@ -187,10 +189,20 @@ export default function LiveBroadcastPage() {
         <div className="flex items-center gap-2 sm:gap-3">
           <span className="text-gray-300 text-sm font-mono hidden sm:inline">{formatCountdown(duration)}</span>
 
+          {/* Recitation Queue & Wird Drawer Button */}
+          <button
+            onClick={() => setShowRecitationDrawer(true)}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-700/20"
+            title="إدارة طابور التسميع والأوراد الفردية"
+          >
+            <Mic className="w-4 h-4 text-emerald-200" />
+            <span>طابور التسميع والورد</span>
+          </button>
+
           {/* Attendance Drawer Button */}
           <button
             onClick={() => setShowAttendanceDrawer(true)}
-            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-colors shadow-md shadow-emerald-600/20"
+            className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-colors"
             title="كشف الحضور والغياب"
           >
             <UserCheck className="w-4 h-4" />
@@ -218,13 +230,22 @@ export default function LiveBroadcastPage() {
       {/* Jitsi Meeting Container */}
       <div className="flex-1 w-full h-full relative overflow-hidden">
         <JitsiMeeting
-          roomName={`QuranPlatform_${session?._id || 'Session'}`}
+          roomName={session?.liveRoomName || `QuranPlatform_${session?._id || 'Session'}`}
           displayName={`أ. ${user?.firstName || ''} ${user?.lastName || ''}`}
           userEmail={user?.email || ''}
           isTeacher={true}
           onLeave={handleEndBroadcast}
         />
       </div>
+
+      {/* Live Recitation & Individual Wird Drawer */}
+      <LiveRecitationDrawer
+        isOpen={showRecitationDrawer}
+        onClose={() => setShowRecitationDrawer(false)}
+        sessionId={session?._id}
+        sessionTitle={sessionTitle}
+        groupName={groups.find(g => g._id === selectedGroup)?.name}
+      />
 
       {/* Live Attendance Drawer */}
       <LiveAttendanceDrawer

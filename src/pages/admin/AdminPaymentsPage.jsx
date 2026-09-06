@@ -8,6 +8,7 @@ import {
 import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import Pagination from '../../components/shared/Pagination';
 import api from '../../services/api';
 import { formatDateAr, getInitials, getAvatarColor } from '../../utils/helpers';
 
@@ -17,6 +18,9 @@ export default function AdminPaymentsPage() {
   // Data states
   const [isLoading, setIsLoading] = useState(true);
   const [payments, setPayments] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
   const [stats, setStats] = useState({
     totalRevenue: 0,
     pendingCount: 0,
@@ -63,9 +67,16 @@ export default function AdminPaymentsPage() {
   });
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, methodFilter, searchQuery]);
+
+  useEffect(() => {
     fetchPayments();
+  }, [statusFilter, methodFilter, currentPage, pageSize]);
+
+  useEffect(() => {
     fetchSettings();
-  }, [statusFilter, methodFilter]);
+  }, []);
 
   const fetchPayments = async () => {
     setIsLoading(true);
@@ -75,11 +86,22 @@ export default function AdminPaymentsPage() {
           status: statusFilter,
           method: methodFilter,
           search: searchQuery,
+          page: currentPage,
+          limit: pageSize,
         },
       });
 
       if (res.data) {
         setPayments(res.data.payments || []);
+        if (res.data.pagination) {
+          setPagination(res.data.pagination);
+        } else {
+          setPagination({
+            total: res.data.payments?.length || 0,
+            page: 1,
+            pages: 1,
+          });
+        }
         setStats(res.data.stats || {
           totalRevenue: 0,
           pendingCount: 0,
@@ -517,6 +539,21 @@ export default function AdminPaymentsPage() {
                     </table>
                   </div>
                 )}
+                <Pagination
+                  currentPage={pagination.page || currentPage}
+                  totalPages={pagination.pages || 1}
+                  totalItems={pagination.total || 0}
+                  pageSize={pageSize}
+                  onPageChange={(p) => setCurrentPage(p)}
+                  onPageSizeChange={(s) => {
+                    setPageSize(s);
+                    setCurrentPage(1);
+                  }}
+                  showPageSize={true}
+                  pageSizeOptions={[10, 15, 30, 50]}
+                  itemName="طلب سداد"
+                  className="border-t border-gray-100 p-4"
+                />
               </div>
 
             </div>

@@ -11,6 +11,8 @@ import useDailyRecordStore from '../../store/dailyRecordStore';
 import { timeAgoAr, getInitials, getAvatarColor, getLevelLabel, getLevelColor } from '../../utils/helpers';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import Pagination from '../../components/shared/Pagination';
+import usePagination from '../../hooks/usePagination';
 
 const STATUS_MAP = {
   pending: { label: 'قيد المراجعة', color: 'bg-amber-50 text-amber-600', dot: 'bg-amber-400' },
@@ -70,6 +72,10 @@ export default function AdminDailyReviewPage() {
   const filteredGroups = groups.filter(g =>
     !searchQuery || g.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const groupsPagination = usePagination(filteredGroups, 9);
+  const recordsPagination = usePagination(groupRecords, 10);
+  const recitationsPagination = usePagination(recitations, 10);
 
   // Cleanup audio players on unmount
   useEffect(() => {
@@ -276,31 +282,46 @@ export default function AdminDailyReviewPage() {
         {filteredGroups.length === 0 ? (
           <div className="empty-state"><Users className="empty-state-icon" /><p>لا توجد مجموعات</p></div>
         ) : (
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 stagger-children">
-            {filteredGroups.map(group => {
-              const lc = getLevelColor(group.level);
-              return (
-                <motion.button key={group._id} whileHover={{ y: -3 }} onClick={() => setSelectedGroup(group)}
-                  className="card-base p-6 text-right hover:shadow-md transition-all w-full">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold px-2.5 py-1 rounded-lg" style={{ backgroundColor: lc.bg, color: lc.text }}>
-                      {getLevelLabel(group.level)}
-                    </span>
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5" /> {group.students?.length || 0}/{group.maxStudents}
-                    </span>
-                  </div>
-                  <h3 className="font-black text-gray-900 mb-1">{group.name}</h3>
-                  <p className="text-xs text-gray-400 mb-3">
-                    المعلم: {group.teacher?.firstName ? `${group.teacher.firstName} ${group.teacher.lastName}` : 'غير معيّن'}
-                  </p>
-                  <div className="flex items-center gap-2 text-amber-500 text-sm font-semibold mt-2">
-                    <BookOpen className="w-4 h-4" /> مراجعة السجلات
-                    <ChevronLeft className="w-4 h-4 mr-auto" />
-                  </div>
-                </motion.button>
-              );
-            })}
+          <div>
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 stagger-children">
+              {groupsPagination.paginatedItems.map(group => {
+                const lc = getLevelColor(group.level);
+                return (
+                  <motion.button key={group._id} whileHover={{ y: -3 }} onClick={() => setSelectedGroup(group)}
+                    className="card-base p-6 text-right hover:shadow-md transition-all w-full">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-lg" style={{ backgroundColor: lc.bg, color: lc.text }}>
+                        {getLevelLabel(group.level)}
+                      </span>
+                      <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5" /> {group.students?.length || 0}/{group.maxStudents}
+                      </span>
+                    </div>
+                    <h3 className="font-black text-gray-900 mb-1">{group.name}</h3>
+                    <p className="text-xs text-gray-400 mb-3">
+                      المعلم: {group.teacher?.firstName ? `${group.teacher.firstName} ${group.teacher.lastName}` : 'غير معيّن'}
+                    </p>
+                    <div className="flex items-center gap-2 text-amber-500 text-sm font-semibold mt-2">
+                      <BookOpen className="w-4 h-4" /> مراجعة السجلات
+                      <ChevronLeft className="w-4 h-4 mr-auto" />
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            <Pagination
+              currentPage={groupsPagination.currentPage}
+              totalPages={groupsPagination.totalPages}
+              totalItems={groupsPagination.totalItems}
+              pageSize={groupsPagination.pageSize}
+              onPageChange={groupsPagination.setCurrentPage}
+              onPageSizeChange={groupsPagination.setPageSize}
+              showPageSize={true}
+              pageSizeOptions={[6, 9, 18, 36]}
+              itemName="مجموعة"
+              className="mt-6"
+            />
           </div>
         )}
       </PageLayout>
@@ -405,112 +426,127 @@ export default function AdminDailyReviewPage() {
             <p className="font-semibold">لا توجد سجلات {statusFilter !== 'all' ? STATUS_MAP[statusFilter]?.label || '' : ''}</p>
           </div>
         ) : (
-          <div className="space-y-3 stagger-children">
-            {groupRecords.map((record) => {
-              const si = STATUS_MAP[record.status];
-              const isReviewing = reviewingId === record._id;
+          <div>
+            <div className="space-y-3 stagger-children">
+              {recordsPagination.paginatedItems.map((record) => {
+                const si = STATUS_MAP[record.status];
+                const isReviewing = reviewingId === record._id;
 
-              return (
-                <motion.div key={record._id} whileHover={{ y: -1 }} className="card-base p-5">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                      style={{ backgroundColor: getAvatarColor(`${record.student?.firstName}${record.student?.lastName}`) }}>
-                      {getInitials(record.student?.firstName, record.student?.lastName)}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <span className="font-bold text-gray-900">{record.student?.firstName} {record.student?.lastName}</span>
-                        <span className="text-gray-300">—</span>
-                        <span className="font-semibold text-gray-700">سورة {record.surahName}</span>
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
-                          آية {record.fromVerse}-{record.toVerse} ({record.versesCount} آية)
-                        </span>
+                return (
+                  <motion.div key={record._id} whileHover={{ y: -1 }} className="card-base p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                        style={{ backgroundColor: getAvatarColor(`${record.student?.firstName}${record.student?.lastName}`) }}>
+                        {getInitials(record.student?.firstName, record.student?.lastName)}
                       </div>
 
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${si.color}`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${si.dot}`} />
-                          {si.label}
-                        </span>
-                        <span className="text-xs text-gray-400">{timeAgoAr(record.date)}</span>
-                        <span className="text-xs bg-gray-50 text-gray-500 px-2 py-0.5 rounded-lg">
-                          {ACTIVITY_LABELS[record.activityType] || 'حفظ'}
-                        </span>
-                      </div>
-
-                      {record.studentNotes && (
-                        <p className="text-xs text-gray-500 mt-2 bg-gray-50 rounded-lg px-3 py-1.5">📝 {record.studentNotes}</p>
-                      )}
-
-                      {record.teacherNotes && (
-                        <p className="text-xs text-amber-700 mt-1.5 bg-amber-50 rounded-lg px-3 py-1.5">👨‍🏫 {record.teacherNotes}</p>
-                      )}
-
-                      {record.rating && (
-                        <div className="flex items-center gap-0.5 mt-1.5">
-                          {[1,2,3,4,5].map(s => <Star key={s} className={`w-3.5 h-3.5 ${s <= record.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />)}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="font-bold text-gray-900">{record.student?.firstName} {record.student?.lastName}</span>
+                          <span className="text-gray-300">—</span>
+                          <span className="font-semibold text-gray-700">سورة {record.surahName}</span>
+                          <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
+                            آية {record.fromVerse}-{record.toVerse} ({record.versesCount} آية)
+                          </span>
                         </div>
-                      )}
 
-                      {/* Review form */}
-                      {isReviewing && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                          className="mt-3 bg-gray-50 rounded-xl p-4 border border-gray-200">
-                          <div className="flex gap-2 mb-3">
-                            <button onClick={() => setReviewForm({ ...reviewForm, status: 'approved' })}
-                              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
-                                reviewForm.status === 'approved' ? 'bg-green-500 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-200'
-                              }`}>
-                              <Check className="w-4 h-4 inline ml-1" /> موافقة
-                            </button>
-                            <button onClick={() => setReviewForm({ ...reviewForm, status: 'needs_review' })}
-                              className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
-                                reviewForm.status === 'needs_review' ? 'bg-red-500 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-200'
-                              }`}>
-                              <AlertCircle className="w-4 h-4 inline ml-1" /> يحتاج مراجعة
-                            </button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${si.color}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${si.dot}`} />
+                            {si.label}
+                          </span>
+                          <span className="text-xs text-gray-400">{timeAgoAr(record.date)}</span>
+                          <span className="text-xs bg-gray-50 text-gray-500 px-2 py-0.5 rounded-lg">
+                            {ACTIVITY_LABELS[record.activityType] || 'حفظ'}
+                          </span>
+                        </div>
+
+                        {record.studentNotes && (
+                          <p className="text-xs text-gray-500 mt-2 bg-gray-50 rounded-lg px-3 py-1.5">📝 {record.studentNotes}</p>
+                        )}
+
+                        {record.teacherNotes && (
+                          <p className="text-xs text-amber-700 mt-1.5 bg-amber-50 rounded-lg px-3 py-1.5">👨‍🏫 {record.teacherNotes}</p>
+                        )}
+
+                        {record.rating && (
+                          <div className="flex items-center gap-0.5 mt-1.5">
+                            {[1,2,3,4,5].map(s => <Star key={s} className={`w-3.5 h-3.5 ${s <= record.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />)}
                           </div>
+                        )}
 
-                          <div className="flex items-center gap-2 mb-3">
-                            <span className="text-xs font-semibold text-gray-600">التقييم:</span>
-                            <div className="flex gap-0.5">
-                              {[1,2,3,4,5].map(s => (
-                                <button key={s} type="button" onClick={() => setReviewForm({ ...reviewForm, rating: s })}>
-                                  <Star className={`w-5 h-5 transition-colors ${s <= reviewForm.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200 hover:text-amber-200'}`} />
-                                </button>
-                              ))}
+                        {/* Review form */}
+                        {isReviewing && (
+                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                            className="mt-4 pt-4 border-t border-gray-100">
+                            <div className="flex gap-2 mb-3">
+                              <button onClick={() => setReviewForm({ ...reviewForm, status: 'approved' })}
+                                className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all ${
+                                  reviewForm.status === 'approved' ? 'bg-green-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                <Check className="w-3.5 h-3.5" /> موافقة
+                              </button>
+                              <button onClick={() => setReviewForm({ ...reviewForm, status: 'needs_review' })}
+                                className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all ${
+                                  reviewForm.status === 'needs_review' ? 'bg-red-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                <AlertCircle className="w-3.5 h-3.5" /> يحتاج مراجعة
+                              </button>
                             </div>
-                          </div>
 
-                          <textarea value={reviewForm.teacherNotes}
-                            onChange={(e) => setReviewForm({ ...reviewForm, teacherNotes: e.target.value })}
-                            className="input-base text-sm mb-3" rows={2} maxLength={500}
-                            placeholder="ملاحظات للطالب (اختياري)..." />
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="text-xs font-semibold text-gray-600">التقييم:</span>
+                              <div className="flex gap-0.5">
+                                {[1,2,3,4,5].map(s => (
+                                  <button key={s} type="button" onClick={() => setReviewForm({ ...reviewForm, rating: s })}>
+                                    <Star className={`w-5 h-5 transition-colors ${s <= reviewForm.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200 hover:text-amber-200'}`} />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
 
-                          <div className="flex gap-2">
-                            <button onClick={() => handleReview(record._id)} className="btn-primary text-sm py-2 flex-1 shadow-sm"
-                              style={{ backgroundColor: '#D97706' }}>
-                              <Check className="w-4 h-4" /> تأكيد المراجعة
-                            </button>
-                            <button onClick={() => setReviewingId(null)} className="btn-ghost text-sm py-2">
-                              <X className="w-4 h-4" /> إلغاء
-                            </button>
-                          </div>
-                        </motion.div>
+                            <textarea value={reviewForm.teacherNotes}
+                              onChange={(e) => setReviewForm({ ...reviewForm, teacherNotes: e.target.value })}
+                              className="input-base text-sm mb-3" rows={2} maxLength={500}
+                              placeholder="ملاحظات للطالب (اختياري)..." />
+
+                            <div className="flex gap-2">
+                              <button onClick={() => handleReview(record._id)} className="btn-primary text-sm py-2 flex-1 shadow-sm"
+                                style={{ backgroundColor: '#D97706' }}>
+                                <Check className="w-4 h-4" /> تأكيد المراجعة
+                              </button>
+                              <button onClick={() => setReviewingId(null)} className="btn-ghost text-sm py-2">
+                                <X className="w-4 h-4" /> إلغاء
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </div>
+
+                      {record.status === 'pending' && !isReviewing && (
+                        <button onClick={() => { setReviewingId(record._id); setReviewForm({ status: 'approved', teacherNotes: '', rating: 5 }); }}
+                          className="btn-outline text-xs py-2 px-3 flex-shrink-0" style={{ borderColor: '#D97706', color: '#D97706' }}>
+                          <MessageSquare className="w-3.5 h-3.5" /> مراجعة
+                        </button>
                       )}
                     </div>
+                  </motion.div>
+                );
+              })}
+            </div>
 
-                    {record.status === 'pending' && !isReviewing && (
-                      <button onClick={() => { setReviewingId(record._id); setReviewForm({ status: 'approved', teacherNotes: '', rating: 5 }); }}
-                        className="btn-outline text-xs py-2 px-3 flex-shrink-0" style={{ borderColor: '#D97706', color: '#D97706' }}>
-                        <MessageSquare className="w-3.5 h-3.5" /> مراجعة
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
+            <Pagination
+              currentPage={recordsPagination.currentPage}
+              totalPages={recordsPagination.totalPages}
+              totalItems={recordsPagination.totalItems}
+              pageSize={recordsPagination.pageSize}
+              onPageChange={recordsPagination.setCurrentPage}
+              onPageSizeChange={recordsPagination.setPageSize}
+              showPageSize={true}
+              pageSizeOptions={[5, 10, 20, 50]}
+              itemName="سجل"
+              className="mt-6"
+            />
           </div>
         )
       ) : (
@@ -525,8 +561,9 @@ export default function AdminDailyReviewPage() {
             <p className="font-semibold">لا توجد تسجيلات تلاوة {recitationStatusFilter !== 'all' ? RECITATION_STATUS_MAP[recitationStatusFilter]?.label || '' : ''}</p>
           </div>
         ) : (
-          <div className="space-y-3 stagger-children">
-            {recitations.map((rec) => {
+          <div>
+            <div className="space-y-3 stagger-children">
+              {recitationsPagination.paginatedItems.map((rec) => {
               const rsi = RECITATION_STATUS_MAP[rec.status] || { label: rec.status, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' };
               const isReviewing = reviewingRecitationId === rec._id;
 
@@ -719,7 +756,21 @@ export default function AdminDailyReviewPage() {
               );
             })}
           </div>
-        )
+
+          <Pagination
+            currentPage={recitationsPagination.currentPage}
+            totalPages={recitationsPagination.totalPages}
+            totalItems={recitationsPagination.totalItems}
+            pageSize={recitationsPagination.pageSize}
+            onPageChange={recitationsPagination.setCurrentPage}
+            onPageSizeChange={recitationsPagination.setPageSize}
+            showPageSize={true}
+            pageSizeOptions={[5, 10, 20, 50]}
+            itemName="تلاوة"
+            className="mt-6"
+          />
+        </div>
+      )
       )}
     </PageLayout>
   );

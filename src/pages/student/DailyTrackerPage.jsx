@@ -10,6 +10,8 @@ import useDailyRecordStore from '../../store/dailyRecordStore';
 import { timeAgoAr, getCirclePath } from '../../utils/helpers';
 import QURAN_SURAHS from '../../utils/quranData';
 import toast from 'react-hot-toast';
+import Pagination from '../../components/shared/Pagination';
+import usePagination from '../../hooks/usePagination';
 
 const ACTIVITY_TYPES = {
   memorization: { label: 'حفظ جديد', icon: '📖', color: 'bg-primary-50 text-primary-600 border-primary-200' },
@@ -26,6 +28,7 @@ const STATUS_MAP = {
 export default function DailyTrackerPage() {
   const { user } = useAuthStore();
   const { records, weeklyStats, isLoading, fetchMyRecords, createRecord, deleteRecord } = useDailyRecordStore();
+  const recordsPagination = usePagination(records, 10);
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -241,80 +244,96 @@ export default function DailyTrackerPage() {
             <p className="text-sm">ابدأ بتسجيل حفظك اليومي! 📖</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
-            {records.map((record, idx) => {
-              const statusInfo = STATUS_MAP[record.status];
-              const actInfo = ACTIVITY_TYPES[record.activityType] || ACTIVITY_TYPES.memorization;
-              return (
-                <motion.div key={record._id}
-                  initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.03 }}
-                  className="p-4 hover:bg-gray-50/50 transition-colors"
-                >
-                  <div className="flex items-start gap-3">
-                    {/* Activity icon */}
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${
-                      record.activityType === 'memorization' ? 'bg-primary-100' :
-                      record.activityType === 'review' ? 'bg-blue-100' : 'bg-purple-100'
-                    }`}>
-                      {actInfo.icon}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold text-gray-900">سورة {record.surahName}</h3>
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
-                          الآيات {record.fromVerse} - {record.toVerse}
-                        </span>
-                        <span className="text-xs font-semibold bg-primary-50 text-primary-600 px-2 py-0.5 rounded-lg">
-                          {record.versesCount} آية
-                        </span>
+          <div>
+            <div className="divide-y divide-gray-50">
+              {recordsPagination.paginatedItems.map((record, idx) => {
+                const statusInfo = STATUS_MAP[record.status];
+                const actInfo = ACTIVITY_TYPES[record.activityType] || ACTIVITY_TYPES.memorization;
+                return (
+                  <motion.div key={record._id}
+                    initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.03 }}
+                    className="p-4 hover:bg-gray-50/50 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Activity icon */}
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${
+                        record.activityType === 'memorization' ? 'bg-primary-100' :
+                        record.activityType === 'review' ? 'bg-blue-100' : 'bg-purple-100'
+                      }`}>
+                        {actInfo.icon}
                       </div>
 
-                      <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${statusInfo.color}`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot}`} />
-                          {statusInfo.label}
-                        </span>
-                        <span className="text-xs text-gray-400">{timeAgoAr(record.date)}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-lg border ${actInfo.color}`}>{actInfo.label}</span>
-                      </div>
-
-                      {record.studentNotes && (
-                        <p className="text-xs text-gray-500 mt-1.5 bg-gray-50 rounded-lg px-3 py-1.5">
-                          📝 {record.studentNotes}
-                        </p>
-                      )}
-
-                      {/* Teacher feedback */}
-                      {record.teacherNotes && (
-                        <p className="text-xs text-primary-700 mt-1.5 bg-primary-50 rounded-lg px-3 py-1.5">
-                          👨‍🏫 ملاحظات المعلم: {record.teacherNotes}
-                        </p>
-                      )}
-
-                      {/* Rating */}
-                      {record.rating && (
-                        <div className="flex items-center gap-0.5 mt-1.5">
-                          {[1, 2, 3, 4, 5].map(s => (
-                            <Star key={s} className={`w-3.5 h-3.5 ${s <= record.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
-                          ))}
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-gray-900">سورة {record.surahName}</h3>
+                          <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
+                            الآيات {record.fromVerse} - {record.toVerse}
+                          </span>
+                          <span className="text-xs font-semibold bg-primary-50 text-primary-600 px-2 py-0.5 rounded-lg">
+                            {record.versesCount} آية
+                          </span>
                         </div>
+
+                        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${statusInfo.color}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot}`} />
+                            {statusInfo.label}
+                          </span>
+                          <span className="text-xs text-gray-400">{timeAgoAr(record.date)}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-lg border ${actInfo.color}`}>{actInfo.label}</span>
+                        </div>
+
+                        {record.studentNotes && (
+                          <p className="text-xs text-gray-500 mt-1.5 bg-gray-50 rounded-lg px-3 py-1.5">
+                            📝 {record.studentNotes}
+                          </p>
+                        )}
+
+                        {/* Teacher feedback */}
+                        {record.teacherNotes && (
+                          <p className="text-xs text-primary-700 mt-1.5 bg-primary-50 rounded-lg px-3 py-1.5">
+                            👨‍🏫 ملاحظات المعلم: {record.teacherNotes}
+                          </p>
+                        )}
+
+                        {/* Rating */}
+                        {record.rating && (
+                          <div className="flex items-center gap-0.5 mt-1.5">
+                            {[1, 2, 3, 4, 5].map(s => (
+                              <Star key={s} className={`w-3.5 h-3.5 ${s <= record.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Delete (only pending) */}
+                      {record.status === 'pending' && (
+                        <button onClick={() => handleDelete(record._id)}
+                          className="p-2 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 group">
+                          <Trash2 className="w-4 h-4 text-gray-300 group-hover:text-red-400" />
+                        </button>
                       )}
                     </div>
+                  </motion.div>
+                );
+              })}
+            </div>
 
-                    {/* Delete (only pending) */}
-                    {record.status === 'pending' && (
-                      <button onClick={() => handleDelete(record._id)}
-                        className="p-2 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0 group">
-                        <Trash2 className="w-4 h-4 text-gray-300 group-hover:text-red-400" />
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
+            <div className="p-4 border-t border-gray-100">
+              <Pagination
+                currentPage={recordsPagination.currentPage}
+                totalPages={recordsPagination.totalPages}
+                totalItems={recordsPagination.totalItems}
+                pageSize={recordsPagination.pageSize}
+                onPageChange={recordsPagination.setCurrentPage}
+                onPageSizeChange={recordsPagination.setPageSize}
+                showPageSize={true}
+                pageSizeOptions={[5, 10, 20, 50]}
+                itemName="سجل حفظ"
+              />
+            </div>
           </div>
         )}
       </div>

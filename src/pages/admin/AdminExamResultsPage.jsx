@@ -8,6 +8,8 @@ import PageLayout from '../../components/shared/PageLayout';
 import useExamStore from '../../store/examStore';
 import { formatDateAr } from '../../utils/helpers';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import Pagination from '../../components/shared/Pagination';
+import usePagination from '../../hooks/usePagination';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -19,6 +21,8 @@ export default function AdminExamResultsPage() {
   const [reviewModal, setReviewModal] = useState(null);
   const [reviewForm, setReviewForm] = useState({ oralScore: '', teacherNotes: '' });
   const [saving, setSaving] = useState(false);
+
+  const resultsPagination = usePagination(examResults, 10);
 
   useEffect(() => {
     fetchExamResults(examId);
@@ -103,7 +107,7 @@ export default function AdminExamResultsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {examResults.map((result, i) => {
+                  {resultsPagination.paginatedItems.map((result, i) => {
                     const score = result.totalPercentage ?? result.writtenPercentage ?? 0;
                     const isPending = result.status === 'pending_oral_review';
                     return (
@@ -146,6 +150,19 @@ export default function AdminExamResultsPage() {
                   })}
                 </tbody>
               </table>
+
+              <Pagination
+                currentPage={resultsPagination.currentPage}
+                totalPages={resultsPagination.totalPages}
+                totalItems={resultsPagination.totalItems}
+                pageSize={resultsPagination.pageSize}
+                onPageChange={resultsPagination.setCurrentPage}
+                onPageSizeChange={resultsPagination.setPageSize}
+                showPageSize={true}
+                pageSizeOptions={[5, 10, 20, 50]}
+                itemName="طالب"
+                className="border-t border-gray-100 p-4"
+              />
             </div>
           )}
 

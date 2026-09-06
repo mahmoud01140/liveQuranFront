@@ -5,6 +5,8 @@ import {
   Plus, X, ChevronLeft, Users, Download, Filter, Shield, RefreshCw, Check
 } from 'lucide-react';
 import PageLayout from '../../components/shared/PageLayout';
+import Pagination from '../../components/shared/Pagination';
+import usePagination from '../../hooks/usePagination';
 import useGroupStore from '../../store/groupStore';
 import useResourceStore from '../../store/resourceStore';
 import { timeAgoAr, getLevelLabel, getLevelColor, formatFileSize } from '../../utils/helpers';
@@ -44,6 +46,9 @@ export default function AdminResourcesPage() {
   const filteredGroups = groups.filter(g =>
     !searchQuery || g.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const groupsPagination = usePagination(filteredGroups, 6);
+  const resourcesPagination = usePagination(resources, 6);
 
   useEffect(() => {
     if (selectedGroup) fetchGroupResources(selectedGroup._id, { category: categoryFilter !== 'all' ? categoryFilter : undefined });
@@ -99,7 +104,7 @@ export default function AdminResourcesPage() {
             onChange={(e) => setSearchQuery(e.target.value)} className="input-base max-w-md" />
         </div>
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 stagger-children">
-          {filteredGroups.map(group => {
+          {groupsPagination.paginatedItems.map(group => {
             const lc = getLevelColor(group.level);
             return (
               <motion.button key={group._id} whileHover={{ y: -3 }} onClick={() => setSelectedGroup(group)}
@@ -121,6 +126,18 @@ export default function AdminResourcesPage() {
             );
           })}
         </div>
+        <Pagination
+          currentPage={groupsPagination.currentPage}
+          totalPages={groupsPagination.totalPages}
+          totalItems={groupsPagination.totalItems}
+          pageSize={groupsPagination.pageSize}
+          onPageChange={groupsPagination.setCurrentPage}
+          onPageSizeChange={groupsPagination.setPageSize}
+          showPageSize={true}
+          pageSizeOptions={[6, 12, 24]}
+          itemName="مجموعة"
+          className="mt-6"
+        />
       </PageLayout>
     );
   }
@@ -240,43 +257,58 @@ export default function AdminResourcesPage() {
           <p className="font-semibold">لا توجد موارد{categoryFilter !== 'all' ? ` في تصنيف "${CATEGORIES[categoryFilter]?.label}"` : ''}</p>
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 stagger-children">
-          {resources.map(resource => {
-            const fi = FILE_ICONS[resource.fileType] || FILE_ICONS.other;
-            const cat = CATEGORIES[resource.category] || CATEGORIES.other;
-            return (
-              <motion.div key={resource._id} whileHover={{ y: -2 }} className="card-base p-5 group">
-                <div className="flex items-start gap-3 mb-3">
-                  <div className={`w-12 h-12 ${fi.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                    <fi.icon className={`w-6 h-6 ${fi.color}`} />
+        <div>
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 stagger-children">
+            {resourcesPagination.paginatedItems.map(resource => {
+              const fi = FILE_ICONS[resource.fileType] || FILE_ICONS.other;
+              const cat = CATEGORIES[resource.category] || CATEGORIES.other;
+              return (
+                <motion.div key={resource._id} whileHover={{ y: -2 }} className="card-base p-5 group">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className={`w-12 h-12 ${fi.bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                      <fi.icon className={`w-6 h-6 ${fi.color}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-gray-900 text-sm truncate">{resource.title}</h3>
+                      <p className="text-xs text-gray-400 mt-0.5">{cat.emoji} {cat.label}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 text-sm truncate">{resource.title}</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">{cat.emoji} {cat.label}</p>
+
+                  {resource.description && <p className="text-xs text-gray-500 mb-3 line-clamp-2">{resource.description}</p>}
+
+                  <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
+                    <span>{timeAgoAr(resource.createdAt)}</span>
+                    <span>{formatFileSize(resource.fileSize)}</span>
                   </div>
-                </div>
 
-                {resource.description && <p className="text-xs text-gray-500 mb-3 line-clamp-2">{resource.description}</p>}
+                  <div className="flex items-center gap-2 border-t border-gray-100 pt-3">
+                    <button onClick={() => handleDownload(resource)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl text-xs font-bold transition-colors">
+                      <Download className="w-3.5 h-3.5" /> تحميل
+                      {resource.downloadCount > 0 && <span className="bg-amber-100 px-1.5 rounded-full">{resource.downloadCount}</span>}
+                    </button>
+                    <button onClick={() => handleDelete(resource._id)}
+                      className="p-2 hover:bg-red-50 rounded-xl transition-colors">
+                      <Trash2 className="w-4 h-4 text-gray-300 group-hover:text-red-400" />
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
 
-                <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
-                  <span>{timeAgoAr(resource.createdAt)}</span>
-                  <span>{formatFileSize(resource.fileSize)}</span>
-                </div>
-
-                <div className="flex items-center gap-2 border-t border-gray-100 pt-3">
-                  <button onClick={() => handleDownload(resource)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl text-xs font-bold transition-colors">
-                    <Download className="w-3.5 h-3.5" /> تحميل
-                    {resource.downloadCount > 0 && <span className="bg-amber-100 px-1.5 rounded-full">{resource.downloadCount}</span>}
-                  </button>
-                  <button onClick={() => handleDelete(resource._id)}
-                    className="p-2 hover:bg-red-50 rounded-xl transition-colors">
-                    <Trash2 className="w-4 h-4 text-gray-300 group-hover:text-red-400" />
-                  </button>
-                </div>
-              </motion.div>
-            );
-          })}
+          <Pagination
+            currentPage={resourcesPagination.currentPage}
+            totalPages={resourcesPagination.totalPages}
+            totalItems={resourcesPagination.totalItems}
+            pageSize={resourcesPagination.pageSize}
+            onPageChange={resourcesPagination.setCurrentPage}
+            onPageSizeChange={resourcesPagination.setPageSize}
+            showPageSize={true}
+            pageSizeOptions={[6, 12, 24]}
+            itemName="مورد"
+            className="mt-6"
+          />
         </div>
       )}
     </PageLayout>

@@ -275,7 +275,7 @@ export default function AdminLivePage() {
       {/* Jitsi Meeting Container */}
       <div className="flex-1 w-full h-full relative overflow-hidden">
         <JitsiMeeting
-          roomName={`QuranPlatform_${session?._id || 'Session'}`}
+          roomName={session?.liveRoomName || `QuranPlatform_${session?._id || 'Session'}`}
           displayName={`مدير: ${user?.firstName || ''} ${user?.lastName || ''}`}
           userEmail={user?.email || ''}
           isTeacher={true}

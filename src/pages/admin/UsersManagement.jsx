@@ -6,6 +6,8 @@ import PageLayout from '../../components/shared/PageLayout';
 import api from '../../services/api';
 import { getLevelLabel, getLevelColor, formatDateAr, getInitials, getAvatarColor } from '../../utils/helpers';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import Pagination from '../../components/shared/Pagination';
+import usePagination from '../../hooks/usePagination';
 
 const LEVELS = ['foundation', 'memorization', 'teacher_prep', 'senior'];
 
@@ -27,7 +29,7 @@ export default function UsersManagement() {
     setIsLoading(true);
     try {
       const [allRes, pendingRes] = await Promise.all([
-        api.get('/users', { params: { limit: 50 } }),
+        api.get('/users', { params: { limit: 200 } }),
         api.get('/users/pending-approval'),
       ]);
       setUsers(allRes.data.users || []);
@@ -63,6 +65,16 @@ export default function UsersManagement() {
         const matchRole = !roleFilter || u.role === roleFilter;
         return matchSearch && matchRole;
       });
+
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalItems,
+    paginatedItems,
+  } = usePagination(displayUsers, 10);
 
   return (
     <PageLayout>
@@ -118,7 +130,7 @@ export default function UsersManagement() {
         </div>
       ) : (
         <div className="space-y-4">
-          {displayUsers.map((user, i) => {
+          {paginatedItems.map((user, i) => {
             const levelColor = getLevelColor(user.assignedLevel);
             return (
               <motion.div key={user._id}
@@ -205,6 +217,19 @@ export default function UsersManagement() {
               </motion.div>
             );
           })}
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            showPageSize={true}
+            pageSizeOptions={[5, 10, 20, 50]}
+            itemName="مستخدم"
+            className="pt-2"
+          />
         </div>
       )}
     </PageLayout>

@@ -46,22 +46,49 @@ export default function IjazahCertificateModal({ isOpen, onClose, ijazah }) {
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrint}
-                className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition-all"
+                className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
                 <span>طباعة / حفظ PDF</span>
               </button>
               <button
                 onClick={onClose}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
           </div>
 
+          <style>{`
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              .printable-certificate, .printable-certificate * {
+                visibility: visible !important;
+              }
+              .printable-certificate {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                margin: 0 !important;
+                padding: 32px !important;
+                box-shadow: none !important;
+                background: #FAF7EE !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+          `}</style>
+
           {/* Certificate Printable Area */}
-          <div ref={certificateRef} className="p-8 sm:p-12 bg-gradient-to-b from-[#FAF7EE] via-white to-[#FAF7EE] relative text-center border-[10px] border-[#D4AF37]/40 m-3 sm:m-4 rounded-2xl shadow-inner">
+          <div ref={certificateRef} className="printable-certificate p-8 sm:p-12 bg-gradient-to-b from-[#FAF7EE] via-white to-[#FAF7EE] relative text-center border-[10px] border-[#D4AF37]/40 m-3 sm:m-4 rounded-2xl shadow-inner">
             {/* Ornate Corner Accents */}
             <div className="absolute top-3 right-3 text-[#D4AF37] font-serif text-2xl select-none">⚜️</div>
             <div className="absolute top-3 left-3 text-[#D4AF37] font-serif text-2xl select-none">⚜️</div>

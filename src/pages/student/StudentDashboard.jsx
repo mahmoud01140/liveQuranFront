@@ -179,6 +179,42 @@ export default function StudentDashboard() {
         </motion.div>
       )}
 
+      {/* Unassigned Group Notification */}
+      {!user?.group && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 sm:mb-6 bg-gradient-to-r from-emerald-50 via-teal-50 to-primary-50 border-2 border-primary-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
+        >
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-primary-600 text-white flex items-center justify-center flex-shrink-0 shadow-md">
+              <BookOpen className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 text-sm">مرحباً بك! مستواك محدد: ({getLevelLabel(user?.assignedLevel)}) 🌟</p>
+              <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
+                تقوم إدارة الأكاديمية حالياً بتسكينك في الحلقة والموعد الأنسب لك برفقة شيخ مقرئ معتمد. في هذه الأثناء، يمكنك البدء فوراً بتصفح المصحف المكرر وتجهيز وردك اليومي.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
+            <Link
+              to="/student/quran"
+              className="btn-primary flex-1 sm:flex-none py-2.5 px-4 text-xs font-bold"
+            >
+              <BookOpen className="w-4 h-4" />
+              تصفح المصحف المكرر
+            </Link>
+            <Link
+              to="/student/daily-tracker"
+              className="btn-secondary flex-1 sm:flex-none py-2.5 px-4 text-xs font-bold"
+            >
+              سجل الورد
+            </Link>
+          </div>
+        </motion.div>
+      )}
+
       {/* Daily Triple Quran Task Section */}
       {dailyTask && (
         <motion.div
@@ -204,13 +240,22 @@ export default function StudentDashboard() {
               </div>
             </div>
 
-            <Link
-              to="/student/quran"
-              className="hidden sm:flex items-center gap-1 text-xs font-bold text-primary-600 hover:text-primary-700 bg-white px-3 py-1.5 rounded-xl border border-primary-200 shadow-sm transition-all"
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>المصحف المكرر</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/student/daily-tracker"
+                className="flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm transition-all"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>سجل الحفظ اليومي</span>
+              </Link>
+              <Link
+                to="/student/quran"
+                className="hidden sm:flex items-center gap-1 text-xs font-bold text-primary-600 hover:text-primary-700 bg-white px-3 py-1.5 rounded-xl border border-primary-200 shadow-sm transition-all"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>المصحف المكرر</span>
+              </Link>
+            </div>
           </div>
 
           {/* 3 Pillars Grid */}

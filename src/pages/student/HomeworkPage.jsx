@@ -10,11 +10,14 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import { formatDateAr } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 import QURAN_SURAHS from '../../utils/quranData';
+import Pagination from '../../components/shared/Pagination';
+import usePagination from '../../hooks/usePagination';
 
 export default function HomeworkPage() {
   const { user, checkAuth } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sessions, setSessions] = useState([]);
+  const sessionsPagination = usePagination(sessions, 5);
   const [isLoading, setIsLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [submitting, setSubmitting] = useState(null);
@@ -323,8 +326,9 @@ export default function HomeworkPage() {
               <p className="text-gray-400 text-sm">سيُضيف المعلم الواجبات بعد كل جلسة</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {sessions.map((session, i) => {
+            <div>
+              <div className="space-y-3">
+                {sessionsPagination.paginatedItems.map((session, i) => {
                 const submitted = isSubmittedByMe(session);
                 const mySub = getMySubmission(session);
                 const overdue = isOverdue(session) && !submitted;
@@ -608,7 +612,21 @@ export default function HomeworkPage() {
                 );
               })}
             </div>
-          )}
+
+            <Pagination
+              currentPage={sessionsPagination.currentPage}
+              totalPages={sessionsPagination.totalPages}
+              totalItems={sessionsPagination.totalItems}
+              pageSize={sessionsPagination.pageSize}
+              onPageChange={sessionsPagination.setCurrentPage}
+              onPageSizeChange={sessionsPagination.setPageSize}
+              showPageSize={true}
+              pageSizeOptions={[3, 5, 10, 20]}
+              itemName="واجب"
+              className="mt-6"
+            />
+          </div>
+        )}
         </div>
       </main>
     </div>

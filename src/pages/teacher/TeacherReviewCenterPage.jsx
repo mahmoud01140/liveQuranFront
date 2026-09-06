@@ -9,6 +9,8 @@ import api from '../../services/api';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import { formatDateAr, getInitials, getAvatarColor } from '../../utils/helpers';
 import QURAN_SURAHS from '../../utils/quranData';
+import Pagination from '../../components/shared/Pagination';
+import usePagination from '../../hooks/usePagination';
 
 export default function TeacherReviewCenterPage() {
   const { user } = useAuthStore();
@@ -46,6 +48,10 @@ export default function TeacherReviewCenterPage() {
   const [showAddRecordingModal, setShowAddRecordingModal] = useState(false);
   const [addRecordingForm, setAddRecordingForm] = useState({ sessionId: '', url: '' });
   const [savingRecording, setSavingRecording] = useState(false);
+
+  const sessionsPagination = usePagination(sessions, 5);
+  const pendingExamsPagination = usePagination(pendingExams, 5);
+  const recordingsPagination = usePagination(recordings, 8);
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -304,8 +310,9 @@ export default function TeacherReviewCenterPage() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {sessions.map((session) => {
+              <div>
+                <div className="space-y-3">
+                  {sessionsPagination.paginatedItems.map((session) => {
                   const submittedCount = session.homeworkSubmissions?.length || 0;
                   const isExpanded = selectedSession === session._id;
 
@@ -452,8 +459,22 @@ export default function TeacherReviewCenterPage() {
                   );
                 })}
               </div>
-            )
-          )}
+
+              <Pagination
+                currentPage={sessionsPagination.currentPage}
+                totalPages={sessionsPagination.totalPages}
+                totalItems={sessionsPagination.totalItems}
+                pageSize={sessionsPagination.pageSize}
+                onPageChange={sessionsPagination.setCurrentPage}
+                onPageSizeChange={sessionsPagination.setPageSize}
+                showPageSize={true}
+                pageSizeOptions={[3, 5, 10, 20]}
+                itemName="جلسة واجب"
+                className="mt-6"
+              />
+            </div>
+          )
+        )}
 
           {/* ─── TAB 2: Oral Exam Reviews ─── */}
           {activeTab === 'oral_exams' && (
@@ -465,8 +486,9 @@ export default function TeacherReviewCenterPage() {
                 <p className="text-gray-500 font-semibold">لا توجد اختبارات شفهية بانتظار التصحيح حالياً</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {pendingExams.map((result) => (
+              <div>
+                <div className="space-y-4">
+                  {pendingExamsPagination.paginatedItems.map((result) => (
                   <div key={result._id} className="card-base overflow-hidden p-5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -574,8 +596,22 @@ export default function TeacherReviewCenterPage() {
                   </div>
                 ))}
               </div>
-            )
-          )}
+
+              <Pagination
+                currentPage={pendingExamsPagination.currentPage}
+                totalPages={pendingExamsPagination.totalPages}
+                totalItems={pendingExamsPagination.totalItems}
+                pageSize={pendingExamsPagination.pageSize}
+                onPageChange={pendingExamsPagination.setCurrentPage}
+                onPageSizeChange={pendingExamsPagination.setPageSize}
+                showPageSize={true}
+                pageSizeOptions={[3, 5, 10, 20]}
+                itemName="اختبار شفهي"
+                className="mt-6"
+              />
+            </div>
+          )
+        )}
 
           {/* ─── TAB 3: Recordings ─── */}
           {activeTab === 'recordings' && (
@@ -595,7 +631,7 @@ export default function TeacherReviewCenterPage() {
                   <tbody className="divide-y divide-gray-50">
                     {recordings.length === 0 ? (
                       <tr><td colSpan="4" className="py-8 text-center text-gray-400">لا توجد تسجيلات مرفوعة بعد</td></tr>
-                    ) : recordings.map((rec) => (
+                    ) : recordingsPagination.paginatedItems.map((rec) => (
                       <tr key={rec._id} className="hover:bg-gray-50/50">
                         <td className="py-4 px-6 font-bold text-gray-900">{rec.session?.title || 'جلسة مباشرة'}</td>
                         <td className="py-4 px-6 text-sm text-gray-600">{rec.session?.scheduledAt ? formatDateAr(rec.session.scheduledAt, 'dd MMMM yyyy') : '--'}</td>
@@ -613,6 +649,20 @@ export default function TeacherReviewCenterPage() {
                     ))}
                   </tbody>
                 </table>
+
+                <div className="p-4 border-t border-gray-100">
+                  <Pagination
+                    currentPage={recordingsPagination.currentPage}
+                    totalPages={recordingsPagination.totalPages}
+                    totalItems={recordingsPagination.totalItems}
+                    pageSize={recordingsPagination.pageSize}
+                    onPageChange={recordingsPagination.setCurrentPage}
+                    onPageSizeChange={recordingsPagination.setPageSize}
+                    showPageSize={true}
+                    pageSizeOptions={[4, 8, 16, 32]}
+                    itemName="تسجيل"
+                  />
+                </div>
               </div>
             )
           )}

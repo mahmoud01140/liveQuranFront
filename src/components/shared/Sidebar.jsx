@@ -12,6 +12,8 @@ const studentLinks = [
   { to: '/student', icon: LayoutDashboard, label: 'الرئيسية', end: true },
   { to: '/student/group', icon: Users, label: 'مجموعتي' },
   { to: '/student/live', icon: Video, label: 'الجلسة المباشرة' },
+  { to: '/student/daily-tracker', icon: CalendarCheck, label: 'سجل الحفظ والورد اليومي' },
+  { to: '/student/homework', icon: ClipboardList, label: 'الواجبات والتسميع' },
   { to: '/student/curriculum', icon: BookOpen, label: 'المنهج وتقييمات الدروس' },
   { to: '/student/quran', icon: BookMarked, label: 'المصحف المكرر والمتشابهات' },
   { to: '/student/exams', icon: FileText, label: 'الاختبارات والتقييمات' },

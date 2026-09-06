@@ -13,6 +13,8 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import useGroupStore from '../../store/groupStore';
 import { getAvatarColor, getInitials } from '../../utils/helpers';
+import Pagination from '../../components/shared/Pagination';
+import usePagination from '../../hooks/usePagination';
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'attendance'
@@ -49,6 +51,8 @@ export default function ReportsPage() {
   const [filterTimeframe, setFilterTimeframe] = useState('month'); // 'week' | 'month' | 'all'
   const [filterStatus, setFilterStatus] = useState('all'); // 'all' | 'absent' | 'present' | 'late' | 'excused'
   const [searchQuery, setSearchQuery] = useState('');
+
+  const studentsPagination = usePagination(attendanceData.students || [], 10);
 
   useEffect(() => {
     fetchAnalytics();
@@ -369,7 +373,7 @@ export default function ReportsPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {attendanceData.students.map((item) => {
+                        {studentsPagination.paginatedItems.map((item) => {
                           const s = item.student;
                           const rateColor =
                             item.attendanceRate >= 85
@@ -379,23 +383,21 @@ export default function ReportsPage() {
                               : 'text-rose-600 bg-rose-50';
 
                           return (
-                            <tr key={s._id} className="hover:bg-gray-50/80 transition-colors">
-                              <td className="p-3.5">
-                                <div className="flex items-center gap-2.5">
-                                  <div
-                                    className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
-                                    style={{ backgroundColor: getAvatarColor(s.name) }}
-                                  >
-                                    {getInitials(s.name, '')}
-                                  </div>
-                                  <div>
-                                    <p className="font-bold text-gray-900">{s.name}</p>
-                                    <p className="text-[10px] text-gray-400">{s.email}</p>
-                                  </div>
+                            <tr key={s._id} className="hover:bg-gray-50/60 transition-colors">
+                              <td className="p-3.5 flex items-center gap-3">
+                                <div
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-xs"
+                                  style={{ backgroundColor: getAvatarColor(s.name) }}
+                                >
+                                  {getInitials(s.name.split(' ')[0] || '', s.name.split(' ')[1] || '')}
+                                </div>
+                                <div>
+                                  <p className="font-bold text-gray-900 text-xs">{s.name}</p>
+                                  <p className="text-[10px] text-gray-400">{s.email}</p>
                                 </div>
                               </td>
 
-                              <td className="p-3.5 font-semibold text-gray-700">
+                              <td className="p-3.5 font-medium text-gray-600">
                                 {s.groupName || '—'}
                               </td>
 
@@ -449,6 +451,18 @@ export default function ReportsPage() {
                     </table>
                   </div>
                 )}
+                <Pagination
+                  currentPage={studentsPagination.currentPage}
+                  totalPages={studentsPagination.totalPages}
+                  totalItems={studentsPagination.totalItems}
+                  pageSize={studentsPagination.pageSize}
+                  onPageChange={studentsPagination.setCurrentPage}
+                  onPageSizeChange={studentsPagination.setPageSize}
+                  showPageSize={true}
+                  pageSizeOptions={[5, 10, 20, 50]}
+                  itemName="طالب"
+                  className="border-t border-gray-100 p-4"
+                />
               </div>
             </div>
           )}
