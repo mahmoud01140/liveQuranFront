@@ -11,6 +11,8 @@ const useExamStore = create((set, get) => ({
   results: [],          // student's past results
   groupExams: [],       // exams for a group
   availableExams: [],   // exams the student hasn't taken yet
+  assignedExams: [],    // unified assigned exams for the student
+  adminExams: [],       // admin: all exams across platform
   groupResults: [],     // admin: results for a group
   examResults: [],      // admin: results for a specific exam
   isLoading: false,
@@ -152,19 +154,53 @@ const useExamStore = create((set, get) => ({
     } catch (_) {}
   },
 
-  // Fetch exams for the student's group + filter out ones already taken
+  // Fetch unified assigned exams for the student (individual, group, or level)
+  fetchAssignedExams: async () => {
+    try {
+      const res = await api.get('/exams/student/assigned');
+      const all = res.data.exams || [];
+      const pending = all.filter(e => !e.isCompleted);
+      set({ assignedExams: all, availableExams: pending, groupExams: all });
+      return all;
+    } catch (_) {
+      return [];
+    }
+  },
+
+  // Fetch exams for the student's group + filter out ones already taken (backward compatible)
   fetchAvailableExams: async (groupId, studentId) => {
     try {
-      const [examsRes, resultsRes] = await Promise.all([
-        api.get(`/exams/group/${groupId}`),
-        api.get(`/exams/results/student/${studentId}`),
-      ]);
-      const allExams = examsRes.data.exams || [];
-      const takenExamIds = new Set((resultsRes.data.results || []).map(r => r.exam?._id));
-      const available = allExams.filter(e => !takenExamIds.has(e._id));
-      set({ availableExams: available, groupExams: allExams });
-      return available;
+      const res = await api.get('/exams/student/assigned');
+      const all = res.data.exams || [];
+      const pending = all.filter(e => !e.isCompleted);
+      set({ availableExams: pending, assignedExams: all, groupExams: all });
+      return pending;
     } catch (_) {
+      try {
+        const [examsRes, resultsRes] = await Promise.all([
+          api.get(`/exams/group/${groupId || 'all'}`),
+          api.get(`/exams/results/student/${studentId}`),
+        ]);
+        const allExams = examsRes.data.exams || [];
+        const takenExamIds = new Set((resultsRes.data.results || []).map(r => r.exam?._id));
+        const available = allExams.filter(e => !takenExamIds.has(e._id));
+        set({ availableExams: available, groupExams: allExams });
+        return available;
+      } catch (err) {
+        return [];
+      }
+    }
+  },
+
+  // Admin: get all exams across platform with stats
+  fetchAdminAllExams: async (params = {}) => {
+    set({ isLoading: true });
+    try {
+      const res = await api.get('/exams/admin/all', { params });
+      set({ adminExams: res.data.exams || [], isLoading: false });
+      return res.data.exams || [];
+    } catch (error) {
+      set({ isLoading: false });
       return [];
     }
   },

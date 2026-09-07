@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Trash2, Save, BookOpen, FileText, Mic, PenLine, ChevronDown, ChevronUp,
   GripVertical, Copy, CheckCircle, AlertCircle, Sparkles, Book, Hash,
-  Clock, Award, RotateCcw, Users
+  Clock, Award, RotateCcw, Users, User, Target, GraduationCap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
@@ -20,6 +20,14 @@ const QUESTION_TYPES = [
   { value: 'recitation', label: 'شفهي / تسميع', icon: Mic, color: 'emerald', emoji: '🎙️' },
 ];
 
+const LEVEL_OPTIONS = [
+  { value: 'foundation', label: 'المستوى التأسيسي', desc: 'تأسيس القراءة وأحكام التجويد', badge: '🌱' },
+  { value: 'memorization', label: 'مستوى الحفظ والإتقان', desc: 'حفظ وتثبيت القرآن الكريم', badge: '📖' },
+  { value: 'teacher_prep', label: 'إعداد معلمين', desc: 'تأهيل الإجازات والإتقان المتقدم', badge: '🎓' },
+  { value: 'senior', label: 'فئة كبار السن', desc: 'تيسير التلاوة والمدارسة', badge: '🧓' },
+  { value: 'all', label: 'جميع المستويات (عام)', desc: 'امتحان موجه لكافة الطلاب بالأكاديمية', badge: '🌐' },
+];
+
 const EMPTY_Q = {
   type: 'mcq', text: '', options: ['', '', '', ''], correctAnswer: 0,
   correctAnswerBool: true, correctAnswerText: '', points: 1, instruction: '',
@@ -32,11 +40,16 @@ export default function CreateExamPage() {
   const [saving, setSaving] = useState(false);
   const [expandedQ, setExpandedQ] = useState(0);
 
-  // Group & Lesson selection
+  // Target & Group & Student selection
+  const [targetType, setTargetType] = useState('group'); // 'group' | 'individual' | 'level'
+  const [targetStudentId, setTargetStudentId] = useState('');
+  const [selectedLevel, setSelectedLevel] = useState('foundation');
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [selectedLessonId, setSelectedLessonId] = useState('');
   const [lessons, setLessons] = useState([]);
   const [loadingLessons, setLoadingLessons] = useState(false);
+  const [groupStudents, setGroupStudents] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
 
   const [exam, setExam] = useState({
     title: '',
@@ -49,6 +62,25 @@ export default function CreateExamPage() {
   useEffect(() => {
     fetchAllGroups();
   }, []);
+
+  // Load students when group changes
+  useEffect(() => {
+    if (!selectedGroupId) {
+      setGroupStudents([]);
+      setTargetStudentId('');
+      return;
+    }
+    const currentG = groups.find(g => g._id === selectedGroupId);
+    if (currentG && Array.isArray(currentG.students) && currentG.students.length > 0 && typeof currentG.students[0] === 'object') {
+      setGroupStudents(currentG.students);
+    } else {
+      setLoadingStudents(true);
+      api.get(`/groups/${selectedGroupId}/students`)
+        .then(res => setGroupStudents(res.data.students || []))
+        .catch(() => setGroupStudents([]))
+        .finally(() => setLoadingStudents(false));
+    }
+  }, [selectedGroupId, groups]);
 
   // Load lessons when group changes
   useEffect(() => {
@@ -126,9 +158,27 @@ export default function CreateExamPage() {
   };
 
   const handleSave = async () => {
-    if (!exam.title) { toast.error('أدخل عنوان التقييم'); return; }
-    if (!selectedGroupId) { toast.error('اختر المجموعة'); return; }
-    if (!selectedLessonId) { toast.error('اختر الدرس'); return; }
+    if (!exam.title.trim()) { toast.error('أدخل عنوان التقييم / الامتحان'); return; }
+
+    if (targetType === 'group' && !selectedGroupId) {
+      toast.error('يرجى اختيار المجموعة');
+      return;
+    }
+    if (targetType === 'individual') {
+      if (!selectedGroupId) {
+        toast.error('يرجى اختيار المجموعة أولاً');
+        return;
+      }
+      if (!targetStudentId) {
+        toast.error('يرجى تحديد الطالب المستهدف');
+        return;
+      }
+    }
+    if (targetType === 'level' && !selectedLevel) {
+      toast.error('يرجى اختيار المستوى المستهدف');
+      return;
+    }
+
     if (exam.questions.length === 0) { toast.error('أضف سؤالاً واحداً على الأقل'); return; }
     if (exam.questions.some(q => !q.text.trim())) { toast.error('أكمل نص جميع الأسئلة'); return; }
 
@@ -138,9 +188,12 @@ export default function CreateExamPage() {
     try {
       await createGroupExam({
         title: exam.title,
-        type: 'lesson',
-        group: selectedGroupId,
-        lessonId: selectedLessonId,
+        type: targetType === 'level' ? 'placement' : (selectedLessonId ? 'lesson' : 'monthly'),
+        targetType,
+        targetStudent: targetType === 'individual' ? targetStudentId : undefined,
+        group: (targetType === 'group' || targetType === 'individual') ? selectedGroupId : undefined,
+        level: targetType === 'level' ? selectedLevel : undefined,
+        lessonId: selectedLessonId || undefined,
         lessonTitle: selectedLesson?.title || '',
         duration: exam.duration,
         passingScore: exam.passingScore,
@@ -153,13 +206,21 @@ export default function CreateExamPage() {
         })),
         totalPoints: exam.questions.reduce((s, q) => s + (q.points || 1), 0),
       });
-      toast.success('تم إنشاء تقييم الدرس بنجاح! ✅');
+
+      const successMsg = targetType === 'individual'
+        ? 'تم إسناد الامتحان الفردي للطالب بنجاح! 🎯'
+        : targetType === 'level'
+        ? 'تم نشر امتحان المستوى بنجاح! 🏷️'
+        : 'تم إنشاء امتحان المجموعة بنجاح! 👥';
+
+      toast.success(successMsg);
       // Reset
       setExam({
         title: '', duration: 30, passingScore: 60, allowRetries: true,
         questions: [{ ...EMPTY_Q }],
       });
       setSelectedLessonId('');
+      setTargetStudentId('');
       setExpandedQ(0);
     } catch (err) {
       toast.error(err?.response?.data?.message || 'خطأ في حفظ التقييم');
@@ -180,60 +241,191 @@ export default function CreateExamPage() {
     <PageLayout>
       {/* Header */}
       <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200/50">
-                <Sparkles className="w-6 h-6 text-white" />
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-200/50">
+            <Sparkles className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-gray-900">إنشاء نشاط / امتحان جديد</h1>
+            <p className="text-sm text-gray-500">إنشاء امتحانات المستوى، امتحانات عامة للمجموعات، أو امتحانات فردية مخصصة للطلاب</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Main Form - 2 cols */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* Step 1: Target Selection */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
+                <span className="text-sm font-black text-blue-600">1</span>
               </div>
               <div>
-                <h1 className="text-xl font-black text-gray-900">نشاط / تقييم الدرس التفاعلي</h1>
-                <p className="text-sm text-gray-500">إنشاء تقييم شامل بجميع أنواع الأسئلة: اختياري، كتابي، وشفهي</p>
+                <h2 className="font-bold text-gray-900">تحديد الفئة المستهدفة ونوع الامتحان</h2>
+                <p className="text-xs text-gray-500">اختر توجيه الامتحان لمجموعة، لطالب محدد، أو لمستوى كامل</p>
               </div>
             </div>
-          </div>
 
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* Main Form - 2 cols */}
-            <div className="lg:col-span-2 space-y-6">
+            {/* Target Type Switcher Tabs */}
+            <div className="grid grid-cols-3 gap-2 p-1.5 bg-gray-100/80 rounded-2xl mb-5">
+              <button
+                type="button"
+                onClick={() => { setTargetType('group'); setSelectedLessonId(''); }}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs md:text-sm transition-all ${
+                  targetType === 'group'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}>
+                <Users className="w-4 h-4" />
+                <span>امتحان لمجموعة</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTargetType('individual'); }}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs md:text-sm transition-all ${
+                  targetType === 'individual'
+                    ? 'bg-white text-amber-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}>
+                <Target className="w-4 h-4" />
+                <span>امتحان فردي لطالب</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTargetType('level'); setSelectedGroupId(''); setSelectedLessonId(''); setTargetStudentId(''); }}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs md:text-sm transition-all ${
+                  targetType === 'level'
+                    ? 'bg-white text-emerald-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}>
+                <GraduationCap className="w-4 h-4" />
+                <span>امتحان مستوى</span>
+              </button>
+            </div>
 
-              {/* Step 1: Group & Lesson Selection */}
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-                <div className="flex items-center gap-2 mb-5">
-                  <div className="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <span className="text-sm font-black text-blue-600">1</span>
+            {/* Conditional Target UI */}
+            {targetType === 'group' && (
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-1.5 block">المجموعة المستهدفة *</label>
+                  <div className="relative">
+                    <Users className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <select value={selectedGroupId}
+                      onChange={e => { setSelectedGroupId(e.target.value); setSelectedLessonId(''); setExam(p => ({ ...p, title: '' })); }}
+                      className="input-base pr-10">
+                      <option value="">اختر المجموعة...</option>
+                      {groups.map(g => <option key={g._id} value={g._id}>{g.name} ({g.students?.length || 0} طالب)</option>)}
+                    </select>
                   </div>
-                  <h2 className="font-bold text-gray-900">اختيار المجموعة والدرس</h2>
                 </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700 mb-1.5 block">
+                    الدرس المرتبط <span className="text-xs font-normal text-gray-400">(اختياري)</span>
+                  </label>
+                  <div className="relative">
+                    <BookOpen className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <select value={selectedLessonId}
+                      onChange={e => setSelectedLessonId(e.target.value)}
+                      disabled={!selectedGroupId || loadingLessons}
+                      className="input-base pr-10 disabled:opacity-50">
+                      <option value="">
+                        {loadingLessons ? 'جاري التحميل...' : !selectedGroupId ? 'اختر المجموعة أولاً' : 'امتحان عام للمجموعة (بدون درس محدد)'}
+                      </option>
+                      {lessons.map(l => <option key={l._id} value={l._id}>{l.lessonNumber}. {l.title}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {targetType === 'individual' && (
+              <div className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-semibold text-gray-700 mb-1.5 block">المجموعة *</label>
+                    <label className="text-sm font-semibold text-gray-700 mb-1.5 block">مجموعة الطالب *</label>
                     <div className="relative">
                       <Users className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <select value={selectedGroupId}
-                        onChange={e => { setSelectedGroupId(e.target.value); setSelectedLessonId(''); setExam(p => ({ ...p, title: '' })); }}
+                        onChange={e => { setSelectedGroupId(e.target.value); setTargetStudentId(''); }}
                         className="input-base pr-10">
-                        <option value="">اختر المجموعة...</option>
+                        <option value="">اختر مجموعة الطالب...</option>
                         {groups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}
                       </select>
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-gray-700 mb-1.5 block">الدرس *</label>
+                    <label className="text-sm font-semibold text-gray-700 mb-1.5 block">الطالب المستهدف *</label>
                     <div className="relative">
-                      <BookOpen className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <select value={selectedLessonId}
-                        onChange={e => setSelectedLessonId(e.target.value)}
-                        disabled={!selectedGroupId || loadingLessons}
+                      <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <select value={targetStudentId}
+                        onChange={e => {
+                          setTargetStudentId(e.target.value);
+                          const st = groupStudents.find(s => s._id === e.target.value);
+                          if (st && !exam.title) {
+                            setExam(p => ({ ...p, title: `امتحان متابعة فردي: ${st.firstName} ${st.lastName}` }));
+                          }
+                        }}
+                        disabled={!selectedGroupId || loadingStudents}
                         className="input-base pr-10 disabled:opacity-50">
                         <option value="">
-                          {loadingLessons ? 'جاري التحميل...' : !selectedGroupId ? 'اختر المجموعة أولاً' : 'اختر الدرس...'}
+                          {loadingStudents ? 'جاري تحميل الطلاب...' : !selectedGroupId ? 'اختر المجموعة أولاً' : groupStudents.length === 0 ? 'لا يوجد طلاب في المجموعة' : 'اختر الطالب...'}
                         </option>
-                        {lessons.map(l => <option key={l._id} value={l._id}>{l.lessonNumber}. {l.title}</option>)}
+                        {groupStudents.map(st => (
+                          <option key={st._id} value={st._id}>{st.firstName} {st.lastName} ({st.email || 'طالب'})</option>
+                        ))}
                       </select>
                     </div>
                   </div>
                 </div>
-              </motion.div>
+
+                {targetStudentId && (
+                  <div className="flex items-center gap-3 p-3.5 bg-amber-50/70 border border-amber-200/70 rounded-2xl">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center font-bold text-amber-700 text-lg">
+                      🎯
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-amber-900">امتحان مخصص وموجه لهذا الطالب فقط</p>
+                      <p className="text-xs text-amber-700">سيظهر للطالب حصراً في صندوق &quot;المطلوب مني إنجازه اليوم 📋&quot; بصفحته الرئيسية مع إشعار فوري له.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {targetType === 'level' && (
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">المستوى المستهدف *</label>
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {LEVEL_OPTIONS.map(lvl => {
+                    const isSelected = selectedLevel === lvl.value;
+                    return (
+                      <div
+                        key={lvl.value}
+                        onClick={() => setSelectedLevel(lvl.value)}
+                        className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
+                          isSelected
+                            ? 'border-emerald-500 bg-emerald-50/50 shadow-sm ring-2 ring-emerald-200'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">{lvl.badge}</span>
+                          <h4 className="font-bold text-sm text-gray-900">{lvl.label}</h4>
+                        </div>
+                        <p className="text-xs text-gray-500">{lvl.desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-emerald-700 bg-emerald-50 p-2.5 rounded-xl mt-3 border border-emerald-100 flex items-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+                  امتحانات المستوى تظهر لجميع الطلاب المنتمين لهذا المستوى أو كاختبار عام لتحديد المستوى وتثبيت الحفظ.
+                </p>
+              </div>
+            )}
+          </motion.div>
 
               {/* Step 2: Exam Settings */}
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
@@ -615,17 +807,49 @@ export default function CreateExamPage() {
                   </div>
                 </div>
 
+                {/* Target Type Info in sidebar */}
+                <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1 text-xs">
+                  <div className="flex justify-between items-center text-gray-500">
+                    <span>نوع التوجيه:</span>
+                    <span className="font-bold text-gray-800">
+                      {targetType === 'individual' ? '🎯 امتحان فردي' : targetType === 'level' ? '🏷️ امتحان مستوى' : '👥 امتحان مجموعة'}
+                    </span>
+                  </div>
+                  {targetType === 'individual' && targetStudentId && (
+                    <div className="flex justify-between items-center text-gray-500">
+                      <span>الطالب:</span>
+                      <span className="font-bold text-amber-700">
+                        {groupStudents.find(s => s._id === targetStudentId)?.firstName} {groupStudents.find(s => s._id === targetStudentId)?.lastName}
+                      </span>
+                    </div>
+                  )}
+                  {targetType === 'level' && (
+                    <div className="flex justify-between items-center text-gray-500">
+                      <span>المستوى:</span>
+                      <span className="font-bold text-emerald-700">
+                        {LEVEL_OPTIONS.find(l => l.value === selectedLevel)?.label}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
                 {/* Validation */}
-                {(!selectedGroupId || !selectedLessonId || !exam.title || exam.questions.some(q => !q.text.trim())) && (
+                {(!exam.title.trim() ||
+                  (targetType === 'group' && !selectedGroupId) ||
+                  (targetType === 'individual' && (!selectedGroupId || !targetStudentId)) ||
+                  (targetType === 'level' && !selectedLevel) ||
+                  exam.questions.some(q => !q.text.trim())) && (
                   <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200">
                     <div className="flex items-center gap-1.5 text-amber-700 mb-1.5">
                       <AlertCircle className="w-4 h-4" />
                       <span className="text-xs font-bold">مطلوب للحفظ:</span>
                     </div>
                     <ul className="space-y-1 text-xs text-amber-600">
-                      {!selectedGroupId && <li>• اختيار المجموعة</li>}
-                      {!selectedLessonId && <li>• اختيار الدرس</li>}
-                      {!exam.title && <li>• عنوان التقييم</li>}
+                      {!exam.title.trim() && <li>• عنوان التقييم / الامتحان</li>}
+                      {targetType === 'group' && !selectedGroupId && <li>• اختيار المجموعة</li>}
+                      {targetType === 'individual' && !selectedGroupId && <li>• اختيار مجموعة الطالب</li>}
+                      {targetType === 'individual' && !targetStudentId && <li>• تحديد الطالب المستهدف</li>}
+                      {targetType === 'level' && !selectedLevel && <li>• اختيار المستوى المستهدف</li>}
                       {exam.questions.some(q => !q.text.trim()) && <li>• إكمال نص جميع الأسئلة</li>}
                     </ul>
                   </div>
@@ -633,10 +857,18 @@ export default function CreateExamPage() {
 
                 {/* Save Button */}
                 <button onClick={handleSave}
-                  disabled={saving || !selectedGroupId || !selectedLessonId || !exam.title || exam.questions.length === 0}
+                  disabled={
+                    saving ||
+                    !exam.title.trim() ||
+                    (targetType === 'group' && !selectedGroupId) ||
+                    (targetType === 'individual' && (!selectedGroupId || !targetStudentId)) ||
+                    (targetType === 'level' && !selectedLevel) ||
+                    exam.questions.length === 0 ||
+                    exam.questions.some(q => !q.text.trim())
+                  }
                   className="w-full mt-5 bg-gradient-to-l from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold py-3.5 rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-200/50 hover:shadow-xl flex items-center justify-center gap-2">
                   {saving ? <LoadingSpinner size="sm" color="white" /> : (
-                    <><Save className="w-5 h-5" /> حفظ التقييم</>
+                    <><Save className="w-5 h-5" /> حفظ ونشر الامتحان</>
                   )}
                 </button>
               </motion.div>

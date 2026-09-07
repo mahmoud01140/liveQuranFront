@@ -7,8 +7,8 @@ import {
 import useAuthStore from '../../store/authStore';
 
 const studentNavItems = [
-  { to: '/student', icon: LayoutDashboard, label: 'الرئيسية', end: true },
-  { to: '/student/curriculum', icon: BookOpen, label: 'المنهج', pattern: /^\/student\/(curriculum|lessons)/ },
+  { to: '/student', icon: LayoutDashboard, label: 'المطلوب اليوم', end: true },
+  { to: '/student/quran', icon: BookMarked, label: 'المصحف' },
   { to: '/student/live', icon: Video, label: 'المباشر', isLiveBadge: true },
   { to: '/student/exams', icon: FileText, label: 'الاختبارات', end: true },
   { to: '/student/progress', icon: TrendingUp, label: 'تقدمي' },

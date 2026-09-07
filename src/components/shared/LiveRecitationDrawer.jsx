@@ -628,40 +628,83 @@ export default function LiveRecitationDrawer({
                         <h4 className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
                           <Edit3 className="w-3.5 h-3.5" /> تخصيص ورد الحفظ الآن
                         </h4>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <label className="text-[10px] text-gray-400 block mb-0.5">سورة الحفظ الجديد</label>
-                            <select
-                              value={editWirdForm.surahNumber}
-                              onChange={e => setEditWirdForm({ ...editWirdForm, surahNumber: e.target.value })}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
-                            >
-                              {QURAN_SURAHS.map(s => (
-                                <option key={s.number} value={s.number}>
-                                  {s.number}. {s.name}
-                                </option>
-                              ))}
-                            </select>
+                        <div className="border-b border-gray-800 pb-2.5">
+                          <span className="text-[10px] font-bold text-emerald-400 block mb-1">📖 الحفظ الجديد (السبق):</span>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-[10px] text-gray-400 block mb-0.5">السورة</label>
+                              <select
+                                value={editWirdForm.surahNumber}
+                                onChange={e => setEditWirdForm({ ...editWirdForm, surahNumber: e.target.value })}
+                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
+                              >
+                                {QURAN_SURAHS.map(s => (
+                                  <option key={s.number} value={s.number}>
+                                    {s.number}. {s.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-gray-400 block mb-0.5">من آية</label>
+                              <input
+                                type="number"
+                                value={editWirdForm.fromVerse}
+                                onChange={e => setEditWirdForm({ ...editWirdForm, fromVerse: e.target.value })}
+                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
+                                min="1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-gray-400 block mb-0.5">إلى آية</label>
+                              <input
+                                type="number"
+                                value={editWirdForm.toVerse}
+                                onChange={e => setEditWirdForm({ ...editWirdForm, toVerse: e.target.value })}
+                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
+                                min="1"
+                              />
+                            </div>
                           </div>
-                          <div>
-                            <label className="text-[10px] text-gray-400 block mb-0.5">من آية</label>
-                            <input
-                              type="number"
-                              value={editWirdForm.fromVerse}
-                              onChange={e => setEditWirdForm({ ...editWirdForm, fromVerse: e.target.value })}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
-                              min="1"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] text-gray-400 block mb-0.5">إلى آية</label>
-                            <input
-                              type="number"
-                              value={editWirdForm.toVerse}
-                              onChange={e => setEditWirdForm({ ...editWirdForm, toVerse: e.target.value })}
-                              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
-                              min="1"
-                            />
+                        </div>
+
+                        <div className="border-b border-gray-800 pb-2.5">
+                          <span className="text-[10px] font-bold text-blue-400 block mb-1">🔄 الماضي القريب (السبقي):</span>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-[10px] text-gray-400 block mb-0.5">السورة</label>
+                              <select
+                                value={editWirdForm.nearSurahNumber}
+                                onChange={e => setEditWirdForm({ ...editWirdForm, nearSurahNumber: e.target.value })}
+                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
+                              >
+                                {QURAN_SURAHS.map(s => (
+                                  <option key={s.number} value={s.number}>
+                                    {s.number}. {s.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-gray-400 block mb-0.5">من آية</label>
+                              <input
+                                type="number"
+                                value={editWirdForm.nearFromVerse}
+                                onChange={e => setEditWirdForm({ ...editWirdForm, nearFromVerse: e.target.value })}
+                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
+                                min="1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-gray-400 block mb-0.5">إلى آية</label>
+                              <input
+                                type="number"
+                                value={editWirdForm.nearToVerse}
+                                onChange={e => setEditWirdForm({ ...editWirdForm, nearToVerse: e.target.value })}
+                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
+                                min="1"
+                              />
+                            </div>
                           </div>
                         </div>
 

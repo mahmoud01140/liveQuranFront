@@ -2,23 +2,23 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, Video, FileText,
   BarChart2, Settings, BookMarked, Radio, ClipboardList,
-  UserCheck, Book, TrendingUp, ChevronLeft, Sparkles, MessageCircle, CalendarCheck, FolderOpen, Flame, CreditCard
+  UserCheck, Book, TrendingUp, ChevronLeft, Sparkles, MessageCircle, CalendarCheck, FolderOpen, Flame, CreditCard,
+  PlusCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAuthStore from '../../store/authStore';
 import { getInitials, getAvatarColor, getLevelLabel } from '../../utils/helpers';
 
 const studentLinks = [
-  { to: '/student', icon: LayoutDashboard, label: 'الرئيسية', end: true },
-  { to: '/student/group', icon: Users, label: 'مجموعتي' },
+  { to: '/student', icon: LayoutDashboard, label: 'المطلوب مني اليوم 📋', end: true },
   { to: '/student/live', icon: Video, label: 'الجلسة المباشرة' },
-  { to: '/student/daily-tracker', icon: CalendarCheck, label: 'سجل الحفظ والورد اليومي' },
-  { to: '/student/homework', icon: ClipboardList, label: 'الواجبات والتسميع' },
-  { to: '/student/curriculum', icon: BookOpen, label: 'المنهج وتقييمات الدروس' },
-  { to: '/student/quran', icon: BookMarked, label: 'المصحف المكرر والمتشابهات' },
-  { to: '/student/exams', icon: FileText, label: 'الاختبارات والتقييمات' },
-  { to: '/student/progress', icon: TrendingUp, label: 'تقدمي وبنك المراجعة' },
-  { to: '/student/subscription', icon: CreditCard, label: 'الاشتراكات والمدفوعات' },
+  { to: '/student/quran', icon: BookMarked, label: 'المصحف الإلكتروني والمعلم' },
+  { to: '/student/group', icon: Users, label: 'مجموعتي وحلقتي' },
+  { to: '/student/daily-tracker', icon: CalendarCheck, label: 'سجل وأرشيف الورد' },
+  { to: '/student/exams', icon: FileText, label: 'سجل الاختبارات والتقييمات' },
+  { to: '/student/curriculum', icon: BookOpen, label: 'المنهج والدروس' },
+  { to: '/student/progress', icon: TrendingUp, label: 'تقدمي وإحصائياتي' },
+  { to: '/student/subscription', icon: CreditCard, label: 'الاشتراك' },
   { to: '/student/discussion', icon: MessageCircle, label: 'غرفة النقاش' },
   { to: '/student/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },
 ];
@@ -27,9 +27,10 @@ const teacherLinks = [
   { to: '/teacher', icon: LayoutDashboard, label: 'الرئيسية', end: true },
   { to: '/teacher/groups', icon: Users, label: 'مجموعاتي' },
   { to: '/teacher/broadcast', icon: Radio, label: 'البث المباشر' },
-  { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والمراجعة' },
-  { to: '/teacher/create-exam', icon: FileText, label: 'نشاط / تقييم الدرس' },
   { to: '/teacher/daily-review', icon: CalendarCheck, label: 'مراجعة الحفظ' },
+  { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والمراجعة' },
+  { to: '/admin/exams', icon: FileText, label: 'بنك وإدارة الامتحانات' },
+  { to: '/teacher/create-exam', icon: PlusCircle, label: 'إنشاء امتحان / تقييم' },
   { to: '/teacher/discussion', icon: MessageCircle, label: 'غرفة النقاش' },
   { to: '/student/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },
 ];
@@ -40,7 +41,8 @@ const adminLinks = [
   { to: '/teacher/broadcast', icon: Radio, label: 'البث المباشر للحلقات' },
   { to: '/teacher/daily-review', icon: CalendarCheck, label: 'طابور التسميع والورد اليومي' },
   { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والتسجيلات' },
-  { to: '/teacher/create-exam', icon: FileText, label: 'نشاط / تقييم الدرس' },
+  { to: '/admin/exams', icon: FileText, label: 'بنك وإدارة الامتحانات' },
+  { to: '/teacher/create-exam', icon: PlusCircle, label: 'إنشاء امتحان / تقييم' },
   { to: '/admin/users', icon: Users, label: 'إدارة الطلاب والمستخدمين' },
   { to: '/admin/payments', icon: CreditCard, label: 'الاشتراكات والمدفوعات' },
   { to: '/admin/reports', icon: BarChart2, label: 'التقارير والإحصاءات' },

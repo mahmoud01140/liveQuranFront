@@ -55,6 +55,7 @@ const UsersManagement = lazy(() => import('./pages/admin/UsersManagement'));
 const GroupsManagement = lazy(() => import('./pages/admin/GroupsManagement'));
 const ReportsPage = lazy(() => import('./pages/admin/ReportsPage'));
 const AdminGroupCurriculumPage = lazy(() => import('./pages/admin/AdminGroupCurriculumPage'));
+const AdminExamsPage = lazy(() => import('./pages/admin/AdminExamsPage'));
 const AdminExamResultsPage = lazy(() => import('./pages/admin/AdminExamResultsPage'));
 const AdminResourcesPage = lazy(() => import('./pages/admin/AdminResourcesPage'));
 
@@ -145,7 +146,9 @@ export default function App() {
             <Route path="/admin/reports" element={<ProtectedRoute role="admin"><ReportsPage /></ProtectedRoute>} />
             <Route path="/admin/live" element={<ProtectedRoute role="admin"><LiveBroadcastPage /></ProtectedRoute>} />
             <Route path="/admin/groups/:groupId/curriculum" element={<ProtectedRoute role="admin"><AdminGroupCurriculumPage /></ProtectedRoute>} />
+            <Route path="/admin/exams" element={<ProtectedRoute role="admin"><AdminExamsPage /></ProtectedRoute>} />
             <Route path="/admin/exams/:examId/results" element={<ProtectedRoute role="admin"><AdminExamResultsPage /></ProtectedRoute>} />
+            <Route path="/teacher/exams" element={<ProtectedRoute role="teacher"><AdminExamsPage /></ProtectedRoute>} />
             <Route path="/admin/discussions" element={<ProtectedRoute role="admin"><DiscussionPage /></ProtectedRoute>} />
             <Route path="/admin/daily-review" element={<ProtectedRoute role="admin"><TeacherDailyReviewPage /></ProtectedRoute>} />
             <Route path="/admin/resources" element={<ProtectedRoute role="admin"><AdminResourcesPage /></ProtectedRoute>} />

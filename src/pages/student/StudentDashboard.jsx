@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Video, Calendar, TrendingUp, Clock, Users, Star, Bell, ChevronLeft, Zap, Flame, Check, AlertTriangle, Lock, CreditCard, Gift, Sparkles } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { BookOpen, Video, Calendar, TrendingUp, Clock, Users, Star, Bell, ChevronLeft, Zap, Flame, Check, AlertTriangle, Lock, CreditCard, Gift, Sparkles, FileText, Play, Target, Award } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import PageLayout from '../../components/shared/PageLayout';
 import useAuthStore from '../../store/authStore';
 import useGroupStore from '../../store/groupStore';
@@ -26,6 +26,7 @@ function useCountdown(targetDate) {
 }
 
 export default function StudentDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { group, studyPlan, fetchMyGroup, fetchStudyPlan } = useGroupStore();
   const { sessions, fetchSessions } = useLiveStore();
@@ -67,10 +68,23 @@ export default function StudentDashboard() {
   const [dailyTask, setDailyTask] = useState(null);
   const [loadingTask, setLoadingTask] = useState(false);
 
+  // ── Assigned Exams (Individual, Group, Level) ──
+  const [assignedExams, setAssignedExams] = useState([]);
+  const [loadingExams, setLoadingExams] = useState(false);
+
   useEffect(() => {
     api.get('/daily-tasks/today')
       .then(res => setDailyTask(res.data.task))
       .catch(() => {});
+
+    setLoadingExams(true);
+    api.get('/exams/student/assigned')
+      .then(res => {
+        const exams = res.data.exams || [];
+        setAssignedExams(exams.filter(e => !e.isCompleted));
+      })
+      .catch(() => {})
+      .finally(() => setLoadingExams(false));
   }, []);
 
   const handleTogglePortion = async (portion) => {
@@ -215,161 +229,271 @@ export default function StudentDashboard() {
         </motion.div>
       )}
 
-      {/* Daily Triple Quran Task Section */}
-      {dailyTask && (
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card-base p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-primary-200/80 bg-gradient-to-br from-primary-50/30 to-white"
-        >
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 rounded-2xl bg-primary-500 text-white flex items-center justify-center font-black shadow-md shadow-primary-500/20">
-                📜
-              </div>
-              <div>
-                <h2 className="font-bold text-gray-900 text-sm sm:text-base flex items-center gap-2">
-                  وردك القرآني اليومي (المنهج الثلاثي المتقن)
-                  <span className="text-[10px] bg-primary-100 text-primary-800 font-black px-2.5 py-0.5 rounded-full">
-                    {dailyTask.overallStatus === 'completed' ? 'مكتمل اليوم ✅' : 'قيد الإنجاز ⏳'}
-                  </span>
+      {/* ══════════════════════════════════════════════════════════════ */}
+      {/* 🌟 UNIFIED REQUIRED HUB: المطلوب مني اليوم (الورد + الامتحانات) 🌟 */}
+      {/* ══════════════════════════════════════════════════════════════ */}
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="card-base p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-primary-300/80 bg-gradient-to-br from-primary-50/40 via-white to-emerald-50/20 shadow-md"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary-600 to-emerald-500 text-white flex items-center justify-center font-black text-xl shadow-md shadow-primary-600/20">
+              📋
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="font-black text-gray-900 text-base sm:text-lg">
+                  المطلوب مني إنجازه اليوم
                 </h2>
-                <p className="text-xs text-gray-500">
-                  الحفظ الجديد + الماضي القريب (الربط) + الماضي البعيد (التمكين الدوري)
+                {dailyTask?.overallStatus === 'completed' ? (
+                  <span className="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <Check className="w-3 h-3" /> ورد اليوم مكتمل
+                  </span>
+                ) : (
+                  <span className="text-[11px] bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 rounded-full">
+                    الورد قيد الإنجاز ⏳
+                  </span>
+                )}
+                {assignedExams.length > 0 && (
+                  <span className="text-[11px] bg-purple-100 text-purple-800 font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <FileText className="w-3 h-3" /> {assignedExams.length} اختبار مطلوب
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">
+                مكان واحد يجمع وردك القرآني اليومي واختباراتك المستحقة دون تشتيت
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              to="/student/daily-tracker"
+              className="flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm transition-all"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>سجل الورد</span>
+            </Link>
+            <Link
+              to="/student/quran"
+              className="flex items-center gap-1 text-xs font-bold text-primary-600 hover:text-primary-700 bg-white hover:bg-primary-50 px-3 py-1.5 rounded-xl border border-primary-200 shadow-sm transition-all"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span>المصحف</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* ── Sub-section 1: Active Assigned Exams (If any) ── */}
+        {assignedExams.length > 0 && (
+          <div className="mb-5 bg-purple-50/60 border border-purple-200 rounded-2xl p-3.5 sm:p-4">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-xs font-black text-purple-900 flex items-center gap-1.5">
+                <Award className="w-4 h-4 text-purple-600" />
+                الامتحانات المستحقة عليك الآن ({assignedExams.length})
+              </span>
+              <span className="text-[11px] text-purple-700 font-semibold">
+                يرجى أداؤها في أقرب وقت
+              </span>
+            </div>
+
+            <div className="space-y-2.5">
+              {assignedExams.map(exam => {
+                const isIndividual = exam.targetType === 'individual';
+                const isGroup = exam.targetType === 'group' || !exam.targetType;
+                const isLevel = exam.targetType === 'level';
+
+                return (
+                  <div
+                    key={exam._id}
+                    className="bg-white border border-purple-100 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:border-purple-300 transition-all"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-base ${
+                        isIndividual
+                          ? 'bg-amber-100 text-amber-800'
+                          : isGroup
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-purple-100 text-purple-800'
+                      }`}>
+                        {isIndividual ? '🎯' : isGroup ? '👥' : '🏷️'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-black text-gray-900 text-sm truncate">{exam.title}</h4>
+                          {isIndividual && (
+                            <span className="text-[10px] font-black bg-gradient-to-r from-amber-500 to-amber-600 text-white px-2 py-0.5 rounded-full shadow-xs">
+                              🎯 امتحان فردي مخصص لك
+                            </span>
+                          )}
+                          {isGroup && exam.group?.name && (
+                            <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                              حلقة: {exam.group.name}
+                            </span>
+                          )}
+                          {isLevel && (
+                            <span className="text-[10px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
+                              امتحان مستوى
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1 flex-wrap">
+                          <span>{exam.questions?.length || 0} أسئلة</span>
+                          {exam.duration && <span>⏱️ المدة: {exam.duration} دقيقة</span>}
+                          {exam.passingScore && <span>النجاح: {exam.passingScore}%</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => navigate(`/student/exams/${exam._id}/take`)}
+                      className={`px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm text-white flex items-center justify-center gap-1.5 shadow-sm transition-all flex-shrink-0 cursor-pointer ${
+                        isIndividual
+                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-amber-500/20'
+                          : 'bg-primary-600 hover:bg-primary-700 shadow-primary-600/20'
+                      }`}
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      ابدأ الامتحان الآن
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Sub-section 2: Daily Quran Wird (3 Pillars) ── */}
+        {dailyTask ? (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                <BookOpen className="w-4 h-4 text-emerald-600" />
+                الورد القرآني اليومي (المنهج الثلاثي)
+              </span>
+              <span className="text-[11px] text-gray-500">
+                اضغط على المربع لتأكيد حفظ أو ربط الجزء
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+              {/* Pillar 1: New Hifz */}
+              <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
+                dailyTask.newHifz?.status === 'completed'
+                  ? 'bg-emerald-50/90 border-emerald-300 ring-1 ring-emerald-400/30'
+                  : 'bg-white border-emerald-200/70 shadow-sm hover:border-emerald-300'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-black text-emerald-800 flex items-center gap-1">
+                    🟢 1. الحفظ الجديد (السبق)
+                  </span>
+                  {dailyTask.newHifz?.score !== undefined && (
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      درجة: {dailyTask.newHifz.score}%
+                    </span>
+                  )}
+                </div>
+                <p className="font-black text-gray-900 text-sm mb-1">
+                  سورة {dailyTask.newHifz?.surahName || '—'}
                 </p>
+                <p className="text-xs text-gray-500 mb-3">
+                  الآيات من {dailyTask.newHifz?.fromVerse || 1} إلى {dailyTask.newHifz?.toVerse || '...'} ({dailyTask.newHifz?.versesCount || 0} آية)
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleTogglePortion('newHifz')}
+                  className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    dailyTask.newHifz?.status === 'completed'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
+                  }`}
+                >
+                  <Check className="w-4 h-4" />
+                  {dailyTask.newHifz?.status === 'completed' ? 'تم الحفظ بنجاح ✅' : 'تحديد كـ تم الحفظ'}
+                </button>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <Link
-                to="/student/daily-tracker"
-                className="flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm transition-all"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>سجل الحفظ اليومي</span>
-              </Link>
-              <Link
-                to="/student/quran"
-                className="hidden sm:flex items-center gap-1 text-xs font-bold text-primary-600 hover:text-primary-700 bg-white px-3 py-1.5 rounded-xl border border-primary-200 shadow-sm transition-all"
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                <span>المصحف المكرر</span>
-              </Link>
+              {/* Pillar 2: Near Revision */}
+              <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
+                dailyTask.nearRevision?.status === 'completed'
+                  ? 'bg-amber-50/90 border-amber-300 ring-1 ring-amber-400/30'
+                  : 'bg-white border-amber-200/70 shadow-sm hover:border-amber-300'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-black text-amber-900 flex items-center gap-1">
+                    🟡 2. الماضي القريب (الربط)
+                  </span>
+                  {dailyTask.nearRevision?.score !== undefined && (
+                    <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                      درجة: {dailyTask.nearRevision.score}%
+                    </span>
+                  )}
+                </div>
+                <p className="font-black text-gray-900 text-sm mb-1">
+                  سورة {dailyTask.nearRevision?.surahName || '—'}
+                </p>
+                <p className="text-xs text-gray-500 mb-3">
+                  ربط آخر 5 إلى 10 أوجه سابقة من المحفوظ
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleTogglePortion('nearRevision')}
+                  className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    dailyTask.nearRevision?.status === 'completed'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'bg-amber-50 hover:bg-amber-100 text-amber-900'
+                  }`}
+                >
+                  <Check className="w-4 h-4" />
+                  {dailyTask.nearRevision?.status === 'completed' ? 'تم الربط بنجاح ✅' : 'تحديد كـ تم الربط'}
+                </button>
+              </div>
+
+              {/* Pillar 3: Cumulative Revision */}
+              <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
+                dailyTask.cumulativeRevision?.status === 'completed'
+                  ? 'bg-blue-50/90 border-blue-300 ring-1 ring-blue-400/30'
+                  : 'bg-white border-blue-200/70 shadow-sm hover:border-blue-300'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-black text-blue-900 flex items-center gap-1">
+                    🔵 3. الماضي البعيد (التمكين)
+                  </span>
+                  {dailyTask.cumulativeRevision?.score !== undefined && (
+                    <span className="text-[11px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full">
+                      درجة: {dailyTask.cumulativeRevision.score}%
+                    </span>
+                  )}
+                </div>
+                <p className="font-black text-gray-900 text-sm mb-1">
+                  ورد {dailyTask.cumulativeRevision?.surahName || 'الدوري'}
+                </p>
+                <p className="text-xs text-gray-500 mb-3">
+                  مراجعة الأجزاء التمكينية لضمان عدم التفلت
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleTogglePortion('cumulativeRevision')}
+                  className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    dailyTask.cumulativeRevision?.status === 'completed'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-blue-50 hover:bg-blue-100 text-blue-900'
+                  }`}
+                >
+                  <Check className="w-4 h-4" />
+                  {dailyTask.cumulativeRevision?.status === 'completed' ? 'تم التمكين بنجاح ✅' : 'تحديد كـ تم التمكين'}
+                </button>
+              </div>
             </div>
           </div>
-
-          {/* 3 Pillars Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-            {/* Pillar 1: New Hifz */}
-            <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
-              dailyTask.newHifz?.status === 'completed'
-                ? 'bg-emerald-50/80 border-emerald-300'
-                : 'bg-white border-emerald-200/60 shadow-sm'
-            }`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-black text-emerald-800 flex items-center gap-1">
-                  🟢 1. الحفظ الجديد (السبق)
-                </span>
-                {dailyTask.newHifz?.score !== undefined && (
-                  <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                    درجة: {dailyTask.newHifz.score}%
-                  </span>
-                )}
-              </div>
-              <p className="font-black text-gray-900 text-sm mb-1">
-                سورة {dailyTask.newHifz?.surahName || '—'}
-              </p>
-              <p className="text-xs text-gray-500 mb-3">
-                الآيات من {dailyTask.newHifz?.fromVerse || 1} إلى {dailyTask.newHifz?.toVerse || '...'} ({dailyTask.newHifz?.versesCount || 0} آية)
-              </p>
-              <button
-                type="button"
-                onClick={() => handleTogglePortion('newHifz')}
-                className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  dailyTask.newHifz?.status === 'completed'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
-                }`}
-              >
-                <Check className="w-4 h-4" />
-                {dailyTask.newHifz?.status === 'completed' ? 'تم الحفظ والمراجعة ✅' : 'تحديد كـ تم الحفظ'}
-              </button>
-            </div>
-
-            {/* Pillar 2: Near Revision */}
-            <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
-              dailyTask.nearRevision?.status === 'completed'
-                ? 'bg-amber-50/80 border-amber-300'
-                : 'bg-white border-amber-200/60 shadow-sm'
-            }`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-black text-amber-900 flex items-center gap-1">
-                  🟡 2. الماضي القريب (الربط)
-                </span>
-                {dailyTask.nearRevision?.score !== undefined && (
-                  <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
-                    درجة: {dailyTask.nearRevision.score}%
-                  </span>
-                )}
-              </div>
-              <p className="font-black text-gray-900 text-sm mb-1">
-                سورة {dailyTask.nearRevision?.surahName || '—'}
-              </p>
-              <p className="text-xs text-gray-500 mb-3">
-                ربط آخر 5 إلى 10 أوجه سابقة من المحفوظ الحديث
-              </p>
-              <button
-                type="button"
-                onClick={() => handleTogglePortion('nearRevision')}
-                className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  dailyTask.nearRevision?.status === 'completed'
-                    ? 'bg-amber-600 text-white shadow-sm'
-                    : 'bg-amber-50 hover:bg-amber-100 text-amber-900'
-                }`}
-              >
-                <Check className="w-4 h-4" />
-                {dailyTask.nearRevision?.status === 'completed' ? 'تم الربط والإتقان ✅' : 'تحديد كـ تم الربط'}
-              </button>
-            </div>
-
-            {/* Pillar 3: Cumulative Revision */}
-            <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
-              dailyTask.cumulativeRevision?.status === 'completed'
-                ? 'bg-blue-50/80 border-blue-300'
-                : 'bg-white border-blue-200/60 shadow-sm'
-            }`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-black text-blue-900 flex items-center gap-1">
-                  🔵 3. الماضي البعيد (التمكين)
-                </span>
-                {dailyTask.cumulativeRevision?.score !== undefined && (
-                  <span className="text-[11px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full">
-                    درجة: {dailyTask.cumulativeRevision.score}%
-                  </span>
-                )}
-              </div>
-              <p className="font-black text-gray-900 text-sm mb-1">
-                ورد {dailyTask.cumulativeRevision?.surahName || 'الدوري'}
-              </p>
-              <p className="text-xs text-gray-500 mb-3">
-                مراجعة الأجزاء القديمة لضمان عدم تفلتها
-              </p>
-              <button
-                type="button"
-                onClick={() => handleTogglePortion('cumulativeRevision')}
-                className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  dailyTask.cumulativeRevision?.status === 'completed'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'bg-blue-50 hover:bg-blue-100 text-blue-900'
-                }`}
-              >
-                <Check className="w-4 h-4" />
-                {dailyTask.cumulativeRevision?.status === 'completed' ? 'تم تمكين الورد ✅' : 'تحديد كـ تم التمكين'}
-              </button>
-            </div>
+        ) : (
+          <div className="text-center py-6 text-gray-400 text-xs">
+            جارٍ تجهيز وردك القرآني اليومي مع المعلم...
           </div>
-        </motion.div>
-      )}
+        )}
+      </motion.div>
 
       {/* Quick stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-4 sm:mb-6 stagger-children">
