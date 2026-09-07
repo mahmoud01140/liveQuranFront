@@ -16,6 +16,7 @@ export default function JitsiMeeting({
 }) {
   const containerRef = useRef(null);
   const jitsiApiRef = useRef(null);
+  const isDisposingRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -28,6 +29,7 @@ export default function JitsiMeeting({
 
   useEffect(() => {
     let isMounted = true;
+    isDisposingRef.current = false;
 
     const loadJitsiScript = () => {
       return new Promise((resolve, reject) => {
@@ -51,11 +53,18 @@ export default function JitsiMeeting({
 
         if (!isMounted || !containerRef.current) return;
 
-        // Clean up any existing instance
+        // Clean up any existing instance without triggering onLeave
+        isDisposingRef.current = true;
         if (jitsiApiRef.current) {
-          jitsiApiRef.current.dispose();
+          try {
+            jitsiApiRef.current.dispose();
+          } catch (_) {}
           jitsiApiRef.current = null;
         }
+        if (containerRef.current) {
+          containerRef.current.innerHTML = '';
+        }
+        isDisposingRef.current = false;
 
         const options = {
           roomName: sanitizedRoomName,
@@ -114,11 +123,11 @@ export default function JitsiMeeting({
         }
 
         api.addEventListener('readyToClose', () => {
-          if (onLeave) onLeave();
+          if (!isDisposingRef.current && isMounted && onLeave) onLeave();
         });
 
         api.addEventListener('videoConferenceLeft', () => {
-          if (onLeave) onLeave();
+          if (!isDisposingRef.current && isMounted && onLeave) onLeave();
         });
 
         setLoading(false);
@@ -135,9 +144,15 @@ export default function JitsiMeeting({
 
     return () => {
       isMounted = false;
+      isDisposingRef.current = true;
       if (jitsiApiRef.current) {
-        jitsiApiRef.current.dispose();
+        try {
+          jitsiApiRef.current.dispose();
+        } catch (_) {}
         jitsiApiRef.current = null;
+      }
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
       }
     };
   }, [sanitizedRoomName, domain, displayName, isTeacher]);

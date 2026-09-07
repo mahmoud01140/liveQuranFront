@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Video, PhoneOff, Bell, CheckCircle2, Clock, Sparkles, Lock, CreditCard,
   Gift, AlertTriangle, RefreshCw, Mic, Hand, BookOpen, Star, Award,
-  ChevronDown, ChevronUp, Check, X
+  ChevronDown, ChevronUp, Check, X, Radio
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -29,6 +29,7 @@ export default function LiveClassPage() {
   const [confirmingPong, setConfirmingPong] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [accessDeniedInfo, setAccessDeniedInfo] = useState(null);
+  const [voluntarilyLeft, setVoluntarilyLeft] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
   const pollingRef = useRef(null);
 
@@ -280,9 +281,16 @@ export default function LiveClassPage() {
   };
 
   const handleLeave = () => {
+    setVoluntarilyLeft(true);
     resetLive();
     setDuration(0);
     toast('خرجت من الجلسة', { icon: '👋' });
+  };
+
+  const handleRejoin = async () => {
+    setVoluntarilyLeft(false);
+    setAccessDeniedInfo(null);
+    await fetchActiveSession({ silent: false });
   };
 
   const isSessionLive = isLive || session?.status === 'live';
@@ -341,6 +349,44 @@ export default function LiveClassPage() {
     );
   }
 
+  // ─── VOLUNTARILY LEFT STATE: Student clicked leave but broadcast may still be active ───
+  if (voluntarilyLeft && !session) {
+    return (
+      <div className="min-h-screen bg-gray-50 font-sans" dir="rtl">
+        <Navbar />
+        <div className="pt-24 px-4 flex items-center justify-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white border border-gray-100 rounded-3xl p-8 sm:p-12 text-center max-w-md mx-auto shadow-sm"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-primary-50 text-primary-600 mx-auto mb-4 flex items-center justify-center shadow-inner">
+              <Video className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-black text-gray-900 mb-2">لقد غادرت الحصة المباشرة</h2>
+            <p className="text-gray-500 text-sm mb-6">يمكنك إعادة الانضمام للمحاضرة في أي وقت طالما البث ما زال مستمراً من المعلم</p>
+
+            <div className="space-y-3">
+              <button
+                onClick={handleRejoin}
+                className="btn-primary w-full py-3.5 text-sm flex items-center justify-center gap-2 shadow-green cursor-pointer"
+              >
+                <Radio className="w-4 h-4 animate-pulse" />
+                إعادة الانضمام للحصة الآن
+              </button>
+              <Link
+                to="/student"
+                className="w-full py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm transition-all block"
+              >
+                العودة للرئيسية
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
   if (!session) {
     return (
       <div className="min-h-screen bg-gray-50 font-sans" dir="rtl">
@@ -358,7 +404,11 @@ export default function LiveClassPage() {
             </div>
 
             <button
-              onClick={() => fetchActiveSession({ silent: false })}
+              onClick={() => {
+                setVoluntarilyLeft(false);
+                setAccessDeniedInfo(null);
+                fetchActiveSession({ silent: false });
+              }}
               className="inline-flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-primary-500 bg-gray-100 hover:bg-primary-50 px-4 py-2 rounded-xl transition-all"
             >
               <RefreshCw className="w-4 h-4" />
