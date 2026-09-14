@@ -1,21 +1,23 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import {
   CheckCircle, BookOpen, Clock, Star, ExternalLink, Play, Video,
   ChevronDown, ChevronUp, Lock, Unlock, Award, PenTool,
-  Trophy, Sparkles, PartyPopper,
+  Trophy, Sparkles, PartyPopper, Users, Calendar, AlertTriangle, CreditCard,
 } from 'lucide-react';
 import Navbar from '../../components/shared/Navbar';
 import Sidebar from '../../components/shared/Sidebar';
 import MobileBottomNav from '../../components/shared/MobileBottomNav';
 import useAuthStore from '../../store/authStore';
+import useGroupStore from '../../store/groupStore';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import VideoPlayer, { isVideoUrl } from '../../components/shared/VideoPlayer';
 import useLessonProgress, { BADGES, getRandomMotivation } from '../../hooks/useLessonProgress';
-import { LESSON_TYPES_AR } from '../../utils/constants';
+import { LESSON_TYPES_AR, DAYS_AR, SESSION_TYPES } from '../../utils/constants';
+import { getInitials, getAvatarColor, formatTime } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
 /* ── Lesson type colors ──────────────────────────────────── */
@@ -47,6 +49,10 @@ function getStepsForLesson(lesson) {
 ═══════════════════════════════════════════════════════════ */
 export default function CurriculumPage() {
   const { user } = useAuthStore();
+  const [searchParams, setSearchParams]     = useSearchParams();
+  const currentTab                          = searchParams.get('tab') === 'group' ? 'group' : 'curriculum';
+  const { group, students, fetchMyGroup, fetchGroupStudents } = useGroupStore();
+  const [activeSession, setActiveSession]   = useState(null);
   const [sidebarOpen, setSidebarOpen]       = useState(false);
   const [customLessons, setCustomLessons]   = useState([]);
   const [isLoading, setIsLoading]           = useState(true);
@@ -67,6 +73,8 @@ export default function CurriculumPage() {
       try {
         const groupId = user?.group?._id || user?.group;
         if (groupId) {
+          fetchMyGroup(groupId);
+          fetchGroupStudents(groupId);
           const planRes = await api.get(`/study-plans/group/${groupId}/full`).catch(() => null);
           if (planRes?.data?.plan?.customLessons?.length) {
             const lessons = planRes.data.plan.customLessons;
@@ -84,6 +92,13 @@ export default function CurriculumPage() {
       } catch {} finally { setIsLoading(false); }
     };
     fetch();
+
+    // Check active live session
+    api.get('/live/active/me').then(res => {
+      if (res.data?.session) {
+        setActiveSession(res.data.session);
+      }
+    }).catch(() => {});
   }, [user]);
 
   /* ── Derived state ─────────────────────────────────────── */
@@ -207,13 +222,194 @@ export default function CurriculumPage() {
       <main className="lg:mr-64 pt-16 pb-20 lg:pb-8">
         <div className="page-container">
 
-          {/* ── Header ──────────────────────────────────── */}
+          {/* ── Header & Tabs ───────────────────────────── */}
           <div className="mb-4 sm:mb-6">
             <h1 className="section-title flex items-center gap-2">
-              <BookOpen className="w-6 h-6 text-primary-400" /> المنهج الدراسي
+              <BookOpen className="w-6 h-6 text-primary-400" /> المنهج الدراسي والمجموعة
             </h1>
-            <p className="section-subtitle">تابع تقدمك خطوة بخطوة — أكمل كل مرحلة للانتقال إلى التالية</p>
+            <p className="section-subtitle">خطة دراستك، الدروس المخصصة، ومعلومات مجموعتك وجدول الحلقات المباشرة</p>
           </div>
+
+          {/* ── Navigation Tabs ──────────────────────────── */}
+          <div className="flex items-center gap-2 mb-6 border-b border-gray-200 pb-3">
+            <button
+              onClick={() => setSearchParams({ tab: 'curriculum' })}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                currentTab === 'curriculum'
+                  ? 'bg-primary-500 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <BookOpen className="w-4 h-4" />
+              المنهج والدروس المقررة 📚
+            </button>
+            <button
+              onClick={() => setSearchParams({ tab: 'group' })}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                currentTab === 'group'
+                  ? 'bg-primary-500 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              معلومات المجموعة والجدول 👥 {group?.name ? `(${group.name})` : ''}
+            </button>
+          </div>
+
+          {/* ── Live Class Ongoing Banner ────────────────── */}
+          {activeSession && activeSession.status === 'live' && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-red-500/20"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
+                  <Video className="w-6 h-6 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
+                    <span className="text-xs font-black bg-white/25 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      الحصة المباشرة منعقدة الآن
+                    </span>
+                  </div>
+                  <h3 className="font-black text-base sm:text-lg mt-1">{activeSession.title}</h3>
+                  <p className="text-xs text-rose-100">
+                    الحصة المباشرة منعقدة الآن مع المعلم. انضم للتسميع والمشاركة في الحلقة!
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/student/live"
+                className="py-2.5 px-5 rounded-xl bg-white text-rose-700 hover:bg-rose-50 font-black text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 flex-shrink-0 self-stretch sm:self-auto justify-center"
+              >
+                <Video className="w-4 h-4" />
+                انضم للحصة المباشرة الآن ➔
+              </Link>
+            </motion.div>
+          )}
+
+          {currentTab === 'group' ? (
+            /* ── Group Tab Content ── */
+            <div className="space-y-6">
+              {!group ? (
+                <div className="card-base p-12 text-center max-w-md mx-auto">
+                  <Users className="w-14 h-14 text-gray-200 mx-auto mb-4" />
+                  <h2 className="font-black text-gray-900 text-lg mb-2">لم تُعيَّن في مجموعة بعد</h2>
+                  <p className="text-gray-500 text-sm">سيتم تعيينك في مجموعة من قِبَل الإدارة قريباً</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                    {/* Group info */}
+                    <div className="card-base p-4 sm:p-6">
+                      <h2 className="font-bold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base flex items-center gap-2">
+                        <Users className="w-4 h-4 text-primary-400" /> معلومات المجموعة
+                      </h2>
+                      <div className="space-y-3 text-xs sm:text-sm">
+                        <div>
+                          <p className="text-gray-500 text-xs">اسم المجموعة</p>
+                          <p className="font-bold text-gray-900 text-base">{group.name}</p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div>
+                            <p className="text-gray-500">عدد الطلاب</p>
+                            <p className="font-bold text-gray-900">{group.students?.length || 0} / {group.maxStudents || 15}</p>
+                          </div>
+                        </div>
+                        {group.teacher && (
+                          <div className="flex items-start gap-3 pt-2 border-t border-gray-100">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0"
+                              style={{ backgroundColor: getAvatarColor(`${group.teacher.firstName}${group.teacher.lastName}`) }}>
+                              {getInitials(group.teacher.firstName, group.teacher.lastName)}
+                            </div>
+                            <div>
+                              <p className="text-gray-500 text-xs">معلم المجموعة</p>
+                              <p className="font-bold text-gray-900">الشيخ / {group.teacher.firstName} {group.teacher.lastName}</p>
+                            </div>
+                          </div>
+                        )}
+                        {group.description && (
+                          <p className="text-gray-600 bg-gray-50 rounded-xl p-3 leading-relaxed text-xs">{group.description}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Days of study */}
+                    <div className="card-base p-4 sm:p-6">
+                      <h2 className="font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
+                        <Calendar className="w-4 h-4 text-primary-400" /> أيام الدراسة
+                      </h2>
+                      {group.days?.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {group.days.map((day, i) => (
+                            <span key={i} className="badge-green text-xs font-semibold px-3 py-1 rounded-xl">
+                              {DAYS_AR[day] || day}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-400 text-xs">لم تُحدد أيام الدراسة بعد</p>
+                      )}
+                    </div>
+
+                    {/* Schedule */}
+                    <div className="card-base p-4 sm:p-6">
+                      <h2 className="font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
+                        <Clock className="w-4 h-4 text-primary-400" /> الجدول الأسبوعي
+                      </h2>
+                      {group.schedule?.length > 0 ? (
+                        <div className="space-y-2">
+                          {group.schedule.map((s, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-xl p-2.5">
+                              <span className="font-bold text-gray-700">{DAYS_AR[s.dayOfWeek]}</span>
+                              <span className="text-gray-500 font-mono">{formatTime(s.startTime)} — {formatTime(s.endTime)}</span>
+                              <span className="badge-green text-[10px]">{SESSION_TYPES[s.sessionType] || s.sessionType}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-400 text-xs">لم يُحدد الجدول بعد</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Classmates */}
+                  <div className="card-base p-4 sm:p-6">
+                    <h2 className="font-bold text-gray-900 mb-4 text-sm sm:text-base flex items-center gap-2">
+                      <Users className="w-4 h-4 text-primary-400" /> زملاء المجموعة ({students?.length || 0})
+                    </h2>
+                    {students && students.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {students.map((student) => (
+                          <div key={student._id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                              style={{ backgroundColor: getAvatarColor(`${student.firstName}${student.lastName}`) }}>
+                              {getInitials(student.firstName, student.lastName)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold text-gray-900 text-xs sm:text-sm truncate">
+                                {student.firstName} {student.lastName}
+                                {student._id === user?._id && <span className="text-primary-600 mr-1 text-xs font-bold">(أنت)</span>}
+                              </p>
+                              <p className="text-[11px] text-gray-400 mt-0.5">
+                                {student.memorizedVerses || 0} آية محفوظة
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-400 text-xs">لا يوجد طلاب مسجلين في المجموعة بعد</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            /* ── Curriculum Tab Content ── */
+            <>
 
           {/* ── Guidance Banner: Curriculum vs. Daily Task ── */}
           <div className="mb-6 card-base p-4 sm:p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-primary-50 border border-emerald-200">
@@ -372,6 +568,7 @@ export default function CurriculumPage() {
                   const hasVideo    = isVideoUrl(lesson.resources);
                   const pct         = isDone ? 100 : completionPct(lid, steps);
                   const doneSteps   = isDone ? steps.length : completedCount(lid, steps);
+                  const isLiveForThis = activeSession && activeSession.status === 'live' && (activeSession.lessonCovered?.toString() === lid?.toString() || (!activeSession.lessonCovered && i === 0));
 
                   return (
                     <motion.div
@@ -381,11 +578,12 @@ export default function CurriculumPage() {
                       transition={{ delay: i * 0.05 }}
                       className={`card-base overflow-hidden transition-all ${
                         !unlocked ? 'opacity-60' : ''
-                      } ${isDone ? 'ring-1 ring-primary-200' : ''}`}
+                      } ${isDone ? 'ring-1 ring-primary-200' : ''} ${isLiveForThis ? 'ring-2 ring-red-500 shadow-lg' : ''}`}
                     >
                       {/* ── Lesson header ──────────────────── */}
                       <div
                         className={`p-4 cursor-pointer transition-colors ${
+                          isLiveForThis ? 'bg-gradient-to-l from-red-50/90 to-rose-50/70' :
                           isDone ? 'bg-gradient-to-l from-primary-50/60 to-emerald-50/60' :
                           unlocked ? 'hover:bg-gray-50' : 'bg-gray-50/50'
                         }`}
@@ -419,6 +617,12 @@ export default function CurriculumPage() {
                               }`}>
                                 {LESSON_TYPES_AR?.[lesson.type] || lesson.type}
                               </span>
+                              {isLiveForThis && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-black flex items-center gap-1 animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
+                                  🔴 الحصة المباشرة الآن
+                                </span>
+                              )}
                               {hasVideo && (
                                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center gap-0.5">
                                   <Video className="w-2.5 h-2.5" /> فيديو
@@ -439,6 +643,17 @@ export default function CurriculumPage() {
 
                           {/* Progress circle + expand */}
                           <div className="flex items-center gap-3 flex-shrink-0">
+                            {isLiveForThis && (
+                              <Link
+                                to="/student/live"
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-1.5 py-1.5 px-3.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-red-500/30 animate-pulse flex-shrink-0"
+                              >
+                                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                                <Video className="w-3.5 h-3.5" />
+                                <span>انضم للحصة المباشرة</span>
+                              </Link>
+                            )}
                             {unlocked && (
                               <Link
                                 to={`/student/lessons/${lid}`}
@@ -622,6 +837,8 @@ export default function CurriculumPage() {
                   <p className="text-sm text-gray-500">ما شاء الله — بارك الله فيك وزادك علماً وحفظاً</p>
                 </motion.div>
               )}
+            </>
+          )}
             </>
           )}
         </div>

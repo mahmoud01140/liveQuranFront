@@ -2,13 +2,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, ChevronLeft, ChevronRight, Search, Check, Loader2, Volume2,
-  Mic, Award, Eye, EyeOff, Sparkles, Repeat, HelpCircle, X, ExternalLink,
+  Eye, EyeOff, Sparkles, Repeat, HelpCircle, X, ExternalLink,
   BookMarked, Info
 } from 'lucide-react';
 import PageLayout from '../../components/shared/PageLayout';
 import QuranAudioPlayer from '../../components/shared/QuranAudioPlayer';
-import RecitationRecorder from '../../components/shared/RecitationRecorder';
-import RecitationHistory from '../../components/shared/RecitationHistory';
 import QURAN_SURAHS from '../../utils/quranData';
 import { MUTASHABIHAT_ITEMS, getMutashabihForAyah } from '../../utils/mutashabihatData';
 import useQuranAudio from '../../hooks/useQuranAudio';
@@ -22,8 +20,6 @@ export default function QuranViewerPage() {
   const [loadingVerses, setLoadingVerses] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSurahList, setShowSurahList] = useState(true);
-  const [isRecorderOpen, setIsRecorderOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   // ── Memorization & Blur Mode states ────────────────────────
   const [isBlurMode, setIsBlurMode] = useState(false);
@@ -166,22 +162,6 @@ export default function QuranViewerPage() {
             >
               <Sparkles className="w-4 h-4 text-amber-200" />
               <span>بنك المتشابهات ({MUTASHABIHAT_ITEMS.length})</span>
-            </button>
-
-            {/* Recorder Button */}
-            <button
-              onClick={() => setIsRecorderOpen(true)}
-              className="btn-primary text-xs py-2 px-3.5 flex items-center gap-1.5 shadow-sm"
-            >
-              <Mic className="w-3.5 h-3.5" /> تسجيل تلاوة
-            </button>
-
-            {/* History Button */}
-            <button
-              onClick={() => setIsHistoryOpen(true)}
-              className="px-3.5 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm"
-            >
-              <Award className="w-3.5 h-3.5 text-primary-500" /> سجل تلاواتي
             </button>
           </div>
         </div>
@@ -609,20 +589,6 @@ export default function QuranViewerPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Recorders modals ─────────────────────────────────── */}
-      <AnimatePresence>
-        {isRecorderOpen && (
-          <RecitationRecorder
-            surah={surah}
-            onClose={() => setIsRecorderOpen(false)}
-          />
-        )}
-        {isHistoryOpen && (
-          <RecitationHistory
-            onClose={() => setIsHistoryOpen(false)}
-          />
-        )}
-      </AnimatePresence>
     </PageLayout>
   );
 }

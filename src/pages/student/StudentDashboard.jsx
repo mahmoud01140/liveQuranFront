@@ -494,8 +494,12 @@ export default function StudentDashboard() {
             </div>
           </div>
         ) : (
-          <div className="text-center py-6 text-gray-400 text-xs">
-            جارٍ تجهيز وردك القرآني اليومي مع المعلم...
+          <div className="text-center py-8 px-4 bg-amber-50/60 rounded-2xl border border-amber-200/70 text-amber-800 flex flex-col items-center justify-center gap-2">
+            <Clock className="w-8 h-8 text-amber-500 animate-pulse" />
+            <p className="font-bold text-sm sm:text-base">لم يتم تعيين وردك القرآني لليوم بعد</p>
+            <p className="text-xs text-amber-700/80 max-w-md">
+              يقوم المعلم بتحديد وكتابة الورد اليومي (حفظ جديد، ماضي قريب، مراجعة بعيدة) مباشرة أثناء أو بعد جلسة التسميع التفاعلية.
+            </p>
           </div>
         )}
       </motion.div>
@@ -548,8 +552,8 @@ export default function StudentDashboard() {
           {studyPlan?.quranCompletionPlan?.dailyPages && (
             <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">هدفك اليومي: {studyPlan.quranCompletionPlan.dailyPages} صفحات</p>
           )}
-          <Link to="/student/progress" className="btn-outline w-full mt-3 sm:mt-4 text-xs sm:text-sm py-2">
-            عرض التقدم التفصيلي
+          <Link to="/student/curriculum" className="btn-outline w-full mt-3 sm:mt-4 text-xs sm:text-sm py-2">
+            عرض خطة المنهج والمجموعة
           </Link>
         </motion.div>
 
@@ -650,10 +654,10 @@ export default function StudentDashboard() {
         className="mt-4 sm:mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3"
       >
         {[
-          { to: '/student/curriculum', icon: BookOpen, label: 'المنهج والدروس', color: 'bg-primary-50 text-primary-600 hover:bg-primary-100' },
-          { to: '/student/live', icon: Video, label: 'الحصة المباشرة', color: 'bg-rose-50 text-rose-600 hover:bg-rose-100' },
+          { to: '/student/curriculum', icon: BookOpen, label: 'المنهج والمجموعة', color: 'bg-primary-50 text-primary-600 hover:bg-primary-100' },
+          { to: '/student/quran', icon: BookOpen, label: 'المصحف التفاعلي', color: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' },
           { to: '/student/exams', icon: Star, label: 'الاختبارات والتقييمات', color: 'bg-purple-50 text-purple-600 hover:bg-purple-100' },
-          { to: '/student/progress', icon: TrendingUp, label: 'تقدمي وبنك المراجعة', color: 'bg-amber-50 text-amber-600 hover:bg-amber-100' },
+          { to: '/student/subscription', icon: CreditCard, label: 'تفاصيل الاشتراك', color: 'bg-blue-50 text-blue-600 hover:bg-blue-100' },
         ].map((action, i) => (
           <Link
             key={i}

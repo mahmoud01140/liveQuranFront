@@ -11,13 +11,10 @@ import { getInitials, getAvatarColor, getLevelLabel } from '../../utils/helpers'
 
 const studentLinks = [
   { to: '/student', icon: LayoutDashboard, label: 'المطلوب مني اليوم 📋', end: true },
-  { to: '/student/live', icon: Video, label: 'الجلسة المباشرة' },
+  { to: '/student/curriculum', icon: BookOpen, label: 'المنهج والمجموعة 📚' },
   { to: '/student/quran', icon: BookMarked, label: 'المصحف الإلكتروني والمعلم' },
-  { to: '/student/group', icon: Users, label: 'مجموعتي وحلقتي' },
-  { to: '/student/daily-tracker', icon: CalendarCheck, label: 'سجل وأرشيف الورد' },
   { to: '/student/exams', icon: FileText, label: 'سجل الاختبارات والتقييمات' },
-  { to: '/student/curriculum', icon: BookOpen, label: 'المنهج والدروس' },
-  { to: '/student/progress', icon: TrendingUp, label: 'تقدمي وإحصائياتي' },
+  { to: '/student/daily-tracker', icon: CalendarCheck, label: 'سجل وأرشيف الورد' },
   { to: '/student/subscription', icon: CreditCard, label: 'الاشتراك' },
   { to: '/student/discussion', icon: MessageCircle, label: 'غرفة النقاش' },
   { to: '/student/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },

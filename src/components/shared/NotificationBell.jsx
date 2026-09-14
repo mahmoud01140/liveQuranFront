@@ -42,16 +42,15 @@ export default function NotificationBell() {
 
     switch (notif.type) {
       case 'live_starting':
-        navigate(role === 'student' ? '/student/group' : '/admin/groups');
+        navigate(role === 'student' ? '/student/live' : '/admin/live');
         break;
       case 'exam_scheduled':
+      case 'result_ready':
+      case 'grade_posted':
         navigate(`${rolePrefix}/exams`);
         break;
-      case 'result_ready':
-        navigate(`${rolePrefix}/progress`);
-        break;
       case 'group_assigned':
-        navigate(role === 'teacher' ? '/teacher/groups' : '/student/group');
+        navigate(role === 'teacher' ? '/teacher/groups' : '/student/curriculum?tab=group');
         break;
       case 'plan_updated':
         navigate(`${rolePrefix}/curriculum`);
