@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard, BookOpen, Video, FileText, TrendingUp,
-  Users, Radio, ClipboardList, MessageCircle, BarChart2, BookMarked
+  Users, ClipboardList, MessageCircle, BarChart2, BookMarked
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 
@@ -17,7 +17,6 @@ const studentNavItems = [
 const teacherNavItems = [
   { to: '/teacher', icon: LayoutDashboard, label: 'الرئيسية', end: true },
   { to: '/teacher/groups', icon: Users, label: 'مجموعاتي' },
-  { to: '/teacher/broadcast', icon: Radio, label: 'البث المباشر' },
   { to: '/teacher/review', icon: ClipboardList, label: 'التصحيح' },
   { to: '/teacher/discussion', icon: MessageCircle, label: 'النقاش' },
 ];
@@ -25,7 +24,6 @@ const teacherNavItems = [
 const adminNavItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'الرئيسية', end: true },
   { to: '/admin/groups', icon: BookMarked, label: 'الحلقات' },
-  { to: '/teacher/broadcast', icon: Radio, label: 'البث المباشر' },
   { to: '/teacher/daily-review', icon: ClipboardList, label: 'التسميع والورد' },
   { to: '/admin/users', icon: Users, label: 'الطلاب' },
 ];

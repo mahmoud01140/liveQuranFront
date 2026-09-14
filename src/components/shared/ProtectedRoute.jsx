@@ -16,8 +16,11 @@ export default function ProtectedRoute({ children, role }) {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  // Role check — admin can access everything
-  if (role && user.role !== role && user.role !== 'admin') {
+  // Role check — admin can access everything, role can be string or array
+  const isRoleAllowed = !role || user.role === 'admin' || (
+    Array.isArray(role) ? role.includes(user.role) : user.role === role
+  );
+  if (!isRoleAllowed) {
     const paths = { student: '/student', teacher: '/teacher', admin: '/admin', parent: '/parent' };
     return <Navigate to={paths[user.role] || '/'} replace />;
   }

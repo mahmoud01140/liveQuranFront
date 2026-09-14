@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, Clock, Award, Star, Mail, Plus, Trash2,
   AlertTriangle, CheckCircle2, XCircle, ChevronLeft, Calendar,
-  TrendingUp, BookOpen, AlertCircle, RefreshCw, Volume2, ShieldAlert
+  TrendingUp, BookOpen, AlertCircle, RefreshCw, Volume2, ShieldAlert,
+  FileText, MessageSquare
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 import PageLayout from '../../components/shared/PageLayout';
@@ -346,6 +347,73 @@ export default function ParentDashboard() {
                         })()}
                       </div>
                     )}
+
+                    {/* Weekly Executive Summary Card */}
+                    <div className="card-base p-5 sm:p-6 bg-gradient-to-br from-white via-primary-50/20 to-emerald-50/30 border border-primary-100 shadow-sm">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary-500 to-emerald-600 text-white flex items-center justify-center shadow-md shadow-primary-500/20 flex-shrink-0">
+                            <FileText className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h3 className="font-black text-gray-900 text-base">التقرير الأسبوعي الشامل للابن</h3>
+                            <p className="text-xs text-gray-500">ملخص إنجاز الحفظ والمواظبة على الحلقات والواجبات لهذا الأسبوع</p>
+                          </div>
+                        </div>
+                        <a
+                          href="https://wa.me/?text=السلام%20عليكم%20أود%20الاستفسار%20عن%20مستوى%20ابني%20في%20الحلقة"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm shadow-emerald-600/20 self-stretch sm:self-auto justify-center"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          <span>تواصل مباشر مع الإدارة / المعلم</span>
+                        </a>
+                      </div>
+
+                      {/* Weekly Highlights Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div className="bg-white/80 backdrop-blur rounded-xl p-3.5 border border-gray-100 flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 font-black">
+                            📖
+                          </div>
+                          <div>
+                            <span className="text-gray-500 block text-[11px]">الحفظ والمراجعة</span>
+                            <span className="font-bold text-gray-900 text-sm">
+                              {(childProgress.stats?.totalVersesMemorized || 0) + (childProgress.stats?.totalVersesReviewed || 0)} آية منجزة
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="bg-white/80 backdrop-blur rounded-xl p-3.5 border border-gray-100 flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 font-black ${
+                            (childProgress.attendance?.rate || 0) >= 80 ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            🎯
+                          </div>
+                          <div>
+                            <span className="text-gray-500 block text-[11px]">مواظبة الحضور</span>
+                            <span className={`font-bold text-sm ${
+                              (childProgress.attendance?.rate || 0) >= 80 ? 'text-blue-900' : 'text-red-600'
+                            }`}>
+                              {childProgress.attendance?.rate || 0}% ({childProgress.attendance?.attendedClasses || 0} من {childProgress.attendance?.totalClasses || 0} حصة)
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="bg-white/80 backdrop-blur rounded-xl p-3.5 border border-gray-100 flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 font-black">
+                            📝
+                          </div>
+                          <div>
+                            <span className="text-gray-500 block text-[11px]">الواجبات والتسليمات</span>
+                            <span className="font-bold text-gray-900 text-sm">
+                              {childProgress.homework?.filter(h => h.submitted).length || 0} مسلّم / {childProgress.homework?.filter(h => h.overdue).length || 0} متأخر
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
                     {/* Stats metrics widgets */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

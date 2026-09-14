@@ -54,8 +54,13 @@ export default function StudentDashboard() {
     s.attendees?.some(a => (a.student?._id || a.student)?.toString() === user?._id?.toString())
   ).length;
 
-  const curriculumProgress = group?.customLessons?.length
-    ? Math.round(((user?.completedLessons?.length || 0) / group.customLessons.length) * 100)
+  const customLessons = studyPlan?.customLessons || group?.customLessons || [];
+  const completedLessonsSet = new Set((user?.completedLessons || []).map(id => (id?._id || id)?.toString()));
+  const completedCustomLessonsCount = customLessons.filter(
+    l => l.status === 'completed' || completedLessonsSet.has(l._id?.toString())
+  ).length;
+  const curriculumProgress = customLessons.length
+    ? Math.min(100, Math.round((completedCustomLessonsCount / customLessons.length) * 100))
     : 0;
 
   const timeLeft = useCountdown(upcomingSession?.status === 'scheduled' ? upcomingSession.scheduledAt : null);

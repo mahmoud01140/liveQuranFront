@@ -26,7 +26,16 @@ const TYPE_COLORS = {
   live_class: 'bg-red-50 text-red-700', review: 'bg-orange-50 text-orange-700',
   exam: 'bg-gray-100 text-gray-700',
 };
-const EMPTY_LESSON = { title: '', description: '', type: 'reading', duration: 45, isLiveRequired: false, resources: '' };
+const EMPTY_LESSON = {
+  title: '',
+  description: '',
+  type: 'reading',
+  duration: 45,
+  isLiveRequired: false,
+  resources: '',
+  defaultHomework: '',
+  defaultQuranHomework: { surahName: '', fromVerse: 1, toVerse: 10, type: 'hifz' },
+};
 const EMPTY_Q = { type: 'mcq', text: '', options: ['', '', '', ''], correctAnswer: 0, correctAnswerText: '', points: 1, instruction: '' };
 
 export default function AdminGroupCurriculumPage() {
@@ -75,7 +84,16 @@ export default function AdminGroupCurriculumPage() {
   const openAddLesson = () => { setEditingLesson(null); setLessonForm(EMPTY_LESSON); setShowLessonModal(true); };
   const openEditLesson = (lesson) => {
     setEditingLesson(lesson);
-    setLessonForm({ title: lesson.title, description: lesson.description || '', type: lesson.type, duration: lesson.duration, isLiveRequired: lesson.isLiveRequired, resources: lesson.resources || '' });
+    setLessonForm({
+      title: lesson.title,
+      description: lesson.description || '',
+      type: lesson.type,
+      duration: lesson.duration,
+      isLiveRequired: lesson.isLiveRequired,
+      resources: lesson.resources || '',
+      defaultHomework: lesson.defaultHomework || '',
+      defaultQuranHomework: lesson.defaultQuranHomework || { surahName: '', fromVerse: 1, toVerse: 10, type: 'hifz' },
+    });
     setShowLessonModal(true);
   };
   const handleSaveLesson = async () => {
@@ -89,6 +107,15 @@ export default function AdminGroupCurriculumPage() {
       toast.success(editingLesson ? 'تم تعديل الدرس' : 'تم إضافة الدرس ✅');
     } catch { toast.error('خطأ في حفظ الدرس'); }
     finally { setSavingLesson(false); }
+  };
+  const handleToggleComplete = async (lessonId) => {
+    try {
+      const res = await api.put(`/study-plans/group/${groupId}/lessons/${lessonId}/toggle-complete`);
+      setPlan(res.data.plan);
+      toast.success(res.data.message);
+    } catch {
+      toast.error('خطأ في تحديث حالة الدرس');
+    }
   };
   const handleDeleteLesson = async (lessonId) => {
     if (!window.confirm('حذف هذا الدرس نهائياً؟')) return;
@@ -148,7 +175,22 @@ export default function AdminGroupCurriculumPage() {
                   <div className="flex justify-between items-center text-sm"><span className="text-gray-500">عدد الدروس</span><span className="font-bold text-primary-500">{customLessons.length}</span></div>
                   <div className="flex justify-between items-center text-sm"><span className="text-gray-500">الطلاب</span><span className="font-bold text-gray-900">{group?.students?.length || 0}</span></div>
                   <div className="flex justify-between items-center text-sm"><span className="text-gray-500">الامتحانات</span><span className="font-bold text-amber-500">{Object.values(lessonExams).flat().length}</span></div>
+                  <div className="flex justify-between items-center text-sm"><span className="text-gray-500">دروس مكتملة</span><span className="font-bold text-emerald-600">{customLessons.filter(l => l.status === 'completed').length} / {customLessons.length}</span></div>
                 </div>
+                {customLessons.length > 0 && (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="font-bold text-gray-600">تقدم المنهج</span>
+                      <span className="font-black text-emerald-600">{Math.round((customLessons.filter(l => l.status === 'completed').length / customLessons.length) * 100)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-700"
+                        style={{ width: `${(customLessons.filter(l => l.status === 'completed').length / customLessons.length) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             {/* Lessons */}
@@ -168,19 +210,49 @@ export default function AdminGroupCurriculumPage() {
                     {customLessons.map((lesson, i) => {
                       const exams = lessonExams[lesson._id] || [];
                       return (
-                        <motion.div key={lesson._id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="bg-gray-50 hover:bg-gray-100 rounded-2xl transition-colors group">
+                        <motion.div key={lesson._id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className={`rounded-2xl transition-colors group ${lesson.status === 'completed' ? 'bg-emerald-50/70 hover:bg-emerald-100/70 border border-emerald-200' : 'bg-gray-50 hover:bg-gray-100'}`}>
                           <div className="flex items-center gap-3 p-4">
-                            <div className="w-9 h-9 bg-gradient-quran rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0">{lesson.lessonNumber}</div>
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-sm flex-shrink-0 ${lesson.status === 'completed' ? 'bg-emerald-500' : 'bg-gradient-quran'}`}>
+                              {lesson.status === 'completed' ? <CheckCircle className="w-5 h-5" /> : lesson.lessonNumber}
+                            </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-semibold text-gray-900 text-sm">{lesson.title}</p>
+                                <p className={`font-semibold text-sm ${lesson.status === 'completed' ? 'text-emerald-900' : 'text-gray-900'}`}>{lesson.title}</p>
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_COLORS[lesson.type] || 'bg-gray-100 text-gray-600'}`}>{LESSON_TYPES.find(t => t.value === lesson.type)?.label || lesson.type}</span>
+                                <button
+                                  onClick={() => handleToggleComplete(lesson._id)}
+                                  title="انقر لتبديل حالة الدرس (مكتمل / لم يبدأ)"
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-all hover:scale-105 ${
+                                    lesson.status === 'completed'
+                                      ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                                      : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                                  }`}
+                                >
+                                  {lesson.status === 'completed' ? '✅ تم الشرح (انقر للإلغاء)' : '⏳ لم يبدأ (انقر للإكمال)'}
+                                </button>
+                                {lesson.defaultHomework && (
+                                  <span className="text-[10px] font-medium bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full truncate max-w-[200px]" title={lesson.defaultHomework}>
+                                    📝 واجب: {lesson.defaultHomework}
+                                  </span>
+                                )}
                               </div>
-                              <div className="flex items-center gap-2 mt-1 text-xs text-gray-400"><Clock className="w-3 h-3" />{lesson.duration} دقيقة</div>
+                              <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                                <Clock className="w-3 h-3" />{lesson.duration} دقيقة
+                                {lesson.completedAt && (
+                                  <span className="text-emerald-600 font-medium">• شُرح في {new Date(lesson.completedAt).toLocaleDateString('ar')}</span>
+                                )}
+                                {lesson.defaultQuranHomework?.surahName && (
+                                  <span className="text-primary-600 font-medium">• واجب قرآني: سورة {lesson.defaultQuranHomework.surahName} ({lesson.defaultQuranHomework.fromVerse}-{lesson.defaultQuranHomework.toVerse})</span>
+                                )}
+                              </div>
                             </div>
                             <div className="flex gap-1 flex-shrink-0">
                               <button onClick={() => openCreateExam(lesson)} title="إنشاء امتحان" className="p-1.5 hover:bg-amber-100 text-amber-600 rounded-lg transition-colors text-xs flex items-center gap-1"><FileText className="w-3.5 h-3.5" />امتحان</button>
-                              <button onClick={() => navigate('/admin/live', { state: { groupId, groupName: group?.name, lessonTitle: lesson.title, lessonId: lesson._id } })} className="p-1.5 hover:bg-red-100 text-red-500 rounded-lg transition-colors"><Radio className="w-3.5 h-3.5" /></button>
+                              {lesson.status !== 'completed' ? (
+                                <button onClick={() => navigate('/admin/live', { state: { groupId, groupName: group?.name, lessonTitle: lesson.title, lessonId: lesson._id } })} className="p-1.5 hover:bg-red-100 text-red-500 rounded-lg transition-colors" title="بدء بث مباشر لهذا الدرس"><Radio className="w-3.5 h-3.5" /></button>
+                              ) : (
+                                <button onClick={() => handleToggleComplete(lesson._id)} className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-lg text-xs" title="انقر لتغيير الحالة إلى قيد الشرح"><CheckCircle className="w-3.5 h-3.5" /></button>
+                              )}
                               <button onClick={() => openEditLesson(lesson)} className="p-1.5 hover:bg-primary-100 text-primary-400 rounded-lg transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
                               <button onClick={() => handleDeleteLesson(lesson._id)} className="p-1.5 hover:bg-red-100 text-red-400 rounded-lg transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                             </div>
@@ -223,6 +295,53 @@ export default function AdminGroupCurriculumPage() {
                   <div><label className="text-sm font-semibold text-gray-700 mb-1 block">المدة (دقيقة)</label><input type="number" min={5} max={180} value={lessonForm.duration} onChange={e => setLessonForm(p => ({ ...p, duration: parseInt(e.target.value) || 45 }))} className="input-base" /></div>
                 </div>
                 <div><label className="text-sm font-semibold text-gray-700 mb-1 block">رابط المصادر (اختياري)</label><input value={lessonForm.resources} onChange={e => setLessonForm(p => ({ ...p, resources: e.target.value }))} className="input-base" placeholder="رابط الفيديو أو الملف..." /></div>
+
+                {/* Default homework linking */}
+                <div className="p-3 bg-purple-50/70 border border-purple-100 rounded-2xl space-y-2.5">
+                  <label className="text-xs font-bold text-purple-900 flex items-center gap-1.5">
+                    📝 الواجب الافتراضي للدرس (يرسل تلقائياً للطلاب بعد البث)
+                  </label>
+                  <input
+                    value={lessonForm.defaultHomework || ''}
+                    onChange={e => setLessonForm(p => ({ ...p, defaultHomework: e.target.value }))}
+                    className="input-base text-xs bg-white"
+                    placeholder="مثال: حل تدريبات أحكام الميم الساكنة ص 15"
+                  />
+                  <div className="grid grid-cols-3 gap-2">
+                    <input
+                      value={lessonForm.defaultQuranHomework?.surahName || ''}
+                      onChange={e => setLessonForm(p => ({
+                        ...p,
+                        defaultQuranHomework: { ...(p.defaultQuranHomework || {}), surahName: e.target.value }
+                      }))}
+                      className="input-base text-xs bg-white"
+                      placeholder="سورة الواجب (اختياري)"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      value={lessonForm.defaultQuranHomework?.fromVerse || ''}
+                      onChange={e => setLessonForm(p => ({
+                        ...p,
+                        defaultQuranHomework: { ...(p.defaultQuranHomework || {}), fromVerse: parseInt(e.target.value) || 1 }
+                      }))}
+                      className="input-base text-xs bg-white"
+                      placeholder="من آية"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      value={lessonForm.defaultQuranHomework?.toVerse || ''}
+                      onChange={e => setLessonForm(p => ({
+                        ...p,
+                        defaultQuranHomework: { ...(p.defaultQuranHomework || {}), toVerse: parseInt(e.target.value) || 1 }
+                      }))}
+                      className="input-base text-xs bg-white"
+                      placeholder="إلى آية"
+                    />
+                  </div>
+                </div>
+
                 <label className="flex items-center gap-3 cursor-pointer p-3 bg-red-50 rounded-xl hover:bg-red-100 transition-colors">
                   <input type="checkbox" checked={lessonForm.isLiveRequired} onChange={e => setLessonForm(p => ({ ...p, isLiveRequired: e.target.checked }))} className="w-4 h-4 rounded accent-red-500" />
                   <div><p className="text-sm font-semibold text-gray-800">يتطلب حصة مباشرة</p><p className="text-xs text-gray-500">سيظهر تنبيه للطالب</p></div>

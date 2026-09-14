@@ -159,30 +159,46 @@ export default function TeacherDailyReviewPage() {
       const selectedNewSurah = QURAN_SURAHS.find(s => s.number === Number(assignForm.surahNumber));
       const selectedNearSurah = QURAN_SURAHS.find(s => s.number === Number(assignForm.nearSurahNumber));
 
-      await api.put(`/daily-tasks/student/${editingStudentTask.student._id}/assign`, {
-        newHifz: {
-          surahNumber: Number(assignForm.surahNumber),
-          surahName: selectedNewSurah?.name || `سورة ${assignForm.surahNumber}`,
-          fromVerse: Number(assignForm.fromVerse),
-          toVerse: Number(assignForm.toVerse),
-        },
-        nearRevision: {
-          surahNumber: Number(assignForm.nearSurahNumber),
-          surahName: selectedNearSurah?.name || `سورة ${assignForm.nearSurahNumber}`,
-          fromVerse: Number(assignForm.nearFromVerse),
-          toVerse: Number(assignForm.nearToVerse),
-        },
-        additionalExercise: assignForm.additionalExercise
-          ? { title: 'تدريب مخصص', details: assignForm.additionalExercise, status: 'pending' }
-          : undefined,
-        teacherNotes: assignForm.teacherNotes || undefined,
-      });
+      if (assignForm.applyWeeklyPlan) {
+        const versesPerDay = Math.max(1, Number(assignForm.toVerse) - Number(assignForm.fromVerse) + 1);
+        await api.post(`/daily-tasks/student/${editingStudentTask.student._id}/weekly-plan`, {
+          pacing: {
+            surahNumber: Number(assignForm.surahNumber),
+            surahName: selectedNewSurah?.name || `سورة ${assignForm.surahNumber}`,
+            startVerse: Number(assignForm.fromVerse),
+            versesPerDay,
+            daysCount: 7,
+            nearRevisionSurah: Number(assignForm.nearSurahNumber),
+            cumulativeJuz: 30,
+          }
+        });
+        toast.success('تم اعتماد خطة الورد الأسبوعية (7 أيام) بنجاح 📅✨');
+      } else {
+        await api.put(`/daily-tasks/student/${editingStudentTask.student._id}/assign`, {
+          newHifz: {
+            surahNumber: Number(assignForm.surahNumber),
+            surahName: selectedNewSurah?.name || `سورة ${assignForm.surahNumber}`,
+            fromVerse: Number(assignForm.fromVerse),
+            toVerse: Number(assignForm.toVerse),
+          },
+          nearRevision: {
+            surahNumber: Number(assignForm.nearSurahNumber),
+            surahName: selectedNearSurah?.name || `سورة ${assignForm.nearSurahNumber}`,
+            fromVerse: Number(assignForm.nearFromVerse),
+            toVerse: Number(assignForm.nearToVerse),
+          },
+          additionalExercise: assignForm.additionalExercise
+            ? { title: 'تدريب مخصص', details: assignForm.additionalExercise, status: 'pending' }
+            : undefined,
+          teacherNotes: assignForm.teacherNotes || undefined,
+        });
+        toast.success('تم حفظ وتخصيص الورد اليومي للطالب بنجاح ✨');
+      }
 
-      toast.success('تم حفظ وتخصيص الورد اليومي للطالب بنجاح ✨');
       setEditingStudentTask(null);
       fetchGroupDailyTasks(selectedGroup._id);
     } catch {
-      toast.error('خطأ في حفظ الورد اليومي');
+      toast.error('خطأ في حفظ الورد');
     } finally {
       setSavingAssign(false);
     }
@@ -1102,6 +1118,26 @@ export default function TeacherDailyReviewPage() {
                   placeholder="مثال: الاستماع لسورة مريم بصوت الشيخ الحصري"
                   className="input-base text-xs py-2"
                 />
+              </div>
+
+              {/* Weekly Plan Checkbox */}
+              <div className="p-3 bg-purple-50/80 border border-purple-200/80 rounded-2xl">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={assignForm.applyWeeklyPlan || false}
+                    onChange={e => setAssignForm({ ...assignForm, applyWeeklyPlan: e.target.checked })}
+                    className="w-4 h-4 rounded accent-purple-600"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-purple-900 block">
+                      📅 تعميم كخطة أسبوعية متتابعة (لـ 7 أيام قادمة)
+                    </span>
+                    <span className="text-[10px] text-purple-700 block">
+                      توزيع حفظ السورة تلقائياً بمعدل {Math.max(1, Number(assignForm.toVerse) - Number(assignForm.fromVerse) + 1)} آيات يومياً للأيام المقبلة
+                    </span>
+                  </div>
+                </label>
               </div>
 
               {/* Teacher Notes */}

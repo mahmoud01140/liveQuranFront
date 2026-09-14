@@ -42,7 +42,7 @@ export default function NotificationBell() {
 
     switch (notif.type) {
       case 'live_starting':
-        navigate(role === 'student' ? '/student/group' : `${rolePrefix}/live`);
+        navigate(role === 'student' ? '/student/group' : '/admin/groups');
         break;
       case 'exam_scheduled':
         navigate(`${rolePrefix}/exams`);

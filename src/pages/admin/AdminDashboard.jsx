@@ -138,7 +138,7 @@ export default function AdminDashboard() {
       {/* Quick shortcuts */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'البث المباشر', path: '/teacher/broadcast', icon: Radio, color: 'bg-red-500' },
+          { label: 'البث المباشر', path: '/admin/groups', icon: Radio, color: 'bg-red-500' },
           { label: 'طابور التسميع والورد', path: '/teacher/daily-review', icon: Clock, color: 'bg-amber-500' },
           { label: 'مركز التصحيح', path: '/teacher/review', icon: ClipboardList, color: 'bg-emerald-500' },
           { label: 'إدارة الحلقات', path: '/admin/groups', icon: BookOpen, color: 'bg-purple-500' },

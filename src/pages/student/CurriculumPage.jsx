@@ -69,12 +69,18 @@ export default function CurriculumPage() {
         if (groupId) {
           const planRes = await api.get(`/study-plans/group/${groupId}/full`).catch(() => null);
           if (planRes?.data?.plan?.customLessons?.length) {
-            setCustomLessons(planRes.data.plan.customLessons);
-            setCompletedLessons(new Set(user.completedLessons || []));
+            const lessons = planRes.data.plan.customLessons;
+            setCustomLessons(lessons);
+            const userDone = new Set((user.completedLessons || []).map(id => id.toString()));
+            // Sync any lesson already marked completed in the plan
+            lessons.forEach(l => {
+              if (l.status === 'completed') userDone.add(l._id.toString());
+            });
+            setCompletedLessons(userDone);
             return;
           }
         }
-        setCompletedLessons(new Set(user.completedLessons || []));
+        setCompletedLessons(new Set((user.completedLessons || []).map(id => id.toString())));
       } catch {} finally { setIsLoading(false); }
     };
     fetch();
@@ -99,8 +105,8 @@ export default function CurriculumPage() {
   const isUnlocked = (index) => {
     if (index === 0) return true;
     const prev  = customLessons[index - 1];
-    const prevId = prev._id;
-    return completedLessons.has(prevId) || allDone(prevId, getStepsForLesson(prev));
+    const prevId = prev._id?.toString();
+    return prev.status === 'completed' || completedLessons.has(prevId) || allDone(prevId, getStepsForLesson(prev));
   };
 
   /* ── Step toggle handler ───────────────────────────────── */
@@ -202,11 +208,41 @@ export default function CurriculumPage() {
         <div className="page-container">
 
           {/* ── Header ──────────────────────────────────── */}
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             <h1 className="section-title flex items-center gap-2">
               <BookOpen className="w-6 h-6 text-primary-400" /> المنهج الدراسي
             </h1>
             <p className="section-subtitle">تابع تقدمك خطوة بخطوة — أكمل كل مرحلة للانتقال إلى التالية</p>
+          </div>
+
+          {/* ── Guidance Banner: Curriculum vs. Daily Task ── */}
+          <div className="mb-6 card-base p-4 sm:p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-primary-50 border border-emerald-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-gray-900 text-sm sm:text-base flex items-center gap-2">
+                    دليل الطالب: ما الفرق بين المنهج والورد اليومي؟
+                  </h3>
+                  <div className="mt-1 text-xs text-gray-600 space-y-1">
+                    <p>
+                      <strong className="text-emerald-700">📚 المنهج والدروس:</strong> الخطة التعليمية الشاملة لمجموعتك (الدروس المعرفية، التجويد، والقواعد المقررة).
+                    </p>
+                    <p>
+                      <strong className="text-primary-700">📋 المطلوب مني اليوم:</strong> وردك القرآني اليومي (الحفظ الجديد، الماضي القريب، الماضي البعيد) والامتحانات المستحقة.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <Link
+                to="/student"
+                className="btn-primary text-xs py-2.5 px-4 whitespace-nowrap shadow-sm self-stretch sm:self-auto text-center"
+              >
+                الانتقال إلى المطلوب مني اليوم ➔
+              </Link>
+            </div>
           </div>
 
           {!hasContent ? (
@@ -217,6 +253,41 @@ export default function CurriculumPage() {
             </div>
           ) : (
             <>
+              {/* ── Curriculum 100% Completion Graduation Card ── */}
+              {progressPct >= 100 && (
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="mb-6 card-base p-6 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-lg relative overflow-hidden"
+                >
+                  <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 text-center md:text-right">
+                      <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
+                        🎓
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-bold uppercase tracking-wider bg-white/25 px-2.5 py-0.5 rounded-full inline-block mb-1">
+                          إنجاز استثنائي
+                        </span>
+                        <h2 className="text-lg sm:text-xl font-black">مبارك! أتممت جميع دروس المنهج المقرر 🎉</h2>
+                        <p className="text-xs text-yellow-100 mt-1">
+                          لقد أكملت جميع الدروس المخصصة لمجموعتك بنجاح وحصلت على شارة "خاتم المنهج".
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap justify-center">
+                      <Link
+                        to="/student"
+                        className="py-2.5 px-4 rounded-xl bg-white text-amber-800 hover:bg-yellow-50 font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
+                      >
+                        <Trophy className="w-4 h-4 text-amber-600" />
+                        الامتحانات المستحقة والترقية للمستوى التالي
+                      </Link>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {/* ── Overall progress + badges ──────────── */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
 
@@ -295,12 +366,12 @@ export default function CurriculumPage() {
                 {customLessons.map((lesson, i) => {
                   const lid         = lesson._id;
                   const steps       = getStepsForLesson(lesson);
-                  const isDone      = completedLessons.has(lid) || allDone(lid, steps);
+                  const isDone      = lesson.status === 'completed' || completedLessons.has(lid) || completedLessons.has(lid?.toString()) || allDone(lid, steps);
                   const unlocked    = isUnlocked(i);
                   const isExpanded  = expandedLesson === lid;
                   const hasVideo    = isVideoUrl(lesson.resources);
-                  const pct         = completionPct(lid, steps);
-                  const doneSteps   = completedCount(lid, steps);
+                  const pct         = isDone ? 100 : completionPct(lid, steps);
+                  const doneSteps   = isDone ? steps.length : completedCount(lid, steps);
 
                   return (
                     <motion.div

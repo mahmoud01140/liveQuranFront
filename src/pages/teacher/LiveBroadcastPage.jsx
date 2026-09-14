@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Radio, ClipboardList, PhoneOff, UserCheck, Mic } from 'lucide-react';
+import {
+  Radio, ClipboardList, PhoneOff, UserCheck, Mic, BookOpen,
+  CheckCircle, AlertCircle, Sparkles, ArrowRight
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import Navbar from '../../components/shared/Navbar';
 import JitsiMeeting from '../../components/shared/JitsiMeeting';
@@ -17,6 +20,7 @@ import { formatCountdown } from '../../utils/helpers';
 export default function LiveBroadcastPage() {
   const { user } = useAuthStore();
   const location = useLocation();
+  const navigate = useNavigate();
   const { groups, fetchAllGroups } = useGroupStore();
   const {
     isBroadcasting,
@@ -27,6 +31,8 @@ export default function LiveBroadcastPage() {
   const [selectedGroup, setSelectedGroup] = useState('');
   const [sessionTitle, setSessionTitle] = useState('');
   const [sessionType, setSessionType] = useState('lesson');
+  const [selectedLessonId, setSelectedLessonId] = useState('');
+  const [selectedLessonData, setSelectedLessonData] = useState(null);
   const [homeworkText, setHomeworkText] = useState('');
   const [homeworkDeadline, setHomeworkDeadline] = useState('');
   const [savingHomework, setSavingHomework] = useState(false);
@@ -37,28 +43,66 @@ export default function LiveBroadcastPage() {
   const [liveHomeworkDeadline, setLiveHomeworkDeadline] = useState('');
   const [duration, setDuration] = useState(0);
   const [session, setSession] = useState(null);
+  const [loadingLesson, setLoadingLesson] = useState(true);
 
   const socket = getSocket();
-  // Single teacher / Admin owns all groups
-  const myGroups = (user?.role === 'admin' || user?.role === 'teacher')
-    ? groups
-    : groups.filter(g => g.teacher?._id === user?._id || g.teacher === user?._id);
 
   useEffect(() => {
     fetchAllGroups();
   }, []);
 
-  // Pre-select group & title if navigated from group cards or curriculum
+  // Guard: must come from curriculum page with groupId
   useEffect(() => {
-    if (location.state?.groupId) {
-      setSelectedGroup(location.state.groupId);
-      if (location.state.lessonTitle) {
-        setSessionTitle(location.state.lessonTitle);
-      } else if (location.state.groupName) {
-        setSessionTitle(`حصة مباشرة — ${location.state.groupName}`);
-      }
+    if (!location.state?.groupId) {
+      toast.error('يجب بدء البث من صفحة منهج المجموعة');
+      navigate('/admin/groups', { replace: true });
+      return;
     }
-  }, [location.state]);
+
+    const { groupId, groupName, lessonTitle, lessonId } = location.state;
+    setSelectedGroup(groupId);
+
+    // Load lesson data from the study plan
+    const loadLessonData = async () => {
+      setLoadingLesson(true);
+      try {
+        const res = await api.get(`/study-plans/group/${groupId}/full`);
+        const groupLessons = res.data.plan?.customLessons || [];
+
+        if (lessonId) {
+          const matched = groupLessons.find(l => l._id === lessonId);
+          if (matched) {
+            setSelectedLessonId(matched._id);
+            setSelectedLessonData(matched);
+            setSessionTitle(matched.title);
+            if (matched.type && ['lesson', 'review', 'recitation', 'exam'].includes(matched.type)) {
+              setSessionType(matched.type);
+            }
+          } else {
+            setSessionTitle(lessonTitle || `حصة مباشرة — ${groupName}`);
+          }
+        } else if (lessonTitle) {
+          const matched = groupLessons.find(l => l.title === lessonTitle);
+          if (matched) {
+            setSelectedLessonId(matched._id);
+            setSelectedLessonData(matched);
+            setSessionTitle(matched.title);
+          } else {
+            setSessionTitle(lessonTitle);
+          }
+        } else {
+          setSessionTitle(`حصة مباشرة — ${groupName}`);
+        }
+      } catch {
+        setSessionTitle(lessonTitle || `حصة مباشرة — ${groupName || ''}`);
+      } finally {
+        setLoadingLesson(false);
+      }
+    };
+    loadLessonData();
+  }, [location.state, navigate]);
+
+  const currentGroup = groups.find(g => g._id === selectedGroup);
 
   useEffect(() => {
     if (isBroadcasting) {
@@ -71,13 +115,17 @@ export default function LiveBroadcastPage() {
   }, [isBroadcasting, session, socket]);
 
   const handleStartBroadcast = async () => {
-    if (!selectedGroup) { toast.error('اختر مجموعة أولاً'); return; }
-    if (!sessionTitle.trim()) { toast.error('أدخل عنوان الجلسة'); return; }
+    if (!selectedGroup) { toast.error('خطأ: لم يتم تحديد المجموعة'); return; }
+    if (!sessionTitle.trim()) { toast.error('عنوان الجلسة مطلوب'); return; }
 
     try {
       // Create session in DB
       const res = await api.post('/live', {
-        groupId: selectedGroup, title: sessionTitle, sessionType,
+        groupId: selectedGroup,
+        title: sessionTitle,
+        sessionType,
+        lessonCovered: selectedLessonId || undefined,
+        lessonTitle: sessionTitle,
         scheduledAt: new Date(),
         homework: homeworkText || undefined,
         homeworkDeadline: homeworkDeadline || undefined,
@@ -127,8 +175,22 @@ export default function LiveBroadcastPage() {
     finally { setSavingHomework(false); }
   };
 
-  // Pre-broadcast setup
+  // Pre-broadcast setup — lesson is pre-selected from curriculum page
   if (!isBroadcasting) {
+    if (loadingLesson) {
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <Navbar />
+          <div className="pt-16 flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-gray-500 text-sm font-semibold">جاري تحضير بيانات الدرس...</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
@@ -138,21 +200,65 @@ export default function LiveBroadcastPage() {
               <div className="w-16 h-16 bg-gradient-quran rounded-2xl mx-auto mb-4 flex items-center justify-center">
                 <Radio className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-xl font-black text-gray-900">بدء بث مباشر جديد (Jitsi Meet)</h2>
-              <p className="text-gray-500 text-sm mt-1">قم بإعداد الجلسة وانطلق</p>
+              <h2 className="text-xl font-black text-gray-900">بدء بث مباشر جديد</h2>
+              <p className="text-gray-500 text-sm mt-1">تأكد من بيانات الجلسة ثم انطلق</p>
             </div>
             <div className="space-y-4">
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">المجموعة *</label>
-                <select value={selectedGroup} onChange={e => setSelectedGroup(e.target.value)} className="input-base">
-                  <option value="">اختر المجموعة</option>
-                  {myGroups.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}
-                </select>
+              {/* Group & Lesson Info (read-only, pre-selected from curriculum) */}
+              <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-2xl space-y-3">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-emerald-600" />
+                  <span className="text-sm font-bold text-emerald-950">بيانات الدرس والمجموعة</span>
+                </div>
+
+                <div className="bg-white rounded-xl p-3 border border-emerald-100 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500 font-medium">المجموعة:</span>
+                    <span className="font-bold text-gray-900">{currentGroup?.name || location.state?.groupName || '—'}</span>
+                  </div>
+                  {selectedLessonData && (
+                    <>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500 font-medium">الدرس:</span>
+                        <span className="font-bold text-emerald-700">
+                          {selectedLessonData.lessonNumber ? `الدرس ${selectedLessonData.lessonNumber}: ` : ''}{selectedLessonData.title}
+                        </span>
+                      </div>
+                      {selectedLessonData.duration && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-500 font-medium">المدة المقررة:</span>
+                          <span className="font-semibold text-gray-700">{selectedLessonData.duration} دقيقة</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-100/70 px-3 py-1.5 rounded-xl font-bold">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  تم ربط البث بالدرس من منهج المجموعة
+                </div>
+
+                <button
+                  onClick={() => navigate(`/admin/groups/${selectedGroup}/curriculum`)}
+                  className="w-full text-xs text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded-lg py-1.5 transition-colors font-semibold flex items-center justify-center gap-1"
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />
+                  الرجوع لصفحة المنهج واختيار درس آخر
+                </button>
               </div>
+
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">عنوان الجلسة *</label>
-                <input value={sessionTitle} onChange={e => setSessionTitle(e.target.value)}
-                  className="input-base" placeholder="مثل: درس تجويد - النون الساكنة" />
+                <label className="text-sm font-semibold text-gray-700 mb-1 block">عنوان الجلسة المباشرة *</label>
+                <input
+                  value={sessionTitle}
+                  onChange={e => setSessionTitle(e.target.value)}
+                  className="input-base font-semibold"
+                  placeholder="عنوان الجلسة..."
+                />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  سيظهر هذا الاسم للطلاب في الإشعار المباشر وأعلى شاشة الحصة.
+                </p>
               </div>
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-1 block">نوع الجلسة</label>
@@ -206,6 +312,12 @@ export default function LiveBroadcastPage() {
             بث مباشر
           </div>
           <h1 className="text-white font-bold text-sm hidden sm:block">{sessionTitle}</h1>
+          {selectedLessonData && (
+            <span className="hidden md:inline-flex items-center gap-1 text-xs bg-emerald-900/60 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+              <BookOpen className="w-3 h-3 text-emerald-400" />
+              الدرس المرتبط بالبث
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <span className="text-gray-300 text-sm font-mono hidden sm:inline">{formatCountdown(duration)}</span>

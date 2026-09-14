@@ -47,10 +47,10 @@ export default function MyGroupsPage() {
                 ))}
               </div>
 
-              <Link to="/teacher/broadcast" state={{ groupId: group._id }}
+              <Link to={`/admin/groups/${group._id}/curriculum`}
                 className="btn-primary w-full text-xs sm:text-sm py-2.5">
                 <Video className="w-4 h-4" />
-                بدء بث لهذه المجموعة
+                منهج المجموعة وبدء البث
               </Link>
             </div>
           );

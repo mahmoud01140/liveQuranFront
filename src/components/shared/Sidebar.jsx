@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, Video, FileText,
-  BarChart2, Settings, BookMarked, Radio, ClipboardList,
+  BarChart2, Settings, BookMarked, ClipboardList,
   UserCheck, Book, TrendingUp, ChevronLeft, Sparkles, MessageCircle, CalendarCheck, FolderOpen, Flame, CreditCard,
   PlusCircle
 } from 'lucide-react';
@@ -26,7 +26,6 @@ const studentLinks = [
 const teacherLinks = [
   { to: '/teacher', icon: LayoutDashboard, label: 'الرئيسية', end: true },
   { to: '/teacher/groups', icon: Users, label: 'مجموعاتي' },
-  { to: '/teacher/broadcast', icon: Radio, label: 'البث المباشر' },
   { to: '/teacher/daily-review', icon: CalendarCheck, label: 'مراجعة الحفظ' },
   { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والمراجعة' },
   { to: '/admin/exams', icon: FileText, label: 'بنك وإدارة الامتحانات' },
@@ -38,7 +37,6 @@ const teacherLinks = [
 const adminLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'الرئيسية (لوحة التحكم)', end: true },
   { to: '/admin/groups', icon: BookMarked, label: 'إدارة وتسكين الحلقات' },
-  { to: '/teacher/broadcast', icon: Radio, label: 'البث المباشر للحلقات' },
   { to: '/teacher/daily-review', icon: CalendarCheck, label: 'طابور التسميع والورد اليومي' },
   { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والتسجيلات' },
   { to: '/admin/exams', icon: FileText, label: 'بنك وإدارة الامتحانات' },

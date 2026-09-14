@@ -144,8 +144,8 @@ export default function App() {
             <Route path="/admin/groups" element={<ProtectedRoute role="admin"><GroupsManagement /></ProtectedRoute>} />
             <Route path="/admin/assign" element={<ProtectedRoute role="admin"><Navigate to="/admin/groups" replace /></ProtectedRoute>} />
             <Route path="/admin/reports" element={<ProtectedRoute role="admin"><ReportsPage /></ProtectedRoute>} />
-            <Route path="/admin/live" element={<ProtectedRoute role="admin"><LiveBroadcastPage /></ProtectedRoute>} />
-            <Route path="/admin/groups/:groupId/curriculum" element={<ProtectedRoute role="admin"><AdminGroupCurriculumPage /></ProtectedRoute>} />
+            <Route path="/admin/live" element={<ProtectedRoute role={['admin', 'teacher']}><LiveBroadcastPage /></ProtectedRoute>} />
+            <Route path="/admin/groups/:groupId/curriculum" element={<ProtectedRoute role={['admin', 'teacher']}><AdminGroupCurriculumPage /></ProtectedRoute>} />
             <Route path="/admin/exams" element={<ProtectedRoute role="admin"><AdminExamsPage /></ProtectedRoute>} />
             <Route path="/admin/exams/:examId/results" element={<ProtectedRoute role="admin"><AdminExamResultsPage /></ProtectedRoute>} />
             <Route path="/teacher/exams" element={<ProtectedRoute role="teacher"><AdminExamsPage /></ProtectedRoute>} />

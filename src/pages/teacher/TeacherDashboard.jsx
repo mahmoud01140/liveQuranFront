@@ -79,13 +79,13 @@ export default function TeacherDashboard() {
 
       {/* Quick actions */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <Link to="/teacher/broadcast" className="card-gradient p-4 sm:p-5 flex items-center gap-3 sm:gap-4 rounded-2xl hover:shadow-xl hover:-translate-y-1 transition-all">
+        <Link to="/admin/groups" className="card-gradient p-4 sm:p-5 flex items-center gap-3 sm:gap-4 rounded-2xl hover:shadow-xl hover:-translate-y-1 transition-all">
           <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
             <Video className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
           <div>
             <p className="font-black text-white text-sm sm:text-base">بدء بث جديد</p>
-            <p className="text-primary-100 text-xs">بث مباشر لمجموعتك</p>
+            <p className="text-primary-100 text-xs">اختر الدرس من منهج المجموعة</p>
           </div>
         </Link>
         <Link to="/teacher/review" className="card-base p-4 sm:p-5 flex items-center gap-3 sm:gap-4 rounded-2xl hover:shadow-md transition-all">
