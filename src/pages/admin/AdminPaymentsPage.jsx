@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import Pagination from '../../components/shared/Pagination';
+import '../../components/halaqa/halaqa.css';
 import api from '../../services/api';
 import { formatDateAr, getInitials, getAvatarColor } from '../../utils/helpers';
 
@@ -198,6 +199,7 @@ export default function AdminPaymentsPage() {
 
   return (
     <PageLayout>
+      <div className="halaqa" style={{ maxWidth: 1040, margin: '0 auto' }}>
       <div>
 
           {/* Header */}
@@ -208,7 +210,7 @@ export default function AdminPaymentsPage() {
                 <span className="badge-purple text-xs">فودافون كاش & انستاباي</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-gray-900">
-                إدارة المدفوعات والاشتراكات 💳
+                إدارة المدفوعات والاشتراكات
               </h1>
               <p className="text-sm text-gray-500 mt-1">
                 مراجعة إيصالات التحويل، تفعيل باقات الطلاب، وضبط بيانات محافظ فودافون كاش وحسابات انستاباي
@@ -260,7 +262,7 @@ export default function AdminPaymentsPage() {
             {/* Pending Requests */}
             <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
               {stats.pendingCount > 0 && (
-                <span className="absolute top-3 left-3 w-2.5 h-2.5 bg-amber-500 rounded-full animate-ping" />
+                <span className="absolute top-3 left-3 w-2.5 h-2.5 rounded-full" style={{ background: '#B45309' }} />
               )}
               <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
                 <Clock className="w-6 h-6" />
@@ -342,8 +344,8 @@ export default function AdminPaymentsPage() {
                   <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold">
                     {[
                       { id: 'all', label: 'جميع الطرق' },
-                      { id: 'vodafone_cash', label: '🔴 فودافون كاش' },
-                      { id: 'instapay', label: '🟣 انستاباي' },
+                      { id: 'vodafone_cash', label: 'فودافون كاش' },
+                      { id: 'instapay', label: 'انستاباي' },
                     ].map((m) => (
                       <button
                         key={m.id}
@@ -382,18 +384,18 @@ export default function AdminPaymentsPage() {
                     <p className="font-bold text-sm text-gray-600">لا توجد طلبات تطابق الفلتر المختار</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-right text-sm">
+                  <div className="hq-table-wrap">
+                    <table className="hq-table">
                       <thead>
-                        <tr className="border-b border-gray-100 bg-gray-50/50 text-gray-400 text-xs font-bold">
-                          <th className="py-3.5 pr-6">الطالب</th>
-                          <th className="py-3.5">الباقة والمدة</th>
-                          <th className="py-3.5">المبلغ</th>
-                          <th className="py-3.5">طريقة التحويل</th>
-                          <th className="py-3.5">بيانات المحول</th>
-                          <th className="py-3.5">إيصال التحويل</th>
-                          <th className="py-3.5">الحالة</th>
-                          <th className="py-3.5 pl-6 text-center">الإجراءات</th>
+                        <tr>
+                          <th>الطالب</th>
+                          <th>الباقة والمدة</th>
+                          <th>المبلغ</th>
+                          <th>طريقة التحويل</th>
+                          <th>بيانات المحول</th>
+                          <th>إيصال التحويل</th>
+                          <th>الحالة</th>
+                          <th style={{ textAlign: 'center' }}>الإجراءات</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 text-gray-700">
@@ -422,7 +424,7 @@ export default function AdminPaymentsPage() {
                               {/* Plan & cycle */}
                               <td className="py-4">
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-100 text-primary-800">
-                                  الاشتراك الموحد ⭐
+                                  الاشتراك الموحد
                                 </span>
                                 <span className="text-xs text-gray-400 block mt-1">
                                   {payment.billingCycle === 'annual' ? 'اشتراك سنوي (365 يوم)'
@@ -441,7 +443,7 @@ export default function AdminPaymentsPage() {
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
                                   isVodafone ? 'bg-red-50 text-red-700 border border-red-200/50' : 'bg-purple-50 text-purple-700 border border-purple-200/50'
                                 }`}>
-                                  {isVodafone ? '🔴 فودافون كاش' : '🟣 انستاباي'}
+                                  {isVodafone ? 'فودافون كاش' : 'انستاباي'}
                                 </span>
                               </td>
 
@@ -572,7 +574,7 @@ export default function AdminPaymentsPage() {
                     <Smartphone className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-gray-900">إعدادات فودافون كاش (Vodafone Cash) 🔴</h2>
+                    <h2 className="text-lg font-black text-gray-900">إعدادات فودافون كاش (Vodafone Cash)</h2>
                     <p className="text-xs text-gray-500 mt-0.5">تحديد أرقام المحافظ المعتمدة للتحويل والتعليمات المعروضة للطلاب</p>
                   </div>
                 </div>
@@ -631,7 +633,7 @@ export default function AdminPaymentsPage() {
                     <Building2 className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-gray-900">إعدادات انستاباي (InstaPay Egypt) 🟣</h2>
+                    <h2 className="text-lg font-black text-gray-900">إعدادات انستاباي (InstaPay Egypt)</h2>
                     <p className="text-xs text-gray-500 mt-0.5">تحديد العنوان اللحظي (IPA) ورقم الهاتف واسم الحساب المستلم</p>
                   </div>
                 </div>
@@ -831,13 +833,13 @@ export default function AdminPaymentsPage() {
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-black bg-white"
                     />
                     <p className="text-[11px] text-emerald-800 mt-2">
-                      💡 الافتراضي (1 محاضرة): يسجل الطالب ويحضر أول جلسة مجاناً، ثم يُطلب منه الاشتراك لمتابعة الحضور.
+                      الافتراضي (1 محاضرة): يسجل الطالب ويحضر أول جلسة مجاناً، ثم يُطلب منه الاشتراك لمتابعة الحضور.
                     </p>
                   </div>
 
                   <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-200/60">
                     <label className="block text-xs font-bold text-gray-900 mb-1.5">
-                      بدء تنبيه السداد قبل انتهاء الاشتراك بـ (أيام) ⚠️
+                      بدء تنبيه السداد قبل انتهاء الاشتراك بـ (أيام)
                     </label>
                     <input
                       type="number"
@@ -848,7 +850,7 @@ export default function AdminPaymentsPage() {
                       className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-black bg-white"
                     />
                     <p className="text-[11px] text-amber-800 mt-2">
-                      💡 الافتراضي (3 أيام): يظهر تنبيه للمستخدم بالسداد عند اقتراب نهاية الشهر. وإذا لم يدفع يُعلّق وصوله للحلقات مؤقتاً حتى السداد.
+                      الافتراضي (3 أيام): يظهر تنبيه للمستخدم بالسداد عند اقتراب نهاية الشهر. وإذا لم يدفع يُعلّق وصوله للحلقات مؤقتاً حتى السداد.
                     </p>
                   </div>
 
@@ -1006,7 +1008,7 @@ export default function AdminPaymentsPage() {
               className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full z-10 relative border border-gray-100 shadow-2xl"
             >
               <h3 className="text-lg font-black text-red-700 mb-2">
-                رفض طلب الدفع ⚠️
+                رفض طلب الدفع
               </h3>
               <p className="text-xs text-gray-500 mb-4">
                 يرجى كتابة سبب الرفض بوضوح ليتم إرساله للطالب في الإشعارات ليتمكن من معالجة المشكلة.
@@ -1105,7 +1107,8 @@ export default function AdminPaymentsPage() {
             </motion.div>
         </div>
       )}
-    </AnimatePresence>
+      </AnimatePresence>
+      </div>
   </PageLayout>
 );
 }

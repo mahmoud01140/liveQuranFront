@@ -1,0 +1,222 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Amiri:wght@400;700&display=swap');
+
+/* ═══════════════════════════════════════════════
+   Al-Halaqa — scoped visual language.
+   Everything lives under `.halaqa` so the rest of
+   the app is untouched. Warm paper world; the only
+   dark surface is `.halaqa-stage`.
+   ═══════════════════════════════════════════════ */
+
+.halaqa {
+  --hq-paper: #FBF7EE;
+  --hq-surface: #FFFFFF;
+  --hq-ink: #2A2438;
+  --hq-muted: #756E85;
+  --hq-line: #E8E2D4;
+  --hq-mentor: #177B58;
+  --hq-mentor-deep: #0F5940;
+  --hq-mentor-wash: #E2EFE7;
+  --hq-guide: #4A3F6B;
+  --hq-guide-wash: #ECE9F4;
+  --hq-gold: #D9A441;
+  --hq-gold-wash: #F8EDD3;
+  --hq-stage: #0C0C1D;
+  --hq-warning: #B45309;
+  --hq-error: #C2410C;
+  --hq-info: #3B5BFD;
+  font-family: 'Tajawal', 'Cairo', 'Noto Sans Arabic', sans-serif;
+  color: var(--hq-ink);
+  direction: rtl;
+}
+
+.halaqa-paper { background: var(--hq-paper); }
+
+/* Focus: always visible, mentor ring */
+.halaqa :focus-visible {
+  outline: 2px solid var(--hq-mentor);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.halaqa-stage :focus-visible {
+  outline-color: #E2EFE7;
+}
+
+/* Current-node restrained pulse — the ONLY allowed pulse outside live */
+@keyframes hq-pulse-soft {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(23, 123, 88, 0.35); }
+  50% { box-shadow: 0 0 0 6px rgba(23, 123, 88, 0); }
+}
+.hq-now-pulse { animation: hq-pulse-soft 2.2s ease-in-out infinite; }
+
+/* Live dot */
+@keyframes hq-live-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.hq-live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: #C2410C;
+  animation: hq-live-blink 1.6s ease-in-out infinite;
+  flex: none;
+}
+
+/* Skeleton shimmer for known-structure loading */
+@keyframes hq-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.hq-skeleton {
+  background: linear-gradient(90deg, #FBF7EE 25%, #E8E2D4 50%, #FBF7EE 75%);
+  background-size: 200% 100%;
+  animation: hq-shimmer 1.4s infinite linear;
+  border-radius: 12px;
+}
+
+/* Khatm ring — the single living element of the journey */
+.hq-ring { transition: transform 0.25s ease; }
+
+/* Journey thread (RTL: line on the right) */
+.hq-thread { position: relative; }
+.hq-thread::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  right: 13px;
+  width: 2px;
+  background: var(--hq-line);
+  border-radius: 9999px;
+}
+.hq-node { position: relative; }
+
+/* Live stage — the only dark surface */
+.halaqa-stage {
+  background: var(--hq-stage);
+  color: #fff;
+}
+
+/* Bottom action bar (live) */
+.hq-actionbar {
+  background: var(--hq-surface);
+  border-top: 1px solid var(--hq-line);
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0.5rem));
+}
+.hq-action {
+  min-width: 48px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  font-weight: 700;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+/* Drawer handle (mobile sheet) */
+.hq-grip {
+  width: 44px;
+  height: 5px;
+  border-radius: 9999px;
+  background: var(--hq-line);
+}
+
+/* Quranic text — Amiri only, never UI */
+.hq-quran {
+  font-family: 'Amiri', serif;
+  line-height: 2.4;
+  color: var(--hq-ink);
+}
+
+/* ── Admin tables: disciplined grid, sticky head, calm rows ── */
+.hq-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--hq-line);
+  border-radius: 18px;
+  background: var(--hq-surface);
+}
+table.hq-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1rem;
+  min-width: 640px;
+}
+.hq-table thead th {
+  background: var(--hq-paper);
+  color: var(--hq-ink);
+  font-weight: 800;
+  font-size: 13px;
+  padding: 12px 16px;
+  text-align: right;
+  border-bottom: 1px solid var(--hq-line);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+.hq-table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--hq-line);
+  color: var(--hq-ink);
+  vertical-align: middle;
+}
+.hq-table tbody tr:last-child td { border-bottom: none; }
+.hq-table tbody tr:hover td { background: var(--hq-paper); }
+
+/* ── Admin panel + quiet facts ── */
+.hq-panel {
+  background: var(--hq-surface);
+  border: 1px solid var(--hq-line);
+  border-radius: 18px;
+  padding: clamp(16px, 3vw, 24px);
+}
+.hq-facts {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 0.8125rem;
+}
+.hq-facts strong { color: var(--hq-ink); font-size: 1.25rem; }
+.hq-facts span { color: var(--hq-muted); }
+
+/* ── Segmented tabs ── */
+.hq-tabs {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--hq-surface);
+  border: 1px solid var(--hq-line);
+  border-radius: 12px;
+  padding: 4px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.hq-tabs button {
+  border: none;
+  cursor: pointer;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  font-family: inherit;
+  white-space: nowrap;
+  background: transparent;
+  color: var(--hq-muted);
+}
+.hq-tabs button[aria-selected="true"] {
+  background: var(--hq-mentor);
+  color: #fff;
+}
+
+/* Reduced motion: information without celebration */
+@media (prefers-reduced-motion: reduce) {
+  .halaqa .hq-now-pulse,
+  .halaqa .hq-live-dot,
+  .halaqa .hq-skeleton {
+    animation: none !important;
+  }
+  .halaqa * {
+    transition-duration: 0.01ms !important;
+  }
+}

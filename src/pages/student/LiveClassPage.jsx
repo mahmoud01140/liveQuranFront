@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Video, PhoneOff, Bell, CheckCircle2, Clock, Sparkles, Lock, CreditCard,
-  Gift, AlertTriangle, RefreshCw, Mic, Hand, BookOpen, Star, Award,
-  ChevronDown, ChevronUp, Check, X, Radio
+  PhoneOff, Bell, CheckCircle2, Clock, Lock, CreditCard,
+  RefreshCw, Hand, BookOpen,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -15,8 +13,11 @@ import useSocket from '../../hooks/useSocket';
 import { joinGroupRoom, getSocket } from '../../services/socket';
 import api from '../../services/api';
 import { formatCountdown } from '../../utils/helpers';
+import '../../components/halaqa/halaqa.css';
+import { HqBadge, HQ } from '../../components/halaqa/primitives';
+import { SpeakerStage, CircleStrip, QueueList, WirdCard, PresenceBar } from '../../components/halaqa/LiveBits';
 
-const POLL_INTERVAL_MS = 10_000; // فحص كل 10 ثوانٍ
+const POLL_INTERVAL_MS = 10_000;
 
 export default function LiveClassPage() {
   const { user } = useAuthStore();
@@ -33,12 +34,13 @@ export default function LiveClassPage() {
   const [isPolling, setIsPolling] = useState(false);
   const pollingRef = useRef(null);
 
-  // Recitation Queue & Personalized Wird State (Vercel HTTP Polling)
+  /* Recitation queue & personalized wird (HTTP polling — logic unchanged) */
   const [queue, setQueue] = useState([]);
   const [currentSpeaker, setCurrentSpeaker] = useState(null);
   const [tasksMap, setTasksMap] = useState({});
   const [raisingHand, setRaisingHand] = useState(false);
   const [showWirdCard, setShowWirdCard] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const queuePollingRef = useRef(null);
   const wasRecitingRef = useRef(false);
 
@@ -51,12 +53,12 @@ export default function LiveClassPage() {
           setSession(res.data.session);
           setIsLive(true);
           handleJoin(sessionId);
-          toast.success('🔴 بدأ المعلم/المدير الحصة المباشرة!');
+          toast.success('بدأ المعلم الحصة المباشرة');
         }
       } catch (_) {}
     },
     'broadcast-ended': () => {
-      toast('انتهت الجلسة المباشرة', { icon: '📤' });
+      toast('انتهت الجلسة المباشرة');
       resetLive();
     },
     'attendance-ping': ({ sessionId, pingId, message, timeoutSeconds = 60 }) => {
@@ -70,14 +72,13 @@ export default function LiveClassPage() {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
         osc.connect(audioCtx.destination);
-        osc.frequency.value = 587.33; // D5
+        osc.frequency.value = 587.33;
         osc.start();
         osc.stop(audioCtx.currentTime + 0.3);
       } catch (_) {}
     },
   });
 
-  // Countdown timer for Roll-Call ping
   useEffect(() => {
     if (!pingActive) return;
     const interval = setInterval(() => {
@@ -108,27 +109,22 @@ export default function LiveClassPage() {
     }
   }, [joinSession]);
 
-  // ─── fetchActiveSession: يُجلب الجلسة النشطة من الـ API ────────────────────
   const fetchActiveSession = useCallback(async ({ silent = false } = {}) => {
     const groupId = user?.group?._id || user?.group;
     try {
-      // 1. محاولة جلب الجلسة النشطة للمستخدم الحالي
       const resActive = await api.get('/live/active/me').catch(() => null);
       if (resActive?.data) {
         if (resActive.data.subscription) setSubscriptionStatus(resActive.data.subscription);
-
         if (resActive.data.session) {
           const liveSession = resActive.data.session;
           setSession(liveSession);
           setIsLive(true);
           await handleJoin(liveSession._id);
           if (liveSession.group?._id) joinGroupRoom(liveSession.group._id);
-          if (!silent) toast.success('🔴 هناك حصة مباشرة الآن! جارٍ الانضمام...');
+          if (!silent) toast.success('هناك حصة مباشرة الآن! جارٍ الانضمام...');
           return;
         }
       }
-
-      // 2. احتياطي: جلب جلسات المجموعة مباشرةً
       if (groupId) {
         const res = await api.get(`/live/group/${groupId}`);
         const sessions = res.data.sessions || [];
@@ -138,7 +134,7 @@ export default function LiveClassPage() {
           setSession(liveSession);
           setIsLive(true);
           await handleJoin(liveSession._id);
-          if (!silent) toast.success('🔴 انضممت للحصة المباشرة!');
+          if (!silent) toast.success('انضممت للحصة المباشرة!');
         } else if (latestSession) {
           setSession(latestSession);
         }
@@ -146,19 +142,14 @@ export default function LiveClassPage() {
     } catch (_) {}
   }, [user, handleJoin, setSession, setIsLive]);
 
-  // ─── On mount: join group room + initial fetch ──────────────────────────────
   useEffect(() => {
     const groupId = user?.group?._id || user?.group;
     if (groupId) joinGroupRoom(groupId);
     fetchActiveSession({ silent: true });
   }, [user, fetchActiveSession]);
 
-  // ─── Polling: فحص كل 10 ثوانٍ إذا لم تبدأ الجلسة بعد ─────────────────────
-  // هذا يضمن عمل الإشعار حتى بدون Socket.io (مثل Vercel)
   useEffect(() => {
     const isSessionLiveNow = isLive || session?.status === 'live';
-
-    // أوقف الـ polling إذا بدأ البث
     if (isSessionLiveNow) {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
@@ -167,15 +158,12 @@ export default function LiveClassPage() {
       }
       return;
     }
-
-    // ابدأ الـ polling إذا لم يكن يعمل
     if (!pollingRef.current) {
       setIsPolling(true);
       pollingRef.current = setInterval(() => {
         fetchActiveSession({ silent: true });
       }, POLL_INTERVAL_MS);
     }
-
     return () => {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
@@ -197,7 +185,7 @@ export default function LiveClassPage() {
     setConfirmingPong(true);
     try {
       await api.post(`/live/${session._id}/attendance-pong`);
-      toast.success('✅ تم تأكيد حضورك وتثبيته في سجل الحصة بنجاح!');
+      toast.success('تم تأكيد حضورك في سجل الحصة');
       setPingActive(null);
     } catch (err) {
       toast.error('حدث خطأ في تأكيد الحضور');
@@ -206,7 +194,6 @@ export default function LiveClassPage() {
     }
   };
 
-  // ─── Fetch Recitation Queue & Personalized Wird via Polling ─────────────────
   const fetchQueueData = useCallback(async () => {
     if (!session?._id) return;
     try {
@@ -228,21 +215,20 @@ export default function LiveClassPage() {
           const gain = audioCtx.createGain();
           osc.connect(gain);
           gain.connect(audioCtx.destination);
-          osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-          osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.12); // E5
-          osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.24); // G5
+          osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+          osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.12);
+          osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.24);
           gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
           osc.start();
           osc.stop(audioCtx.currentTime + 0.4);
         } catch (_) {}
-        toast.success('🎙️ حان دورك في التسميع الآن مع المعلم!', { duration: 6000 });
+        toast.success('حان دورك في التسميع الآن مع المعلم!');
       } else if (!isMyTurnReciting) {
         wasRecitingRef.current = false;
       }
     } catch (_) {}
   }, [session?._id, user?._id]);
 
-  // Polling every 3.5s when session is live (Zero socket.io, fully Vercel compliant)
   useEffect(() => {
     const isSessionLiveNow = isLive || session?.status === 'live';
     if (!session?._id || !isSessionLiveNow) {
@@ -252,12 +238,10 @@ export default function LiveClassPage() {
       }
       return;
     }
-
     fetchQueueData();
     queuePollingRef.current = setInterval(() => {
       fetchQueueData();
     }, 3500);
-
     return () => {
       if (queuePollingRef.current) {
         clearInterval(queuePollingRef.current);
@@ -281,7 +265,6 @@ export default function LiveClassPage() {
   };
 
   const handleLeave = () => {
-    // إرسال event للباكيند لتسجيل وقت المغادرة في كشف الحضور
     const socket = getSocket();
     if (socket && session?._id) {
       socket.emit('leave-session', {
@@ -292,10 +275,9 @@ export default function LiveClassPage() {
     setVoluntarilyLeft(true);
     resetLive();
     setDuration(0);
-    toast('خرجت من الجلسة', { icon: '👋' });
+    toast('خرجت من الجلسة');
   };
 
-  // تسجيل الخروج تلقائياً عند مغادرة الصفحة أو إغلاق التبويب
   useEffect(() => {
     const handleBeforeUnload = () => {
       const socket = getSocket();
@@ -306,9 +288,7 @@ export default function LiveClassPage() {
         });
       }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
-
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       const socket = getSocket();
@@ -329,131 +309,86 @@ export default function LiveClassPage() {
 
   const isSessionLive = isLive || session?.status === 'live';
 
-  // ─── LOCKED STATE: When trial is consumed or subscription is expired ───
+  /* ── LOCKED: trial consumed or subscription expired (same logic, halaqa skin) ── */
   if (accessDeniedInfo || (subscriptionStatus && !subscriptionStatus.canAccessLiveSession && user?.role === 'student')) {
     return (
-      <div className="min-h-screen bg-gray-50 font-sans" dir="rtl">
+      <div className="halaqa" style={{ minHeight: '100vh', background: HQ.PAPER }} dir="rtl">
         <Navbar />
-        <div className="pt-20 px-4 flex items-center justify-center min-h-screen">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="bg-white border border-gray-100 rounded-3xl p-8 sm:p-12 text-center max-w-lg mx-auto shadow-xl relative overflow-hidden"
-          >
-            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-l from-amber-400 via-primary-500 to-emerald-500" />
-            
-            <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 mx-auto mb-5 flex items-center justify-center shadow-inner">
-              <Lock className="w-8 h-8" />
+        <div style={{ paddingTop: 96, padding: 16, display: 'flex', justifyContent: 'center' }}>
+          <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 'clamp(24px,5vw,48px)', textAlign: 'center', maxWidth: 520, width: '100%' }}>
+            <div style={{ width: 64, height: 64, borderRadius: 18, background: '#F8EDD3', color: '#B45309', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Lock size={30} />
             </div>
-
-            <span className="badge-gold text-xs mb-2 inline-block">
-              {subscriptionStatus?.isExpired ? 'انتهت فترة الاشتراك الشهري' : 'أتممت المحاضرة التجريبية الأولى بنجاح 🌟'}
-            </span>
-
-            <h2 className="text-2xl font-black text-gray-900 mb-3">
-              {subscriptionStatus?.isExpired
-                ? 'تم تعليق حضور الجلسات لانتهاء الاشتراك'
-                : 'مطلوب الاشتراك للاستمرار في الحلقات'}
+            <HqBadge tone="gold">
+              {subscriptionStatus?.isExpired ? 'انتهت فترة الاشتراك الشهري' : 'أتممت المحاضرة التجريبية الأولى بنجاح'}
+            </HqBadge>
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: HQ.INK, margin: '12px 0' }}>
+              {subscriptionStatus?.isExpired ? 'توقّف حضور الجلسات لانتهاء الاشتراك' : 'الاشتراك مطلوب لمواصلة الحلقات'}
             </h2>
-
-            <p className="text-sm text-gray-600 leading-relaxed mb-8">
+            <p style={{ fontSize: 15, color: HQ.MUTED, lineHeight: 1.8, margin: '0 0 28px' }}>
               {subscriptionStatus?.isExpired
-                ? 'انتهت مدة اشتراكك الشهري. للاستمرار في حضور الحلقات المباشرة مع مجموعتك ومتابعة الحفظ، يرجى سداد الاشتراك.'
-                : 'لقد استمتعت بحضور جلستك التجريبية المجانية! لمواصلة رحلتك المباركة وحضور باقي الحلقات المباشرة مع المعلم، يرجى سداد الاشتراك الشهري.'}
+                ? 'انتهت مدة اشتراكك الشهري. لمواصلة حضور الحلقات المباشرة مع مجموعتك ومتابعة الحفظ، سدد الاشتراك.'
+                : 'استمتعت بجلستك التجريبية المجانية! لمواصلة رحلتك وحضور باقي الحلقات مع المعلم، سدد الاشتراك الشهري.'}
             </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                to="/student/subscription"
-                className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-quran text-white font-bold text-sm shadow-green hover:shadow-lg transition-all flex items-center justify-center gap-2"
-              >
-                <CreditCard className="w-4 h-4" />
-                سداد الاشتراك الشهري الآن
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <Link to="/student/subscription" className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', padding: '0 32px', fontSize: 15, textDecoration: 'none' }}>
+                <CreditCard size={17} /> سداد الاشتراك الشهري
               </Link>
-              <Link
-                to="/student"
-                className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm transition-all"
-              >
+              <Link to="/student" className="hq-action" style={{ background: HQ.PAPER, color: HQ.INK, border: `1px solid ${HQ.LINE}`, padding: '0 24px', fontSize: 15, textDecoration: 'none' }}>
                 العودة للرئيسية
               </Link>
             </div>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── VOLUNTARILY LEFT STATE: Student clicked leave but broadcast may still be active ───
-  if (voluntarilyLeft && !session) {
-    return (
-      <div className="min-h-screen bg-gray-50 font-sans" dir="rtl">
-        <Navbar />
-        <div className="pt-24 px-4 flex items-center justify-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white border border-gray-100 rounded-3xl p-8 sm:p-12 text-center max-w-md mx-auto shadow-sm"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-primary-50 text-primary-600 mx-auto mb-4 flex items-center justify-center shadow-inner">
-              <Video className="w-8 h-8" />
-            </div>
-            <h2 className="text-xl font-black text-gray-900 mb-2">لقد غادرت الحصة المباشرة</h2>
-            <p className="text-gray-500 text-sm mb-6">يمكنك إعادة الانضمام للمحاضرة في أي وقت طالما البث ما زال مستمراً من المعلم</p>
-
-            <div className="space-y-3">
-              <button
-                onClick={handleRejoin}
-                className="btn-primary w-full py-3.5 text-sm flex items-center justify-center gap-2 shadow-green cursor-pointer"
-              >
-                <Radio className="w-4 h-4 animate-pulse" />
-                إعادة الانضمام للحصة الآن
-              </button>
-              <Link
-                to="/student"
-                className="w-full py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm transition-all block"
-              >
-                العودة للرئيسية
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="min-h-screen bg-gray-50 font-sans" dir="rtl">
-        <Navbar />
-        <div className="pt-16 flex items-center justify-center min-h-screen">
-          <div className="card-base p-12 text-center max-w-md mx-4 shadow-sm">
-            <Video className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-            <h2 className="text-xl font-black text-gray-900 mb-2">لا توجد جلسة مباشرة حالياً</h2>
-            <p className="text-gray-500 text-sm mb-6">عند بدء المعلم الجلسة ستنضم تلقائياً خلال ثوانٍ</p>
-
-            {/* Polling indicator */}
-            <div className="flex items-center justify-center gap-2 text-xs text-primary-500 font-semibold mb-4">
-              <RefreshCw className={`w-3.5 h-3.5 ${isPolling ? 'animate-spin' : ''}`} />
-              <span>{isPolling ? 'يبحث تلقائياً كل 10 ثوانٍ...' : 'البحث متوقف مؤقتاً'}</span>
-            </div>
-
-            <button
-              onClick={() => {
-                setVoluntarilyLeft(false);
-                setAccessDeniedInfo(null);
-                fetchActiveSession({ silent: false });
-              }}
-              className="inline-flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-primary-500 bg-gray-100 hover:bg-primary-50 px-4 py-2 rounded-xl transition-all"
-            >
-              <RefreshCw className="w-4 h-4" />
-              تحديث يدوي
-            </button>
           </div>
         </div>
       </div>
     );
   }
 
+  /* ── LEFT state ── */
+  if (voluntarilyLeft && !session) {
+    return (
+      <div className="halaqa" style={{ minHeight: '100vh', background: HQ.PAPER }} dir="rtl">
+        <Navbar />
+        <div style={{ paddingTop: 96, padding: 16, display: 'flex', justifyContent: 'center' }}>
+          <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 'clamp(24px,5vw,48px)', textAlign: 'center', maxWidth: 440, width: '100%' }}>
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: HQ.INK, margin: '0 0 8px' }}>غادرت الحصة المباشرة</h2>
+            <p style={{ color: HQ.MUTED, fontSize: 14, margin: '0 0 24px' }}>يمكنك العودة في أي وقت ما دام البث مستمرًا.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button type="button" onClick={handleRejoin} className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', fontSize: 15 }}>
+                إعادة الانضمام للحصة
+              </button>
+              <Link to="/student" className="hq-action" style={{ background: HQ.PAPER, color: HQ.INK, border: `1px solid ${HQ.LINE}`, fontSize: 15, textDecoration: 'none' }}>
+                العودة للرئيسية
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── NO SESSION state ── */
+  if (!session) {
+    return (
+      <div className="halaqa" style={{ minHeight: '100vh', background: HQ.PAPER }} dir="rtl">
+        <Navbar />
+        <div style={{ paddingTop: 64, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 48, textAlign: 'center', maxWidth: 420, width: '100%' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: HQ.INK, margin: '0 0 8px' }}>لا توجد جلسة مباشرة حاليًا</h2>
+            <p style={{ color: HQ.MUTED, fontSize: 14, margin: '0 0 20px' }}>عند بدء المعلم الجلسة ستنضم تلقائيًا خلال ثوانٍ.</p>
+            <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, color: HQ.MENTOR, fontWeight: 700, margin: '0 0 16px' }}>
+              <RefreshCw size={14} className={isPolling ? 'animate-spin' : ''} />
+              {isPolling ? 'يبحث تلقائيًا كل 10 ثوانٍ...' : 'البحث متوقف مؤقتًا'}
+            </p>
+            <button type="button" onClick={() => { setVoluntarilyLeft(false); setAccessDeniedInfo(null); fetchActiveSession({ silent: false }); }}
+              className="hq-action" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK, padding: '0 20px', fontSize: 14 }}>
+              <RefreshCw size={15} /> تحديث يدوي
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const myId = user?._id?.toString();
   const myTurn = queue.find(item => (item.student?._id || item.student)?.toString() === myId);
@@ -461,258 +396,147 @@ export default function LiveClassPage() {
   const hasHandRaised = myTurn?.status === 'hand_raised';
   const isCompleted = myTurn?.status === 'completed';
   const myTask = myId ? tasksMap[myId] : null;
+  const speakerObj = currentSpeaker && typeof currentSpeaker === 'object' ? currentSpeaker : null;
+
+  const rail = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <section aria-label="طابور التسميع" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 16 }}>
+        <h2 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 800, color: HQ.INK }}>طابور التسميع</h2>
+        <QueueList queue={queue} myId={myId} currentId={speakerObj?._id?.toString()}
+          onRaiseHand={(!isCompleted && !isMyTurn) ? handleToggleHand : null} raisingHand={raisingHand} />
+      </section>
+      <WirdCard task={myTask} evaluation={isCompleted ? myTurn?.evaluation : null}
+        open={showWirdCard} onToggle={() => setShowWirdCard(v => !v)} />
+      <PresenceBar state="joined" pinging={Boolean(pingActive)} onOpen={() => setDrawerOpen(true)} />
+    </div>
+  );
 
   return (
-    <div className="h-screen h-[100dvh] max-h-[100dvh] w-full bg-gray-950 flex flex-col overflow-hidden font-sans select-none" dir="rtl">
-      {/* Top status bar - Single-line, perfectly fits mobile without wrapping */}
-      <header className="bg-gray-900/95 backdrop-blur-md border-b border-gray-800 px-2.5 sm:px-4 h-12 sm:h-14 flex items-center justify-between z-20 flex-shrink-0 gap-1.5 sm:gap-2">
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <span className={`w-2.5 h-2.5 rounded-full ${isSessionLive ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
-            <span className="text-white font-bold text-xs sm:text-sm truncate max-w-[95px] xs:max-w-[130px] sm:max-w-xs" title={session?.title}>
-              {session?.title || 'الحلقة المباشرة'}
-            </span>
-          </div>
-
+    <div className="halaqa" dir="rtl"
+      style={{ height: '100vh', maxHeight: '100dvh', width: '100%', background: HQ.PAPER, display: 'flex', flexDirection: 'column', overflow: 'hidden', userSelect: 'none' }}>
+      {/* Slim paper header — chrome stays paper, only the stage is dark */}
+      <header style={{ background: HQ.SURFACE, borderBottom: `1px solid ${HQ.LINE}`, padding: '0 12px', height: 56, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <span className="hq-live-dot" aria-hidden />
+          <strong style={{ fontSize: 15, color: HQ.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '38vw' }}>
+            {session?.title || 'الحلقة المباشرة'}
+          </strong>
           {session?.group?.name && (
-            <span className="hidden md:inline text-[11px] bg-gray-800 text-gray-300 px-2 py-0.5 rounded-full truncate max-w-[100px]">
-              {session.group.name}
-            </span>
-          )}
-
-          {/* Turn status badges */}
-          {isMyTurn && (
-            <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-emerald-500 text-white px-2 py-0.5 sm:py-1 rounded-xl font-bold animate-pulse shadow-sm flex-shrink-0">
-              <Mic className="w-3 h-3" />
-              <span className="hidden xs:inline">أنت تُسمّع الآن!</span>
-              <span className="xs:hidden">دورك الآن 🎙️</span>
-            </span>
-          )}
-
-          {!isMyTurn && currentSpeaker && (
-            <span className="hidden lg:inline-flex items-center gap-1 text-xs bg-blue-900/60 text-blue-200 border border-blue-500/30 px-2.5 py-0.5 rounded-xl">
-              <Mic className="w-3 h-3 text-blue-400" />
-              يُسمّع: {currentSpeaker.firstName}
-            </span>
-          )}
-
-          {isCompleted && !isMyTurn && (
-            <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-xl font-bold flex-shrink-0">
-              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-              <span>{myTurn?.evaluation?.score || 100}%</span>
-            </span>
+            <span className="hidden md:inline" style={{ fontSize: 12, color: HQ.MUTED, fontWeight: 700 }}>{session.group.name}</span>
           )}
         </div>
-
-        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-          {/* Hand Raise Toggle Button */}
-          {!isCompleted && !isMyTurn && (
-            <button
-              onClick={handleToggleHand}
-              disabled={raisingHand}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
-                hasHandRaised
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white animate-bounce'
-                  : 'bg-gray-800 hover:bg-gray-700 text-gray-200 hover:text-white'
-              }`}
-              title={hasHandRaised ? 'إنزال اليد' : 'طلب دور التسميع'}
-            >
-              <Hand className={`w-3.5 h-3.5 ${hasHandRaised ? 'fill-current' : ''}`} />
-              <span className="hidden sm:inline">{hasHandRaised ? 'تم رفع اليد ✋' : 'طلب التسميع'}</span>
-            </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
+          {isCompleted && !isMyTurn && (
+            <HqBadge tone="mentor"><CheckCircle2 size={13} /> {myTurn?.evaluation?.score || 100}%</HqBadge>
           )}
-
-          {/* Toggle My Daily Wird Card */}
-          <button
-            onClick={() => setShowWirdCard(prev => !prev)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-              showWirdCard
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white'
-            }`}
-            title="وردي القرآني اليومي"
-          >
-            <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">وردي</span>
-            {showWirdCard ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-
           {isSessionLive && (
-            <div className="hidden md:flex items-center gap-1 text-xs text-gray-400 bg-gray-800/80 px-2 py-1.5 rounded-xl font-mono">
-              <Clock className="w-3 h-3 text-emerald-400" />
-              <span>{formatCountdown(duration)}</span>
-            </div>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: HQ.MUTED, fontWeight: 700 }}>
+              <Clock size={14} color={HQ.MENTOR} />{formatCountdown(duration)}
+            </span>
           )}
-
-          <button
-            onClick={handleLeave}
-            className="flex items-center gap-1 text-xs font-bold bg-rose-600/80 hover:bg-rose-600 text-white px-2.5 py-1.5 rounded-xl transition-all"
-            title="مغادرة الحصة"
-          >
-            <PhoneOff className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">مغادرة</span>
-          </button>
         </div>
       </header>
 
-      {/* Main meeting area */}
-      <div className="flex-1 min-h-0 relative bg-black overflow-hidden flex flex-col">
-        {session?._id && (
-          <JitsiMeeting
-            roomName={session?.liveRoomName || `QuranPlatform_${session._id}`}
-            displayName={`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'طالب'}
-            userEmail={user?.email}
-            onLeave={handleLeave}
-          />
-        )}
+      {/* Body: stage + rail (desktop) / stage + sheet (mobile) */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 16, padding: 16, paddingBottom: 8 }}>
+        {/* ── Stage: the only dark surface ── */}
+        <div className="halaqa-stage" style={{ flex: 1, minWidth: 0, borderRadius: 18, padding: 12, display: 'flex', flexDirection: 'column', gap: 12, overflow: 'hidden' }}>
+          <SpeakerStage speaker={speakerObj} isMe={isMyTurn} isLive={isSessionLive}
+            teacherName={session?.teacher ? `${session.teacher.firstName || ''} ${session.teacher.lastName || ''}`.trim() : ''} />
+          <div style={{ padding: '0 4px' }}>
+            <CircleStrip members={queue} currentId={speakerObj?._id?.toString()} />
+          </div>
+          <div style={{ flex: 1, minHeight: 0, borderRadius: 12, overflow: 'hidden', background: '#0C0C1D', position: 'relative' }}>
+            {session?._id && (
+              <JitsiMeeting
+                roomName={session?.liveRoomName || `QuranPlatform_${session._id}`}
+                displayName={`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'طالب'}
+                userEmail={user?.email}
+                onLeave={handleLeave}
+              />
+            )}
+          </div>
+        </div>
 
-        {/* Floating / Collapsible Personalized Wird & Live Recitation Card */}
-        <AnimatePresence>
-          {showWirdCard && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: -10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -10 }}
-              className={`absolute inset-x-2 top-2 sm:inset-x-auto sm:top-4 sm:left-4 sm:max-w-sm max-h-[75dvh] overflow-y-auto z-30 rounded-2xl shadow-2xl backdrop-blur-md border p-3.5 sm:p-4 transition-all ${
-                isMyTurn
-                  ? 'bg-gray-900/95 border-emerald-500 ring-2 ring-emerald-500/40'
-                  : 'bg-gray-900/95 border-gray-700/80'
-              }`}
-            >
-              <div className="flex items-center justify-between border-b border-gray-700/80 pb-2 mb-2.5">
-                <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                    isMyTurn ? 'bg-emerald-500 text-white animate-pulse' : 'bg-gray-800 text-emerald-400'
-                  }`}>
-                    <BookOpen className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white">
-                      {isMyTurn ? '🎙️ المطلوب منك تسميعه الآن' : '📖 وردك القرآني المخصص لليوم'}
-                    </h4>
-                    <span className="text-[10px] text-gray-400">خاص بك وفق وتيرة حفظك</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowWirdCard(false)}
-                  className="w-6 h-6 rounded-lg bg-gray-800 text-gray-400 hover:text-white flex items-center justify-center text-xs"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Tasks breakdown */}
-              <div className="space-y-2 text-xs">
-                {/* New Hifz */}
-                <div className="bg-gray-800/80 rounded-xl p-2.5 border border-emerald-500/20">
-                  <span className="text-[10px] text-emerald-400 font-bold block mb-0.5">
-                    📖 الحفظ الجديد (السبق):
-                  </span>
-                  {myTask?.newHifz?.surahName ? (
-                    <p className="text-white font-bold">
-                      سورة {myTask.newHifz.surahName} (الآيات من {myTask.newHifz.fromVerse} إلى {myTask.newHifz.toVerse})
-                    </p>
-                  ) : (
-                    <p className="text-gray-400 text-[11px]">تابع مع المعلم لتحديد السورة</p>
-                  )}
-                </div>
-
-                {/* Near Revision */}
-                <div className="bg-gray-800/80 rounded-xl p-2.5 border border-blue-500/20">
-                  <span className="text-[10px] text-blue-400 font-bold block mb-0.5">
-                    🔄 الماضي القريب (السبقي):
-                  </span>
-                  {myTask?.nearRevision?.surahName ? (
-                    <p className="text-white font-bold">
-                      سورة {myTask.nearRevision.surahName} (الآيات {myTask.nearRevision.fromVerse} إلى {myTask.nearRevision.toVerse})
-                    </p>
-                  ) : (
-                    <p className="text-gray-400 text-[11px]">مراجعة آخر الأوجه المحفوظة</p>
-                  )}
-                </div>
-
-                {/* Cumulative Revision */}
-                {myTask?.cumulativeRevision?.surahName && (
-                  <div className="bg-gray-800/80 rounded-xl p-2.5 border border-purple-500/20">
-                    <span className="text-[10px] text-purple-400 font-bold block mb-0.5">
-                      🏛️ الورد التمكيني:
-                    </span>
-                    <p className="text-white font-bold">
-                      {myTask.cumulativeRevision.surahName}
-                    </p>
-                  </div>
-                )}
-
-                {/* Additional exercise */}
-                {myTask?.additionalExercise?.details && (
-                  <div className="bg-amber-950/30 rounded-xl p-2 border border-amber-500/20 text-amber-200 text-[11px]">
-                    🎯 <span className="font-bold">تدريب:</span> {myTask.additionalExercise.details}
-                  </div>
-                )}
-
-                {/* Evaluation Result if already reviewed */}
-                {isCompleted && myTurn?.evaluation && (
-                  <div className="bg-gradient-to-r from-emerald-950/60 to-teal-950/60 border border-emerald-500/40 rounded-xl p-3 text-center mt-2">
-                    <div className="flex items-center justify-center gap-1 text-amber-400 mb-1">
-                      {[1, 2, 3, 4, 5].map(star => (
-                        <Star
-                          key={star}
-                          className={`w-4 h-4 ${
-                            star <= (myTurn.evaluation.rating || 5)
-                              ? 'fill-amber-400 text-amber-400'
-                              : 'text-gray-600'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-sm font-black text-emerald-400">
-                      درجة التسميع: {myTurn.evaluation.score || 100}%
-                    </span>
-                    {myTurn.evaluation.notes && (
-                      <p className="text-[11px] text-gray-300 mt-1 italic">
-                        "{myTurn.evaluation.notes}"
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Attendance roll-call ping overlay */}
-        <AnimatePresence>
-          {pingActive && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="absolute inset-x-3 bottom-3 sm:inset-x-auto sm:bottom-6 sm:right-6 z-40 bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 border-2 border-primary-500 max-w-sm w-auto sm:w-full"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-700 flex items-center justify-center font-bold">
-                  <Bell className="w-5 h-5 animate-bounce" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-gray-900 text-sm">نداء التحقق من الحضور! ✋</h4>
-                  <p className="text-xs text-gray-500">متبقي: {pingActive.remaining} ثانية</p>
-                </div>
-              </div>
-
-              <p className="text-xs text-gray-600 mb-4">{pingActive.message}</p>
-
-              <button
-                onClick={handleConfirmAttendance}
-                disabled={confirmingPong}
-                className="w-full py-3 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2"
-              >
-                {confirmingPong ? <Sparkles className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                أنا متواجد ومتابع للحصة ✅
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Desktop rail — visually lighter than the stage */}
+        <aside aria-label="لوحات الحلقة" className="hidden lg:block"
+          style={{ width: 340, flex: 'none', overflowY: 'auto', paddingBottom: 8 }}>
+          {rail}
+        </aside>
       </div>
+
+      {/* Mobile bottom sheet — queue / wird / presence */}
+      <div className="lg:hidden" style={{
+        flex: 'none', background: HQ.SURFACE, borderTop: `1px solid ${HQ.LINE}`,
+        borderRadius: '18px 18px 0 0', maxHeight: drawerOpen ? '52dvh' : 'none',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      }}>
+        <button type="button" onClick={() => setDrawerOpen(o => !o)} aria-expanded={drawerOpen}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minHeight: 48 }}>
+          <span className="hq-grip" aria-hidden />
+          <span style={{ fontSize: 13, fontWeight: 800, color: HQ.INK }}>
+            {drawerOpen ? 'إخفاء لوحات الحلقة' : `الطابور والورد والحضور (${queue.length})`}
+          </span>
+        </button>
+        <div style={{
+          display: 'grid', gridTemplateRows: drawerOpen ? '1fr' : '0fr',
+          transition: 'grid-template-rows 0.25s ease',
+        }}>
+          <div style={{ overflow: drawerOpen ? 'auto' : 'hidden', padding: drawerOpen ? '4px 16px 16px' : '0 16px', minHeight: 0 }}>
+            {rail}
+          </div>
+        </div>
+      </div>
+
+      {/* Attendance ping — paper alert above the action bar, never floating glass */}
+      {pingActive && (
+        <div role="alert" style={{
+          flex: 'none', margin: '8px 16px 0', background: HQ.SURFACE,
+          border: `2px solid ${HQ.MENTOR}`, borderRadius: 18, padding: 16,
+          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+        }}>
+          <span style={{ width: 44, height: 44, borderRadius: 12, background: HQ.PAPER, color: HQ.MENTOR, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+            <Bell size={22} />
+          </span>
+          <span style={{ flex: 1, minWidth: 180 }}>
+            <strong style={{ display: 'block', fontSize: 15, color: HQ.INK }}>المعلم ينادي الحضور</strong>
+            <span style={{ fontSize: 13, color: HQ.MUTED }}>{pingActive.message} — متبقي {pingActive.remaining} ثانية</span>
+          </span>
+          <button type="button" onClick={handleConfirmAttendance} disabled={confirmingPong}
+            className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', padding: '0 24px', fontSize: 15, opacity: confirmingPong ? 0.6 : 1 }}>
+            <CheckCircle2 size={17} /> أنا متواجد
+          </button>
+        </div>
+      )}
+
+      {/* Fixed bottom action bar — every target ≥48px */}
+      <nav aria-label="إجراءات الحصة" className="hq-actionbar"
+        style={{ flex: 'none', display: 'flex', gap: 8, padding: '8px 16px', justifyContent: 'center' }}>
+        {!isCompleted && !isMyTurn && (
+          <button type="button" onClick={handleToggleHand} disabled={raisingHand} className="hq-action"
+            aria-pressed={hasHandRaised}
+            style={{
+              flex: 1, maxWidth: 220, fontSize: 15,
+              background: hasHandRaised ? '#B45309' : HQ.MENTOR, color: '#fff',
+              opacity: raisingHand ? 0.6 : 1,
+            }}>
+            <Hand size={18} /> {hasHandRaised ? 'إنزال اليد' : 'طلب التسميع'}
+          </button>
+        )}
+        {isMyTurn && (
+          <span className="hq-action" role="status" style={{ flex: 1, maxWidth: 220, fontSize: 15, background: HQ.PAPER, border: `1.5px solid ${HQ.MENTOR}`, color: HQ.MENTOR }}>
+            دورك في التسميع الآن
+          </span>
+        )}
+        <button type="button" onClick={() => { setDrawerOpen(true); setShowWirdCard(true); }} className="hq-action"
+          style={{ flex: 1, maxWidth: 180, fontSize: 15, background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK }}>
+          <BookOpen size={18} /> وردي
+        </button>
+        <button type="button" onClick={handleLeave} className="hq-action"
+          style={{ flex: 1, maxWidth: 180, fontSize: 15, background: '#C2410C', color: '#fff' }}>
+          <PhoneOff size={18} /> مغادرة
+        </button>
+      </nav>
     </div>
   );
 }

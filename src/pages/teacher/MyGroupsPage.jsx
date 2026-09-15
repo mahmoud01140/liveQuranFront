@@ -2,9 +2,21 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PageLayout from '../../components/shared/PageLayout';
 import useGroupStore from '../../store/groupStore';
-import { getLevelLabel, getLevelColor } from '../../utils/helpers';
+import { getLevelLabel } from '../../utils/helpers';
 import { DAYS_AR } from '../../utils/constants';
 import { Users, Video, Calendar } from 'lucide-react';
+import '../../components/halaqa/halaqa.css';
+import { HQ, HqBadge } from '../../components/halaqa/primitives';
+
+/* مجموعاتي — same data and destination, quiet rows.
+   Broadcast entry stays via the group curriculum, as before. */
+
+const LEVEL_TONE = {
+  foundation: 'mentor',
+  memorization: 'guide',
+  teacher_prep: 'gold',
+  senior: 'neutral',
+};
 
 export default function MyGroupsPage() {
   const { groups, fetchAllGroups } = useGroupStore();
@@ -15,46 +27,46 @@ export default function MyGroupsPage() {
 
   return (
     <PageLayout>
-      <div className="mb-4 sm:mb-6">
-        <h1 className="section-title">مجموعاتي الدراسية</h1>
-        <p className="section-subtitle">{groups.length} مجموعة دراسية مسجلة</p>
-      </div>
+      <div className="halaqa" style={{ maxWidth: 860, margin: '0 auto' }}>
+        <h1 style={{ margin: '0 0 4px', fontSize: 26, fontWeight: 900, color: HQ.INK }}>مجموعاتي</h1>
+        <p style={{ margin: '0 0 16px', fontSize: 14, color: HQ.MUTED }}>
+          {groups.length ? `${groups.length} مجموعات — اختر واحدة للمنهج وبدء البث` : 'ستظهر مجموعاتك هنا فور تعيينك'}
+        </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-        {groups.map((group) => {
-          const lc = getLevelColor(group.level);
-          return (
-            <div key={group._id} className="card-base p-4 sm:p-6 hover:shadow-md transition-all">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <span className="text-xs font-bold px-2.5 py-1 rounded-lg"
-                  style={{ backgroundColor: lc.bg, color: lc.text }}>
-                  {getLevelLabel(group.level)}
-                </span>
-                <span className="text-xs text-gray-400 flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5" />
-                  {group.students?.length || 0}/{group.maxStudents}
-                </span>
-              </div>
-              <h3 className="font-black text-gray-900 text-base mb-2">{group.name}</h3>
-              {group.description && <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4 leading-relaxed">{group.description}</p>}
-
-              <div className="space-y-2 mb-4">
-                {group.schedule?.slice(0, 2).map((s, j) => (
-                  <div key={j} className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2">
-                    <Calendar className="w-3.5 h-3.5 text-primary-400 flex-shrink-0" />
-                    <span className="truncate">{DAYS_AR[s.dayOfWeek]} — {s.startTime} إلى {s.endTime}</span>
-                  </div>
-                ))}
-              </div>
-
-              <Link to={`/admin/groups/${group._id}/curriculum`}
-                className="btn-primary w-full text-xs sm:text-sm py-2.5">
-                <Video className="w-4 h-4" />
-                منهج المجموعة وبدء البث
-              </Link>
-            </div>
-          );
-        })}
+        {groups.length === 0 ? (
+          <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 48, textAlign: 'center' }}>
+            <Users size={40} color={HQ.LINE} style={{ margin: '0 auto 12px' }} />
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: HQ.INK }}>لا مجموعات مخصصة بعد</p>
+          </div>
+        ) : (
+          <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            {groups.map((group) => (
+              <li key={group._id} style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, marginBottom: 12, padding: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                  <strong style={{ fontSize: 17, color: HQ.INK }}>{group.name}</strong>
+                  <HqBadge tone={LEVEL_TONE[group.level] || 'neutral'}>{getLevelLabel(group.level)}</HqBadge>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13, color: HQ.MUTED, marginRight: 'auto' }}>
+                    <Users size={14} />
+                    {group.students?.length || 0}/{group.maxStudents}
+                  </span>
+                </div>
+                {group.description && (
+                  <p style={{ margin: '0 0 8px', fontSize: 14, color: HQ.MUTED, lineHeight: 1.8 }}>{group.description}</p>
+                )}
+                {group.schedule?.slice(0, 2).length > 0 && (
+                  <p style={{ margin: '0 0 12px', fontSize: 13, color: HQ.MUTED, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <Calendar size={14} />
+                    {group.schedule.slice(0, 2).map(s => `${DAYS_AR[s.dayOfWeek]} ${s.startTime} - ${s.endTime}`).join(' · ')}
+                  </p>
+                )}
+                <Link to={`/admin/groups/${group._id}/curriculum`} className="hq-action"
+                  style={{ width: '100%', background: HQ.MENTOR, color: '#fff', fontSize: 15, textDecoration: 'none' }}>
+                  <Video size={17} /> منهج المجموعة وبدء البث
+                </Link>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
     </PageLayout>
   );

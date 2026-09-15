@@ -1,17 +1,25 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Users, BookOpen, Clock, TrendingUp, UserCheck, Radio, ClipboardList, FileText } from 'lucide-react';
+import { Users, BookOpen, Clock, Video, ClipboardList, FileText, ChevronLeft, RotateCcw } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import PageLayout from '../../components/shared/PageLayout';
 import api from '../../services/api';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
+
+/* لوحة الإدارة — clarity, honest density, fast action.
+   Same analytics endpoints and fallback; charts keep recharts. */
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ users: 0, groups: 0, pending: 0, attendance: '0%' });
   const [levelData, setLevelData] = useState([]);
   const [weekData, setWeekData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
 
-  useEffect(() => {
+  const load = () => {
+    setLoading(true);
+    setLoadFailed(false);
     const fetchAnalytics = async () => {
       try {
         const res = await api.get('/reports/analytics');
@@ -35,127 +43,130 @@ export default function AdminDashboard() {
             users: usersRes.data.total || 0,
             groups: groupsRes.data.groups?.length || 0,
             pending: pendingRes.data.users?.length || 0,
-            attendance: '85%',
+            attendance: '—',
           });
-        } catch (__) {}
+        } catch (__) {
+          setLoadFailed(true);
+        }
+      } finally {
+        setLoading(false);
       }
     };
     fetchAnalytics();
-  }, []);
+  };
 
-  const statCards = [
-    { title: 'إجمالي المستخدمين', value: stats.users, icon: Users, color: 'text-primary-400', bg: 'bg-primary-50' },
-    { title: 'المجموعات النشطة', value: stats.groups, icon: BookOpen, color: 'text-purple-500', bg: 'bg-purple-50' },
-    { title: 'بانتظار الموافقة', value: stats.pending, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50', urgent: stats.pending > 0 },
-    { title: 'معدل الحضور', value: stats.attendance, icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' },
-  ];
+  useEffect(() => { load(); }, []);
 
   return (
     <PageLayout>
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="section-title">لوحة تحكم المدير 🛡️</h1>
-            <p className="section-subtitle">نظرة عامة على المنصة والإحصاءات الحقيقية</p>
+      <div className="halaqa" style={{ maxWidth: 1000, margin: '0 auto' }}>
+        <h1 style={{ margin: '0 0 4px', fontSize: 26, fontWeight: 900, color: HQ.INK }}>نظرة الإدارة</h1>
+        <p style={{ margin: '0 0 16px', fontSize: 14, color: HQ.MUTED }}>وضع المنصة الآن — وما يحتاج تدخلك</p>
+
+        {loading ? (
+          <div aria-label="جارٍ تحميل اللوحة">
+            <div className="hq-skeleton" style={{ height: 90, width: '100%', marginBottom: 12 }} />
+            <div className="hq-skeleton" style={{ height: 220, width: '100%' }} />
           </div>
-        </div>
-      </motion.div>
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 stagger-children">
-        {statCards.map((card, i) => (
-          <motion.div key={i} whileHover={{ y: -2 }} className="stat-card relative overflow-hidden">
-            {card.urgent && (
-              <div className="absolute top-3 left-3 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            )}
-            <div className={`w-12 h-12 ${card.bg} rounded-xl flex items-center justify-center`}>
-              <card.icon className={`w-6 h-6 ${card.color}`} />
-            </div>
-            <div>
-              <p className="text-2xl font-black text-gray-900">{card.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{card.title}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Charts row */}
-      <div className="grid lg:grid-cols-3 gap-6 mb-8">
-        {/* Activity chart */}
-        <div className="lg:col-span-2 card-base p-6">
-          <h2 className="font-bold text-gray-900 mb-4">نمو الجلسات والطلاب شهرياً</h2>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={weekData}>
-              <defs>
-                <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1D9E75" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#1D9E75" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Area type="monotone" dataKey="students" stroke="#1D9E75" fill="url(#colorStudents)" name="الطلاب النشطون" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Level distribution */}
-        <div className="card-base p-6">
-          <h2 className="font-bold text-gray-900 mb-4">توزيع الطلاب حسب المستوى</h2>
-          <ResponsiveContainer width="100%" height={160}>
-            <PieChart>
-              <Pie
-                data={levelData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={65}
-                innerRadius={35}
-              >
-                {levelData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color || '#1D9E75'} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="grid grid-cols-2 gap-1.5 mt-3">
-            {levelData.map((d, i) => (
-              <div key={i} className="flex items-center gap-1.5 text-xs">
-                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color || '#1D9E75' }} />
-                <span className="text-gray-600 truncate">{d.name}</span>
-                <span className="font-bold text-gray-800 ml-auto">{d.value}</span>
+        ) : loadFailed ? (
+          <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 40, textAlign: 'center' }} role="alert">
+            <p style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 900, color: HQ.INK }}>تعذّر تحميل البيانات</p>
+            <p style={{ margin: '0 0 20px', fontSize: 14, color: HQ.MUTED }}>تحقق من الاتصال ثم حاول مرة أخرى.</p>
+            <button type="button" onClick={load} className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', padding: '0 24px', fontSize: 15 }}>
+              <RotateCcw size={16} /> إعادة المحاولة
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Facts + attention */}
+            <section aria-label="وضع المنصة"
+              style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 20, marginBottom: 16 }}>
+              <div className="hq-facts" style={{ marginBottom: stats.pending > 0 ? 12 : 0 }}>
+                <span><strong>{stats.users}</strong> <span>مستخدم</span></span>
+                <span><strong>{stats.groups}</strong> <span>مجموعة نشطة</span></span>
+                <span><strong>{stats.attendance}</strong> <span>حضور</span></span>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+              {stats.pending > 0 && (
+                <Link to="/admin/users"
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '12px 14px', textDecoration: 'none', minHeight: 56 }}>
+                  <span className="hq-live-dot" aria-hidden style={{ background: '#C2410C', animation: 'none', opacity: 1 }} />
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 800, color: HQ.INK }}>
+                    {stats.pending} بانتظار الموافقة والتسكين
+                  </span>
+                  <ChevronLeft size={18} color={HQ.MUTED} />
+                </Link>
+              )}
+            </section>
 
-      {/* Quick shortcuts */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {[
-          { label: 'البث المباشر', path: '/admin/groups', icon: Radio, color: 'bg-red-500' },
-          { label: 'طابور التسميع والورد', path: '/teacher/daily-review', icon: Clock, color: 'bg-amber-500' },
-          { label: 'مركز التصحيح', path: '/teacher/review', icon: ClipboardList, color: 'bg-emerald-500' },
-          { label: 'إدارة الحلقات', path: '/admin/groups', icon: BookOpen, color: 'bg-purple-500' },
-          { label: 'إدارة الطلاب', path: '/admin/users', icon: Users, color: 'bg-primary-500' },
-          { label: 'نشاط / تقييم درس', path: '/teacher/create-exam', icon: FileText, color: 'bg-blue-500' },
-        ].map((action, i) => (
-          <Link
-            key={i}
-            to={action.path}
-            className="card-base p-3.5 flex flex-col items-center text-center gap-2 hover:shadow-md transition-all group cursor-pointer"
-          >
-            <div className={`w-10 h-10 ${action.color} text-white rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform shadow-sm`}>
-              <action.icon className="w-5 h-5" />
+            {/* Charts — disciplined grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 16, marginBottom: 16 }}>
+              <section aria-label="نمو الجلسات والطلاب" className="lg:col-span-2"
+                style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 20 }}>
+                <h2 style={{ margin: '0 0 12px', fontSize: 17, fontWeight: 800, color: HQ.INK }}>النمو الشهري</h2>
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={weekData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8E2D4" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="students" stroke="#177B58" fill="#E2EFE7" name="الطلاب النشطون" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </section>
+
+              <section aria-label="توزيع المستويات"
+                style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 20 }}>
+                <h2 style={{ margin: '0 0 12px', fontSize: 17, fontWeight: 800, color: HQ.INK }}>المستويات</h2>
+                <ResponsiveContainer width="100%" height={160}>
+                  <PieChart>
+                    <Pie data={levelData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={65} innerRadius={35}>
+                      {levelData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color || '#177B58'} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 12 }}>
+                  {levelData.map((d, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                      <span aria-hidden style={{ width: 10, height: 10, borderRadius: 9999, background: d.color || '#177B58', flex: 'none' }} />
+                      <span style={{ color: HQ.MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
+                      <strong style={{ color: HQ.INK, marginRight: 'auto' }}>{d.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
-            <span className="text-xs font-bold text-gray-800 line-clamp-1">{action.label}</span>
-          </Link>
-        ))}
+
+            {/* Fast actions */}
+            <section aria-label="إجراءات سريعة">
+              {[
+                { label: 'إدارة وتسكين الحلقات', hint: 'المجموعات والطلاب الجدد', path: '/admin/groups', icon: BookOpen, primary: true },
+                { label: 'مركز التصحيح', hint: 'الواجبات والتسجيلات', path: '/teacher/review', icon: ClipboardList },
+                { label: 'طابور التسميع', hint: 'الورد اليومي', path: '/teacher/daily-review', icon: Clock },
+                { label: 'بنك الامتحانات', hint: 'إدارة ونتائج', path: '/admin/exams', icon: FileText },
+                { label: 'المدفوعات', hint: 'الإيصالات والاشتراكات', path: '/admin/payments', icon: Users },
+                { label: 'البث المباشر', hint: 'بدء حصة', path: '/admin/groups', icon: Video },
+              ].map((a) => (
+                <Link key={a.label} to={a.path}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
+                    background: a.primary ? HQ.MENTOR : HQ.SURFACE, color: a.primary ? '#fff' : HQ.INK,
+                    border: a.primary ? 'none' : `1px solid ${HQ.LINE}`,
+                    borderRadius: 14, padding: '12px 16px', marginBottom: 8, minHeight: 60,
+                  }}>
+                  <a.icon size={19} style={{ flex: 'none' }} />
+                  <span style={{ flex: 1 }}>
+                    <strong style={{ display: 'block', fontSize: 15 }}>{a.label}</strong>
+                    <span style={{ display: 'block', fontSize: 13, opacity: 0.75 }}>{a.hint}</span>
+                  </span>
+                  <ChevronLeft size={18} style={{ opacity: 0.6 }} />
+                </Link>
+              ))}
+            </section>
+          </>
+        )}
       </div>
     </PageLayout>
   );

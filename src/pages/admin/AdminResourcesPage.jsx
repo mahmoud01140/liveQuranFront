@@ -287,9 +287,9 @@ export default function AdminResourcesPage() {
                       <Download className="w-3.5 h-3.5" /> تحميل
                       {resource.downloadCount > 0 && <span className="bg-amber-100 px-1.5 rounded-full">{resource.downloadCount}</span>}
                     </button>
-                    <button onClick={() => handleDelete(resource._id)}
-                      className="p-2 hover:bg-red-50 rounded-xl transition-colors">
-                      <Trash2 className="w-4 h-4 text-gray-300 group-hover:text-red-400" />
+                    <button onClick={() => handleDelete(resource._id)} aria-label={`حذف ${resource.title}`}
+                      className="p-2 hover:bg-red-50 rounded-xl transition-colors min-w-[44px] min-h-[44px] inline-flex items-center justify-center">
+                      <Trash2 className="w-4 h-4 text-red-400" />
                     </button>
                   </div>
                 </motion.div>

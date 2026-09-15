@@ -310,7 +310,7 @@ export default function LiveRecitationDrawer({
           {/* Header */}
           <div className="px-6 py-4 bg-gray-800/90 border-b border-gray-700/80 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-emerald-900/30">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: '#177B58' }}>
                 <Mic className="w-5 h-5" />
               </div>
               <div>
@@ -887,7 +887,7 @@ export default function LiveRecitationDrawer({
                       <button
                         onClick={() => handleSaveEvaluation(true)}
                         disabled={savingEvaluation}
-                        className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs transition-all shadow-md shadow-emerald-900/30 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        className="flex-1 py-2.5 rounded-xl text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50" style={{ background: '#177B58' }}
                       >
                         <CheckCircle2 className="w-4 h-4" />
                         <span>اعتماد والانتقال للتالي ⏭️</span>

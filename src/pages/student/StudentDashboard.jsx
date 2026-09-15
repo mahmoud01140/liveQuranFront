@@ -1,28 +1,47 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { BookOpen, Video, Calendar, TrendingUp, Clock, Users, Star, Bell, ChevronLeft, Zap, Flame, Check, AlertTriangle, Lock, CreditCard, Gift, Sparkles, FileText, Play, Target, Award } from 'lucide-react';
+import { BookOpen, Video, Clock, Check, AlertTriangle, Lock, CreditCard, Play, ChevronLeft, RotateCcw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import PageLayout from '../../components/shared/PageLayout';
 import useAuthStore from '../../store/authStore';
 import useGroupStore from '../../store/groupStore';
 import useLiveStore from '../../store/liveStore';
-import { getLevelLabel, getLevelColor, formatDateAr, getCirclePath, formatCountdown } from '../../utils/helpers';
+import { getLevelLabel, formatDateAr, formatCountdown, getSmartDateLabel } from '../../utils/helpers';
 import { DAYS_AR } from '../../utils/constants';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
+import { HqActionLink } from '../../components/halaqa/JourneyNode';
 
-// Add this simple custom hook for countdown ticking
+/* «اليوم» — what do I do now, and what is next?
+   Same endpoints and logic as before; only the hierarchy changed.
+   Journey details live at /student/progress — never duplicated here. */
+
 function useCountdown(targetDate) {
   const [timeLeft, setTimeLeft] = useState(0);
   useEffect(() => {
     if (!targetDate) return;
-    const interval = setInterval(() => {
+    const tick = () => {
       const diff = Math.floor((new Date(targetDate) - new Date()) / 1000);
       setTimeLeft(diff > 0 ? diff : 0);
-    }, 1000);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, [targetDate]);
   return timeLeft;
+}
+
+const PORTIONS = [
+  { key: 'newHifz', label: 'الحفظ الجديد' },
+  { key: 'nearRevision', label: 'الماضي القريب' },
+  { key: 'cumulativeRevision', label: 'الماضي البعيد' },
+];
+
+function portionName(p) {
+  if (!p) return '';
+  if (p.surahName) return `سورة ${p.surahName}${p.fromVerse ? ` — الآيات ${p.fromVerse} إلى ${p.toVerse}` : ''}`;
+  return '';
 }
 
 export default function StudentDashboard() {
@@ -31,9 +50,15 @@ export default function StudentDashboard() {
   const { group, studyPlan, fetchMyGroup, fetchStudyPlan } = useGroupStore();
   const { sessions, fetchSessions } = useLiveStore();
 
+  const [dailyTask, setDailyTask] = useState(null);
+  const [assignedExams, setAssignedExams] = useState([]);
+  const [subscription, setSubscription] = useState(null);
+  const [ready, setReady] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  const groupId = user?.group?._id || user?.group;
+
   useEffect(() => {
-    // user.group may be a populated object OR a plain string ID
-    const groupId = user?.group?._id || user?.group;
     if (groupId) {
       fetchMyGroup(groupId);
       fetchStudyPlan(groupId);
@@ -41,635 +66,263 @@ export default function StudentDashboard() {
     }
   }, [user?.group]);
 
-  const levelColor = getLevelColor(user?.assignedLevel);
-  const juzCompleted = studyPlan?.quranCompletionPlan?.completedJuz?.length || 0;
-  const juzPct = Math.round((juzCompleted / 30) * 100);
-  const { circumference, strokeDashoffset } = getCirclePath(juzPct);
+  const loadLocal = () => {
+    setReady(false);
+    setLoadFailed(false);
+    let ok = 0;
+    const settle = async (fn) => { try { await fn(); ok++; } catch (_) {} };
+    Promise.all([
+      settle(async () => {
+        const res = await api.get('/daily-tasks/today');
+        setDailyTask(res.data.task || null);
+      }),
+      settle(async () => {
+        const res = await api.get('/exams/student/assigned');
+        setAssignedExams((res.data.exams || []).filter(e => !e.isCompleted));
+      }),
+      settle(async () => {
+        const res = await api.get('/payments/my-history');
+        setSubscription(res.data?.subscription || null);
+      }),
+    ]).then(() => {
+      if (ok === 0) setLoadFailed(true);
+      setReady(true);
+    });
+  };
 
-  const upcomingSession = sessions.find(s => s.status === 'scheduled' || s.status === 'live');
-  const recentSessions = sessions.slice(0, 3);
-
-  // Real stats calculation
-  const attendedCount = sessions.filter(s =>
-    s.attendees?.some(a => (a.student?._id || a.student)?.toString() === user?._id?.toString())
-  ).length;
-
-  const customLessons = studyPlan?.customLessons || group?.customLessons || [];
-  const completedLessonsSet = new Set((user?.completedLessons || []).map(id => (id?._id || id)?.toString()));
-  const completedCustomLessonsCount = customLessons.filter(
-    l => l.status === 'completed' || completedLessonsSet.has(l._id?.toString())
-  ).length;
-  const curriculumProgress = customLessons.length
-    ? Math.min(100, Math.round((completedCustomLessonsCount / customLessons.length) * 100))
-    : 0;
-
-  const timeLeft = useCountdown(upcomingSession?.status === 'scheduled' ? upcomingSession.scheduledAt : null);
-
-  // Greeting based on time
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء الخير' : 'مساء النور';
-
-  // ── Daily Triple Quran Task ──
-  const [dailyTask, setDailyTask] = useState(null);
-  const [loadingTask, setLoadingTask] = useState(false);
-
-  // ── Assigned Exams (Individual, Group, Level) ──
-  const [assignedExams, setAssignedExams] = useState([]);
-  const [loadingExams, setLoadingExams] = useState(false);
-
-  useEffect(() => {
-    api.get('/daily-tasks/today')
-      .then(res => setDailyTask(res.data.task))
-      .catch(() => {});
-
-    setLoadingExams(true);
-    api.get('/exams/student/assigned')
-      .then(res => {
-        const exams = res.data.exams || [];
-        setAssignedExams(exams.filter(e => !e.isCompleted));
-      })
-      .catch(() => {})
-      .finally(() => setLoadingExams(false));
-  }, []);
+  useEffect(() => { loadLocal(); }, []);
 
   const handleTogglePortion = async (portion) => {
     if (!dailyTask?._id) return;
     const currentStatus = dailyTask[portion]?.status;
     const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
-
     try {
-      const res = await api.put(`/daily-tasks/${dailyTask._id}/portion`, {
-        portion,
-        status: newStatus
-      });
+      const res = await api.put(`/daily-tasks/${dailyTask._id}/portion`, { portion, status: newStatus });
       setDailyTask(res.data.task);
-      if (newStatus === 'completed') {
-        toast.success('🎉 بارك الله فيك! تم إنجاز هذا الجزء من الورد');
-      }
+      if (newStatus === 'completed') toast.success('بارك الله فيك! تم إنجاز هذا الجزء من الورد');
     } catch {
       toast.error('حدث خطأ في تحديث حالة الورد');
     }
   };
 
-  // Subscription status
-  const [subscription, setSubscription] = useState(null);
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء الخير' : 'مساء النور';
 
-  useEffect(() => {
-    api.get('/payments/my-history')
-      .then(res => setSubscription(res.data?.subscription || null))
-      .catch(() => {});
-  }, []);
+  const liveSession = sessions.find(s => s.status === 'live');
+  const upcomingSession = liveSession || sessions.find(s => s.status === 'scheduled');
+  const timeLeft = useCountdown(upcomingSession?.status === 'scheduled' ? upcomingSession.scheduledAt : null);
+
+  const pendingPortions = PORTIONS.filter(p => dailyTask?.[p.key] && dailyTask[p.key].status !== 'completed');
+  const juzCompleted = studyPlan?.quranCompletionPlan?.completedJuz?.length || 0;
+  const juzPct = Math.round((juzCompleted / 30) * 100);
+
+  /* Ordered candidates from real data — first is «my step now», second is «next» */
+  const candidates = [];
+  if (!groupId) {
+    candidates.push({ kind: 'quran', label: 'تصفح المصحف المكرر', hint: 'بانتظار تسكينك في مجموعتك', to: '/student/quran' });
+  } else {
+    if (liveSession) candidates.push({ kind: 'live', label: 'انضم للحصة الآن', hint: liveSession.title, to: '/student/live', live: true });
+    if (assignedExams[0]) candidates.push({ kind: 'exam', label: `ابدأ: ${assignedExams[0].title}`, hint: `${assignedExams[0].questions?.length || 0} أسئلة`, examId: assignedExams[0]._id });
+    if (pendingPortions.length) candidates.push({ kind: 'wird', label: `أكمل وردك (${pendingPortions.length} متبقٍ)`, hint: portionName(dailyTask[pendingPortions[0].key]), scroll: true });
+    if (upcomingSession && upcomingSession.status === 'scheduled') candidates.push({ kind: 'upcoming', label: 'الحصة القادمة', hint: getSmartDateLabel(upcomingSession.scheduledAt), to: '/student/live' });
+    candidates.push({ kind: 'curriculum', label: 'تابع منهجك', hint: 'دروسك ومواد مجموعتك', to: '/student/curriculum' });
+  }
+  const [primary, next] = candidates;
+
+  const scrollToTasks = () => {
+    document.getElementById('today-tasks')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const primaryAction = primary?.examId
+    ? <button type="button" onClick={() => navigate(`/student/exams/${primary.examId}/take`)} className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', padding: '0 32px', fontSize: 16, width: '100%' }}><Play size={18} /> {primary.label}</button>
+    : primary?.scroll
+    ? <button type="button" onClick={scrollToTasks} className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', padding: '0 32px', fontSize: 16, width: '100%' }}><BookOpen size={18} /> {primary.label}</button>
+    : primary ? <HqActionLink to={primary.to}>{primary.label}</HqActionLink> : null;
+
+  const sheet = { background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 'clamp(16px, 3vw, 28px)' };
+  const h2 = { margin: '0 0 4px', fontSize: 18, fontWeight: 800, color: HQ.INK };
 
   return (
     <PageLayout>
-      {/* Welcome */}
-      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} className="mb-4 sm:mb-6">
-        <div className="card-gradient p-4 sm:p-6 rounded-2xl sm:rounded-3xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-40 h-40 bg-white/10 rounded-full -translate-x-10 -translate-y-10" />
-          <div className="absolute bottom-0 right-0 w-32 h-32 bg-white/5 rounded-full translate-x-5 translate-y-5" />
-          <div className="absolute top-4 left-4 opacity-20">
-            <Zap className="w-12 h-12 sm:w-16 sm:h-16 text-white" />
+      <div className="halaqa" style={{ ...sheet, maxWidth: 760, margin: '0 auto' }}>
+        {!ready ? (
+          <div aria-label="جارٍ تحميل يومك">
+            <div className="hq-skeleton" style={{ height: 22, width: '45%', marginBottom: 16 }} />
+            <div className="hq-skeleton" style={{ height: 56, width: '100%', marginBottom: 16 }} />
+            <div className="hq-skeleton" style={{ height: 14, width: '30%', marginBottom: 8 }} />
+            <div className="hq-skeleton" style={{ height: 52, width: '100%', marginBottom: 8 }} />
+            <div className="hq-skeleton" style={{ height: 52, width: '100%', marginBottom: 8 }} />
+            <div className="hq-skeleton" style={{ height: 52, width: '100%' }} />
           </div>
-          <div className="relative z-10">
-            <div className="font-quran text-lg sm:text-xl mb-1 sm:mb-2 opacity-90">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
-            <h1 className="text-xl sm:text-2xl font-black mb-1">
-              {greeting} {user?.firstName}! 👋
-            </h1>
-            <p className="text-primary-100 text-xs sm:text-sm">
-              مستواك: <strong>{getLevelLabel(user?.assignedLevel)}</strong>
-              {group && ` | مجموعتك: ${group.name}`}
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Subscription Alerts on Dashboard */}
-      {subscription?.isExpiringSoon && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-4 sm:mb-6 bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
-              <AlertTriangle className="w-5 h-5 animate-bounce" />
-            </div>
-            <div>
-              <p className="font-bold text-amber-950 text-sm">تنبيه باقتراب موعد سداد الاشتراك الشهري ⚠️</p>
-              <p className="text-xs text-amber-800">
-                يتبقى <span className="font-black underline">{subscription.daysRemaining} أيام</span> على انتهاء اشتراكك في الحلقات. سارع بالسداد عبر فودافون كاش أو انستاباي.
-              </p>
-            </div>
-          </div>
-          <Link
-            to="/student/subscription"
-            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 flex-shrink-0"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            تجديد الاشتراك
-          </Link>
-        </motion.div>
-      )}
-
-      {subscription?.isExpired && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-4 sm:mb-6 bg-red-50 border-2 border-red-300 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
-              <Lock className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="font-bold text-red-950 text-sm">تم تعليق حضور الجلسات لانتهاء الاشتراك 🔒</p>
-              <p className="text-xs text-red-800">
-                انتهت فترة اشتراكك الشهري. يرجى سداد الاشتراك لاستئناف حضور الحلقات والتفاعل مع المعلم فوراً.
-              </p>
-            </div>
-          </div>
-          <Link
-            to="/student/subscription"
-            className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 flex-shrink-0"
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            سداد وتفعيل الاشتراك
-          </Link>
-        </motion.div>
-      )}
-
-      {/* Unassigned Group Notification */}
-      {!user?.group && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-4 sm:mb-6 bg-gradient-to-r from-emerald-50 via-teal-50 to-primary-50 border-2 border-primary-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm"
-        >
-          <div className="flex items-start sm:items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-primary-600 text-white flex items-center justify-center flex-shrink-0 shadow-md">
-              <BookOpen className="w-6 h-6 animate-pulse" />
-            </div>
-            <div>
-              <p className="font-bold text-gray-900 text-sm">مرحباً بك! مستواك محدد: ({getLevelLabel(user?.assignedLevel)}) 🌟</p>
-              <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">
-                تقوم إدارة الأكاديمية حالياً بتسكينك في الحلقة والموعد الأنسب لك برفقة شيخ مقرئ معتمد. في هذه الأثناء، يمكنك البدء فوراً بتصفح المصحف المكرر وتجهيز وردك اليومي.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
-            <Link
-              to="/student/quran"
-              className="btn-primary flex-1 sm:flex-none py-2.5 px-4 text-xs font-bold"
-            >
-              <BookOpen className="w-4 h-4" />
-              تصفح المصحف المكرر
-            </Link>
-            <Link
-              to="/student/daily-tracker"
-              className="btn-secondary flex-1 sm:flex-none py-2.5 px-4 text-xs font-bold"
-            >
-              سجل الورد
-            </Link>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════ */}
-      {/* 🌟 UNIFIED REQUIRED HUB: المطلوب مني اليوم (الورد + الامتحانات) 🌟 */}
-      {/* ══════════════════════════════════════════════════════════════ */}
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="card-base p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-primary-300/80 bg-gradient-to-br from-primary-50/40 via-white to-emerald-50/20 shadow-md"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary-600 to-emerald-500 text-white flex items-center justify-center font-black text-xl shadow-md shadow-primary-600/20">
-              📋
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-black text-gray-900 text-base sm:text-lg">
-                  المطلوب مني إنجازه اليوم
-                </h2>
-                {dailyTask?.overallStatus === 'completed' ? (
-                  <span className="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <Check className="w-3 h-3" /> ورد اليوم مكتمل
-                  </span>
-                ) : (
-                  <span className="text-[11px] bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 rounded-full">
-                    الورد قيد الإنجاز ⏳
-                  </span>
-                )}
-                {assignedExams.length > 0 && (
-                  <span className="text-[11px] bg-purple-100 text-purple-800 font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <FileText className="w-3 h-3" /> {assignedExams.length} اختبار مطلوب
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 mt-0.5">
-                مكان واحد يجمع وردك القرآني اليومي واختباراتك المستحقة دون تشتيت
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <Link
-              to="/student/daily-tracker"
-              className="flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm transition-all"
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>سجل الورد</span>
-            </Link>
-            <Link
-              to="/student/quran"
-              className="flex items-center gap-1 text-xs font-bold text-primary-600 hover:text-primary-700 bg-white hover:bg-primary-50 px-3 py-1.5 rounded-xl border border-primary-200 shadow-sm transition-all"
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>المصحف</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* ── Sub-section 1: Active Assigned Exams (If any) ── */}
-        {assignedExams.length > 0 && (
-          <div className="mb-5 bg-purple-50/60 border border-purple-200 rounded-2xl p-3.5 sm:p-4">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <span className="text-xs font-black text-purple-900 flex items-center gap-1.5">
-                <Award className="w-4 h-4 text-purple-600" />
-                الامتحانات المستحقة عليك الآن ({assignedExams.length})
-              </span>
-              <span className="text-[11px] text-purple-700 font-semibold">
-                يرجى أداؤها في أقرب وقت
-              </span>
-            </div>
-
-            <div className="space-y-2.5">
-              {assignedExams.map(exam => {
-                const isIndividual = exam.targetType === 'individual';
-                const isGroup = exam.targetType === 'group' || !exam.targetType;
-                const isLevel = exam.targetType === 'level';
-
-                return (
-                  <div
-                    key={exam._id}
-                    className="bg-white border border-purple-100 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:border-purple-300 transition-all"
-                  >
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-base ${
-                        isIndividual
-                          ? 'bg-amber-100 text-amber-800'
-                          : isGroup
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-purple-100 text-purple-800'
-                      }`}>
-                        {isIndividual ? '🎯' : isGroup ? '👥' : '🏷️'}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-black text-gray-900 text-sm truncate">{exam.title}</h4>
-                          {isIndividual && (
-                            <span className="text-[10px] font-black bg-gradient-to-r from-amber-500 to-amber-600 text-white px-2 py-0.5 rounded-full shadow-xs">
-                              🎯 امتحان فردي مخصص لك
-                            </span>
-                          )}
-                          {isGroup && exam.group?.name && (
-                            <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                              حلقة: {exam.group.name}
-                            </span>
-                          )}
-                          {isLevel && (
-                            <span className="text-[10px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
-                              امتحان مستوى
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1 flex-wrap">
-                          <span>{exam.questions?.length || 0} أسئلة</span>
-                          {exam.duration && <span>⏱️ المدة: {exam.duration} دقيقة</span>}
-                          {exam.passingScore && <span>النجاح: {exam.passingScore}%</span>}
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => navigate(`/student/exams/${exam._id}/take`)}
-                      className={`px-5 py-2.5 rounded-xl font-black text-xs sm:text-sm text-white flex items-center justify-center gap-1.5 shadow-sm transition-all flex-shrink-0 cursor-pointer ${
-                        isIndividual
-                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-amber-500/20'
-                          : 'bg-primary-600 hover:bg-primary-700 shadow-primary-600/20'
-                      }`}
-                    >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      ابدأ الامتحان الآن
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ── Sub-section 2: Daily Quran Wird (3 Pillars) ── */}
-        {dailyTask ? (
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
-                <BookOpen className="w-4 h-4 text-emerald-600" />
-                الورد القرآني اليومي (المنهج الثلاثي)
-              </span>
-              <span className="text-[11px] text-gray-500">
-                اضغط على المربع لتأكيد حفظ أو ربط الجزء
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-              {/* Pillar 1: New Hifz */}
-              <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
-                dailyTask.newHifz?.status === 'completed'
-                  ? 'bg-emerald-50/90 border-emerald-300 ring-1 ring-emerald-400/30'
-                  : 'bg-white border-emerald-200/70 shadow-sm hover:border-emerald-300'
-              }`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-black text-emerald-800 flex items-center gap-1">
-                    🟢 1. الحفظ الجديد (السبق)
-                  </span>
-                  {dailyTask.newHifz?.score !== undefined && (
-                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                      درجة: {dailyTask.newHifz.score}%
-                    </span>
-                  )}
-                </div>
-                <p className="font-black text-gray-900 text-sm mb-1">
-                  سورة {dailyTask.newHifz?.surahName || '—'}
-                </p>
-                <p className="text-xs text-gray-500 mb-3">
-                  الآيات من {dailyTask.newHifz?.fromVerse || 1} إلى {dailyTask.newHifz?.toVerse || '...'} ({dailyTask.newHifz?.versesCount || 0} آية)
-                </p>
-                <button
-                  type="button"
-                  onClick={() => handleTogglePortion('newHifz')}
-                  className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    dailyTask.newHifz?.status === 'completed'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
-                  }`}
-                >
-                  <Check className="w-4 h-4" />
-                  {dailyTask.newHifz?.status === 'completed' ? 'تم الحفظ بنجاح ✅' : 'تحديد كـ تم الحفظ'}
-                </button>
-              </div>
-
-              {/* Pillar 2: Near Revision */}
-              <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
-                dailyTask.nearRevision?.status === 'completed'
-                  ? 'bg-amber-50/90 border-amber-300 ring-1 ring-amber-400/30'
-                  : 'bg-white border-amber-200/70 shadow-sm hover:border-amber-300'
-              }`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-black text-amber-900 flex items-center gap-1">
-                    🟡 2. الماضي القريب (الربط)
-                  </span>
-                  {dailyTask.nearRevision?.score !== undefined && (
-                    <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
-                      درجة: {dailyTask.nearRevision.score}%
-                    </span>
-                  )}
-                </div>
-                <p className="font-black text-gray-900 text-sm mb-1">
-                  سورة {dailyTask.nearRevision?.surahName || '—'}
-                </p>
-                <p className="text-xs text-gray-500 mb-3">
-                  ربط آخر 5 إلى 10 أوجه سابقة من المحفوظ
-                </p>
-                <button
-                  type="button"
-                  onClick={() => handleTogglePortion('nearRevision')}
-                  className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    dailyTask.nearRevision?.status === 'completed'
-                      ? 'bg-amber-600 text-white shadow-sm'
-                      : 'bg-amber-50 hover:bg-amber-100 text-amber-900'
-                  }`}
-                >
-                  <Check className="w-4 h-4" />
-                  {dailyTask.nearRevision?.status === 'completed' ? 'تم الربط بنجاح ✅' : 'تحديد كـ تم الربط'}
-                </button>
-              </div>
-
-              {/* Pillar 3: Cumulative Revision */}
-              <div className={`p-3.5 sm:p-4 rounded-2xl border transition-all ${
-                dailyTask.cumulativeRevision?.status === 'completed'
-                  ? 'bg-blue-50/90 border-blue-300 ring-1 ring-blue-400/30'
-                  : 'bg-white border-blue-200/70 shadow-sm hover:border-blue-300'
-              }`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-black text-blue-900 flex items-center gap-1">
-                    🔵 3. الماضي البعيد (التمكين)
-                  </span>
-                  {dailyTask.cumulativeRevision?.score !== undefined && (
-                    <span className="text-[11px] font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full">
-                      درجة: {dailyTask.cumulativeRevision.score}%
-                    </span>
-                  )}
-                </div>
-                <p className="font-black text-gray-900 text-sm mb-1">
-                  ورد {dailyTask.cumulativeRevision?.surahName || 'الدوري'}
-                </p>
-                <p className="text-xs text-gray-500 mb-3">
-                  مراجعة الأجزاء التمكينية لضمان عدم التفلت
-                </p>
-                <button
-                  type="button"
-                  onClick={() => handleTogglePortion('cumulativeRevision')}
-                  className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    dailyTask.cumulativeRevision?.status === 'completed'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-blue-50 hover:bg-blue-100 text-blue-900'
-                  }`}
-                >
-                  <Check className="w-4 h-4" />
-                  {dailyTask.cumulativeRevision?.status === 'completed' ? 'تم التمكين بنجاح ✅' : 'تحديد كـ تم التمكين'}
-                </button>
-              </div>
-            </div>
+        ) : loadFailed ? (
+          <div style={{ textAlign: 'center', padding: '48px 16px' }} role="alert">
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: HQ.INK, margin: '0 0 8px' }}>تعذّر تحميل يومك</h1>
+            <p style={{ color: HQ.MUTED, fontSize: 15, margin: '0 0 20px' }}>تحقق من الاتصال ثم حاول مرة أخرى.</p>
+            <button type="button" onClick={loadLocal} className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', padding: '0 24px', fontSize: 15 }}>
+              <RotateCcw size={17} /> إعادة المحاولة
+            </button>
           </div>
         ) : (
-          <div className="text-center py-8 px-4 bg-amber-50/60 rounded-2xl border border-amber-200/70 text-amber-800 flex flex-col items-center justify-center gap-2">
-            <Clock className="w-8 h-8 text-amber-500 animate-pulse" />
-            <p className="font-bold text-sm sm:text-base">لم يتم تعيين وردك القرآني لليوم بعد</p>
-            <p className="text-xs text-amber-700/80 max-w-md">
-              يقوم المعلم بتحديد وكتابة الورد اليومي (حفظ جديد، ماضي قريب، مراجعة بعيدة) مباشرة أثناء أو بعد جلسة التسميع التفاعلية.
-            </p>
-          </div>
-        )}
-      </motion.div>
+          <>
+            {/* A. Greeting — small, never a hero */}
+            <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>{greeting}،</p>
+            <h1 style={{ margin: '2px 0 20px', fontSize: 26, fontWeight: 900, color: HQ.INK }}>
+              {user?.firstName || 'طالبنا'}، هذا يومك
+            </h1>
 
-      {/* Quick stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-4 sm:mb-6 stagger-children">
-        {[
-          { icon: Flame, label: 'السلسلة اليومية', value: `${user?.streak || 0} أيام`, bg: 'bg-orange-50', color: 'text-orange-500', iconBg: 'bg-orange-100' },
-          { icon: Star, label: 'نقاط الـ XP', value: `${user?.points || 0} XP`, bg: 'bg-yellow-50', color: 'text-yellow-500', iconBg: 'bg-yellow-100' },
-          { icon: BookOpen, label: 'أجزاء محفوظة', value: `${juzCompleted}/30`, bg: 'bg-primary-50', color: 'text-primary-400', iconBg: 'bg-primary-100' },
-          { icon: TrendingUp, label: 'تقدم المنهج', value: `${curriculumProgress}%`, bg: 'bg-purple-50', color: 'text-purple-500', iconBg: 'bg-purple-100' },
-        ].map((s, i) => (
-          <motion.div key={i} whileHover={{ y: -2, scale: 1.01 }} transition={{ type: 'spring', stiffness: 300 }} className="card-base p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3 cursor-default">
-            <div className={`w-10 h-10 sm:w-12 sm:h-12 ${s.iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
-              <s.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${s.color}`} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-base sm:text-xl font-black text-gray-900 leading-tight truncate">{s.value}</p>
-              <p className="text-[11px] sm:text-xs text-gray-500 truncate mt-0.5">{s.label}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            {/* Slim subscription alerts (functional, kept) */}
+            {subscription?.isExpiringSoon && (
+              <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
+                <span style={{ width: 34, height: 34, borderRadius: 10, background: '#F8EDD3', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                  <AlertTriangle size={17} color="#B45309" />
+                </span>
+                <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>يتبقى <strong>{subscription.daysRemaining} أيام</strong> على اشتراكك.</span>
+                <Link to="/student/subscription" style={{ fontSize: 14, fontWeight: 800, color: '#B45309', whiteSpace: 'nowrap' }}>التجديد</Link>
+              </div>
+            )}
+            {subscription?.isExpired && (
+              <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 12, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
+                <span style={{ width: 34, height: 34, borderRadius: 10, background: HQ.PAPER, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                  <Lock size={17} color="#C2410C" />
+                </span>
+                <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>توقّف حضور الجلسات لانتهاء الاشتراك.</span>
+                <Link to="/student/subscription" style={{ fontSize: 14, fontWeight: 800, color: '#C2410C', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}><CreditCard size={15} /> السداد</Link>
+              </div>
+            )}
+            {!groupId && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
+                <BookOpen size={18} color={HQ.MENTOR} style={{ flex: 'none' }} />
+                <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>الإدارة تسكّنك في مجموعتك — ابدأ بالمصحف والورد.</span>
+                <Link to="/student/quran" style={{ fontSize: 14, fontWeight: 800, color: HQ.MENTOR, whiteSpace: 'nowrap' }}>المصحف</Link>
+              </div>
+            )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Quran progress ring */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="card-base p-4 sm:p-6 flex flex-col items-center"
-        >
-          <h2 className="font-bold text-gray-900 mb-3 sm:mb-4 self-start flex items-center gap-2 text-sm sm:text-base">
-            <BookOpen className="w-4 h-4 text-primary-400" />
-            تقدم الختم
-          </h2>
-          <div className="relative mb-3 sm:mb-4">
-            <svg className="w-28 h-28 sm:w-32 sm:h-32 -rotate-90" viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="54" fill="none" stroke="#E1F5EE" strokeWidth="10" />
-              <circle cx="60" cy="60" r="54" fill="none" stroke="#1D9E75" strokeWidth="10"
-                strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1.5s ease' }} />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-xl sm:text-2xl font-black text-primary-500">{juzPct}%</span>
-              <span className="text-[10px] sm:text-xs text-gray-400">مكتمل</span>
-            </div>
-          </div>
-          <p className="text-xs sm:text-sm font-bold text-gray-700">{juzCompleted} جزء من 30</p>
-          {studyPlan?.quranCompletionPlan?.dailyPages && (
-            <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">هدفك اليومي: {studyPlan.quranCompletionPlan.dailyPages} صفحات</p>
-          )}
-          <Link to="/student/curriculum" className="btn-outline w-full mt-3 sm:mt-4 text-xs sm:text-sm py-2">
-            عرض خطة المنهج والمجموعة
-          </Link>
-        </motion.div>
-
-        {/* Next session */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="card-base p-4 sm:p-6"
-        >
-          <h2 className="font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
-            <Video className="w-4 h-4 text-primary-400" />
-            الجلسة القادمة
-          </h2>
-          {upcomingSession ? (
-            <div>
-              {upcomingSession.status === 'live' ? (
-                <div className="bg-red-50 border border-red-200 rounded-2xl p-3.5 sm:p-4 mb-3 sm:mb-4">
-                  <div className="flex items-center gap-2 text-red-600 font-bold mb-1.5 sm:mb-2 text-sm sm:text-base">
-                    <div className="live-dot" />
-                    الجلسة مباشرة الآن!
-                  </div>
-                  <p className="text-xs sm:text-sm text-gray-700 font-semibold">{upcomingSession.title}</p>
-                </div>
-              ) : (
-                <div className="bg-primary-50 rounded-2xl p-3.5 sm:p-4 mb-3 sm:mb-4">
-                  <p className="font-bold text-gray-900 text-sm sm:text-base">{upcomingSession.title}</p>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                    📅 {formatDateAr(upcomingSession.scheduledAt, 'EEEE dd MMMM yyyy')}
+            {/* B. My step now — exactly one primary action */}
+            {primary && (
+              <section aria-label="خطوتي الآن" style={{ marginBottom: 24 }}>
+                {primary.live && (
+                  <p style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 8px', fontSize: 14, fontWeight: 800, color: HQ.MENTOR }}>
+                    <span className="hq-live-dot" aria-hidden /> {primary.hint}
                   </p>
-                  {timeLeft > 0 && (
-                    <div className="mt-2.5 sm:mt-3 bg-white/70 rounded-xl px-3 py-2 border border-primary-100 flex items-center justify-between">
-                      <span className="text-xs font-bold text-gray-700">تبدأ خلال:</span>
-                      <span className="text-xs sm:text-sm font-mono font-bold text-primary-600" dir="ltr">
-                        {formatCountdown(timeLeft)}
+                )}
+                {!primary.live && primary.hint && (
+                  <p style={{ margin: '0 0 8px', fontSize: 14, color: HQ.MUTED }}>{primary.hint}</p>
+                )}
+                {primaryAction}
+              </section>
+            )}
+
+            {/* C. Next — one quiet line */}
+            {next && (
+              <section aria-label="التالي" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: HQ.MUTED, marginBottom: 24 }}>
+                <span style={{ fontWeight: 800, color: HQ.INK, flex: 'none' }}>التالي:</span>
+                <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{next.label}</span>
+                {next.to && <Link to={next.to} aria-label={`انتقال: ${next.label}`} style={{ color: HQ.MENTOR, display: 'inline-flex', flex: 'none' }}><ChevronLeft size={18} /></Link>}
+              </section>
+            )}
+
+            {/* D. Today's tasks — list first, never cards */}
+            <section id="today-tasks" aria-label="مهمتي اليوم" style={{ marginBottom: 24 }}>
+              <h2 style={h2}>مهمتي اليوم</h2>
+              {(!dailyTask && assignedExams.length === 0) ? (
+                <p style={{ fontSize: 15, color: HQ.MUTED, margin: '8px 0 0' }}>
+                  يومك خفيف — لا مهام معلّقة. {groupId ? 'معلمك يحدد وردك أثناء الحصة.' : 'تصفح المصحف ريثما تُسكَّن في مجموعة.'}
+                </p>
+              ) : (
+                <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
+                  {PORTIONS.filter(p => dailyTask?.[p.key]).map(p => {
+                    const portion = dailyTask[p.key];
+                    const donePortion = portion.status === 'completed';
+                    return (
+                      <li key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 60, padding: '10px 4px', borderBottom: `1px solid ${HQ.LINE}` }}>
+                        <button type="button" onClick={() => handleTogglePortion(p.key)}
+                          aria-pressed={donePortion} aria-label={`${p.label}: ${donePortion ? 'مكتمل، اضغط للإلغاء' : 'تحديد كمكتمل'}`}
+                          style={{
+                            flex: 'none', width: 30, height: 30, borderRadius: 9999, cursor: 'pointer',
+                            border: `2px solid ${donePortion ? HQ.MENTOR : HQ.LINE}`,
+                            background: donePortion ? HQ.MENTOR : 'transparent', color: '#fff',
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                          {donePortion && <Check size={16} strokeWidth={3.5} />}
+                        </button>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: HQ.INK }}>{p.label}</span>
+                          <span style={{ display: 'block', fontSize: 13, color: HQ.MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {portionName(portion)}{portion.score !== undefined ? ` · الدرجة ${portion.score}%` : ''}
+                          </span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                  {assignedExams.map(exam => (
+                    <li key={exam._id} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 60, padding: '10px 4px', borderBottom: `1px solid ${HQ.LINE}` }}>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: HQ.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{exam.title}</span>
+                        <span style={{ display: 'block', fontSize: 13, color: HQ.MUTED }}>
+                          اختبار · {exam.questions?.length || 0} أسئلة{exam.duration ? ` · ${exam.duration} دقيقة` : ''}
+                        </span>
                       </span>
-                    </div>
+                      <button type="button" onClick={() => navigate(`/student/exams/${exam._id}/take`)}
+                        style={{ flex: 'none', minHeight: 48, padding: '0 20px', borderRadius: 12, border: 'none', background: HQ.MENTOR, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        <Play size={15} /> ابدأ
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            {/* E. Journey mini-summary — snapshot only, details live at /student/progress */}
+            <section aria-label="ملخص رحلتي" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 16, marginBottom: 24 }}>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 14, marginBottom: 12 }}>
+                <span><strong style={{ color: HQ.INK }}>{getLevelLabel(user?.assignedLevel) || '—'}</strong> <span style={{ color: HQ.MUTED }}>المستوى</span></span>
+                <span><strong style={{ color: HQ.INK }}>{juzPct}%</strong> <span style={{ color: HQ.MUTED }}>الختمة</span></span>
+                <span><strong style={{ color: HQ.INK }}>{juzCompleted}/30</strong> <span style={{ color: HQ.MUTED }}>جزءًا</span></span>
+                {group?.name && <span><strong style={{ color: HQ.INK }}>{group.name}</strong> <span style={{ color: HQ.MUTED }}>المجموعة</span></span>}
+              </div>
+              <Link to="/student/progress" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontWeight: 800, fontSize: 15, color: HQ.MENTOR, textDecoration: 'none' }}>
+                عرض رحلتي كاملة <ChevronLeft size={17} />
+              </Link>
+            </section>
+
+            {/* F. Next majlis */}
+            <section aria-label="المجلس القادم">
+              <h2 style={h2}>المجلس القادم</h2>
+              {upcomingSession ? (
+                <div style={{ marginTop: 8 }}>
+                  <p style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800, color: HQ.INK }}>
+                    {upcomingSession.status === 'live' && <span className="hq-live-dot" aria-hidden style={{ display: 'inline-block', marginLeft: 8 }} />}
+                    {upcomingSession.title}
+                  </p>
+                  <p style={{ margin: '0 0 4px', fontSize: 14, color: HQ.MUTED }}>
+                    {group?.name || upcomingSession.group?.name || ''}
+                    {upcomingSession.status === 'scheduled' && upcomingSession.scheduledAt
+                      ? ` · ${formatDateAr(upcomingSession.scheduledAt, 'EEEE dd MMMM')}`
+                      : ''}
+                  </p>
+                  {upcomingSession.status === 'scheduled' && timeLeft > 0 && (
+                    <p style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 800, color: HQ.MENTOR }}>
+                      <Clock size={14} style={{ verticalAlign: -2 }} /> تبدأ خلال {formatCountdown(timeLeft)}
+                    </p>
+                  )}
+                  <HqActionLink to="/student/live" primary={upcomingSession.status === 'live'}>
+                    {upcomingSession.status === 'live' ? 'انضم الآن' : 'صفحة الحصة'}
+                  </HqActionLink>
+                  {group?.schedule?.length > 0 && (
+                    <p style={{ margin: '12px 0 0', fontSize: 13, color: HQ.MUTED }}>
+                      أيام حلقتك المعتادة: {group.schedule.map(s => DAYS_AR[s.dayOfWeek]).filter(Boolean).join('، ')}
+                    </p>
                   )}
                 </div>
+              ) : (
+                <p style={{ fontSize: 15, color: HQ.MUTED, margin: '8px 0 0' }}>
+                  لا حصة مجدولة حاليًا — سيعلن معلمك الموعد في المجموعة.
+                </p>
               )}
-              <Link to="/student/live" className="btn-primary w-full text-xs sm:text-sm py-2.5">
-                {upcomingSession.status === 'live' ? '🔴 انضم الآن' : 'عرض التفاصيل'}
-              </Link>
-            </div>
-          ) : (
-            <div className="text-center py-6 sm:py-8 text-gray-400">
-              <Calendar className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-gray-200" />
-              <p className="text-xs sm:text-sm">لا توجد جلسات مجدولة</p>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Schedule */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="card-base p-4 sm:p-6"
-        >
-          <h2 className="font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
-            <Calendar className="w-4 h-4 text-primary-400" />
-            جدول مجموعتي
-          </h2>
-          {group?.schedule?.length > 0 ? (
-            <div className="space-y-2">
-              {group.schedule.map((s, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 + i * 0.05 }}
-                  className="flex items-center gap-2.5 sm:gap-3 bg-gray-50 hover:bg-primary-50/40 rounded-xl px-3 py-2 transition-colors duration-200"
-                >
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-primary-100 text-primary-600 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0">
-                    {Object.keys(DAYS_AR).indexOf(s.dayOfWeek) + 1}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-semibold text-gray-800">{DAYS_AR[s.dayOfWeek]}</p>
-                    <p className="text-[11px] sm:text-xs text-gray-400">{s.startTime} - {s.endTime}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-6 sm:py-8 text-gray-400">
-              <Clock className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 text-gray-200" />
-              <p className="text-xs sm:text-sm">لم يحدد جدول بعد</p>
-            </div>
-          )}
-        </motion.div>
+            </section>
+          </>
+        )}
       </div>
-
-      {/* Quick actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="mt-4 sm:mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3"
-      >
-        {[
-          { to: '/student/curriculum', icon: BookOpen, label: 'المنهج والمجموعة', color: 'bg-primary-50 text-primary-600 hover:bg-primary-100' },
-          { to: '/student/quran', icon: BookOpen, label: 'المصحف التفاعلي', color: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' },
-          { to: '/student/exams', icon: Star, label: 'الاختبارات والتقييمات', color: 'bg-purple-50 text-purple-600 hover:bg-purple-100' },
-          { to: '/student/subscription', icon: CreditCard, label: 'تفاصيل الاشتراك', color: 'bg-blue-50 text-blue-600 hover:bg-blue-100' },
-        ].map((action, i) => (
-          <Link
-            key={i}
-            to={action.to}
-            className={`flex items-center gap-2 sm:gap-3 p-3 sm:px-4 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 ${action.color}`}
-          >
-            <action.icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-            <span className="truncate">{action.label}</span>
-            <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-auto opacity-40 flex-shrink-0" />
-          </Link>
-        ))}
-      </motion.div>
     </PageLayout>
   );
 }

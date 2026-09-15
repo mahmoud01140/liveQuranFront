@@ -14,6 +14,7 @@ import toast from 'react-hot-toast';
 import useGroupStore from '../../store/groupStore';
 import { getAvatarColor, getInitials } from '../../utils/helpers';
 import Pagination from '../../components/shared/Pagination';
+import '../../components/halaqa/halaqa.css';
 import usePagination from '../../hooks/usePagination';
 
 export default function ReportsPage() {
@@ -144,9 +145,10 @@ export default function ReportsPage() {
 
   return (
     <PageLayout>
+      <div className="halaqa" style={{ maxWidth: 1000, margin: '0 auto' }}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="section-title">التقارير والإحصاءات 📊</h1>
+              <h1 className="section-title">التقارير والإحصاءات</h1>
           <p className="section-subtitle">نظرة تحليلية شاملة وكشوفات الحضور والغياب المباشرة من قاعدة البيانات</p>
         </div>
 
@@ -160,7 +162,7 @@ export default function ReportsPage() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                📊 الإحصاءات العامة
+                الإحصاءات العامة
               </button>
 
               <button
@@ -200,12 +202,12 @@ export default function ReportsPage() {
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={reportData.monthlyTrends}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="month" tick={{ fontSize: 11, fontFamily: 'Cairo' }} />
+                      <XAxis dataKey="month" tick={{ fontSize: 11, fontFamily: 'Tajawal' }} />
                       <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip contentStyle={{ fontFamily: 'Cairo', borderRadius: 12, border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }} />
-                      <Legend wrapperStyle={{ fontFamily: 'Cairo', fontSize: 12 }} />
-                      <Bar dataKey="students" fill="#1D9E75" name="الطلاب الجدد" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="sessions" fill="#534AB7" name="الجلسات المباشرة" radius={[4, 4, 0, 0]} />
+                      <Tooltip contentStyle={{ fontFamily: 'Tajawal', borderRadius: 12, border: '1px solid #E8E2D4' }} />
+                      <Legend wrapperStyle={{ fontFamily: 'Tajawal', fontSize: 12 }} />
+                      <Bar dataKey="students" fill="#177B58" name="الطلاب الجدد" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="sessions" fill="#4A3F6B" name="الجلسات المباشرة" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -215,11 +217,11 @@ export default function ReportsPage() {
                   <ResponsiveContainer width="100%" height={260}>
                     <LineChart data={reportData.weeklyAttendance}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="week" tick={{ fontSize: 11, fontFamily: 'Cairo' }} />
+                      <XAxis dataKey="week" tick={{ fontSize: 11, fontFamily: 'Tajawal' }} />
                       <YAxis domain={[50, 100]} tick={{ fontSize: 11 }} />
-                      <Tooltip contentStyle={{ fontFamily: 'Cairo', borderRadius: 12, border: 'none' }}
+                      <Tooltip contentStyle={{ fontFamily: 'Tajawal', borderRadius: 12, border: '1px solid #E8E2D4' }}
                         formatter={(v) => [`${v}%`, 'معدل الحضور']} />
-                      <Line type="monotone" dataKey="rate" stroke="#1D9E75" strokeWidth={3} dot={{ fill: '#1D9E75', r: 5 }} name="الحضور %" />
+                      <Line type="monotone" dataKey="rate" stroke="#177B58" strokeWidth={3} dot={{ fill: '#177B58', r: 5 }} name="الحضور %" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -297,10 +299,10 @@ export default function ReportsPage() {
                     className="text-xs font-semibold bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-primary-400"
                   >
                     <option value="all">جميع الحالات</option>
-                    <option value="absent">🚨 الغائبين فقط</option>
-                    <option value="late">⏳ المتأخرين فقط</option>
-                    <option value="present">✅ الحاضرين فقط</option>
-                    <option value="excused">📝 المعذورين فقط</option>
+                    <option value="absent">الغائبين فقط</option>
+                    <option value="late">المتأخرين فقط</option>
+                    <option value="present">الحاضرين فقط</option>
+                    <option value="excused">المعذورين فقط</option>
                   </select>
                 </div>
 
@@ -358,18 +360,18 @@ export default function ReportsPage() {
                     <p className="text-sm font-bold">لا توجد سجلات حضور مطابقة للفلاتر المحددة</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-right text-xs">
-                      <thead className="bg-gray-50 text-gray-600 font-bold border-b border-gray-200/80">
+                  <div className="hq-table-wrap">
+                    <table className="hq-table">
+                      <thead>
                         <tr>
-                          <th className="p-3.5">الطالب</th>
-                          <th className="p-3.5">المجموعة</th>
-                          <th className="p-3.5 text-center">إجمالي الحصص</th>
-                          <th className="p-3.5 text-center">حاضر</th>
-                          <th className="p-3.5 text-center">متأخر</th>
-                          <th className="p-3.5 text-center">غائب</th>
-                          <th className="p-3.5 text-center">نسبة الحضور</th>
-                          <th className="p-3.5">آخر الجلسات والملاحظات</th>
+                          <th>الطالب</th>
+                          <th>المجموعة</th>
+                          <th style={{ textAlign: 'center' }}>إجمالي الحصص</th>
+                          <th style={{ textAlign: 'center' }}>حاضر</th>
+                          <th style={{ textAlign: 'center' }}>متأخر</th>
+                          <th style={{ textAlign: 'center' }}>غائب</th>
+                          <th style={{ textAlign: 'center' }}>نسبة الحضور</th>
+                          <th>آخر الجلسات والملاحظات</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -439,7 +441,7 @@ export default function ReportsPage() {
                                       }`}
                                       title={`${sess.sessionTitle} - ${sess.notes || ''}`}
                                     >
-                                      {sess.status === 'present' ? '✅' : sess.status === 'late' ? '⏳' : sess.status === 'excused' ? '📝' : '❌'} {sess.sessionTitle}
+                                      {sess.status === 'present' ? 'حاضر' : sess.status === 'late' ? 'متأخر' : sess.status === 'excused' ? 'معذور' : 'غائب'}: {sess.sessionTitle}
                                     </span>
                                   ))}
                                 </div>
@@ -466,6 +468,7 @@ export default function ReportsPage() {
               </div>
             </div>
           )}
+      </div>
     </PageLayout>
   );
 }

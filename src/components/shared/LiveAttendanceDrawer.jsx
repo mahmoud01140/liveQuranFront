@@ -216,7 +216,7 @@ export default function LiveAttendanceDrawer({
             dir="rtl"
           >
             {/* Header */}
-            <div className="p-4 sm:p-5 bg-gradient-to-l from-slate-900 to-slate-800 text-white border-b border-slate-700 flex items-center justify-between flex-shrink-0">
+            <div className="p-4 sm:p-5 text-white border-b border-slate-700 flex items-center justify-between flex-shrink-0" style={{ background: '#2A2438' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-primary-500/20 border border-primary-400/30 flex items-center justify-center text-primary-400">
                   <UserCheck className="w-5 h-5" />

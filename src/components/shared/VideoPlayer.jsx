@@ -369,10 +369,11 @@ export default function VideoPlayer({ url, title, onClose }) {
                           </button>
                           <button
                             onClick={() => removeNote(n.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-300
-                                       hover:text-red-400 transition-all"
+                            aria-label="حذف الملاحظة"
+                            className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-lg
+                                       transition-all min-w-[32px] min-h-[32px] inline-flex items-center justify-center"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                         <p className="text-xs text-gray-700 leading-relaxed">{n.text}</p>
@@ -402,10 +403,11 @@ export default function VideoPlayer({ url, title, onClose }) {
                         <span className="text-xs text-gray-700 flex-1 truncate">{b.label}</span>
                         <button
                           onClick={() => removeBookmark(b.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-gray-300
-                                     hover:text-red-400 transition-all flex-shrink-0"
+                          aria-label="حذف العلامة"
+                          className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-lg
+                                     transition-all flex-shrink-0 min-w-[32px] min-h-[32px] inline-flex items-center justify-center"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))

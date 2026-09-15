@@ -79,10 +79,9 @@ export default function QuranAudioPlayer({ audio, surahName, totalSurahVerses })
           className="h-full bg-gradient-to-l from-primary-400 to-emerald-400 transition-all duration-150 relative"
           style={{ width: `${audioProgress}%` }}
         >
-          {/* Seek thumb */}
+          {/* Seek thumb — always visible so touch users see the handle */}
           <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2
-                          w-3.5 h-3.5 rounded-full bg-primary-500 shadow-md border-2 border-white
-                          opacity-0 group-hover:opacity-100 transition-opacity" />
+                          w-3.5 h-3.5 rounded-full bg-primary-500 shadow-md border-2 border-white" />
         </div>
       </div>
 

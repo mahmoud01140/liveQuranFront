@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import { FileText, Clock, CheckCircle, XCircle, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '../../components/shared/PageLayout';
@@ -8,6 +7,18 @@ import useExamStore from '../../store/examStore';
 import { formatDateAr } from '../../utils/helpers';
 import Pagination from '../../components/shared/Pagination';
 import usePagination from '../../hooks/usePagination';
+import '../../components/halaqa/halaqa.css';
+import { HQ, HqBadge } from '../../components/halaqa/primitives';
+
+/* الاختبارات — what is required now, then what comes after.
+   Same store calls, pagination, and navigation; only hierarchy changed.
+   List-first: one required exam stands out, the rest are quiet rows. */
+
+function examKind(exam) {
+  if (exam.questions?.some(q => q.type === 'recitation')) return 'يشمل شفهيًا';
+  if (exam.questions?.some(q => q.type === 'written')) return 'يشمل تحريريًا';
+  return 'اختياري';
+}
 
 export default function ExamsPage() {
   const { user } = useAuthStore();
@@ -26,82 +37,75 @@ export default function ExamsPage() {
     }
   }, [user]);
 
+  const sheet = { background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 'clamp(16px, 3vw, 28px)' };
+
+  const tabs = [
+    { key: 'available', label: 'المطلوب الآن', count: availableExams.length },
+    { key: 'results', label: 'نتائجي', count: results.length },
+  ];
+
   return (
     <PageLayout>
-      <div className="mb-4 sm:mb-6">
-        <h1 className="section-title">امتحاناتي والتقييمات</h1>
-        <p className="section-subtitle">الامتحانات المتاحة وسجل النتائج والتسميع</p>
-      </div>
+      <div className="halaqa" style={{ ...sheet, maxWidth: 760, margin: '0 auto' }}>
+        <h1 style={{ margin: '0 0 4px', fontSize: 26, fontWeight: 900, color: HQ.INK }}>اختباراتي</h1>
+        <p style={{ margin: '0 0 16px', fontSize: 14, color: HQ.MUTED }}>
+          {availableExams.length ? `لديك ${availableExams.length} اختبارًا مطلوبًا` : 'لا اختبارات معلقة عليك الآن'}
+        </p>
 
-      {/* Tabs */}
-      <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-6 bg-white rounded-2xl p-1.5 shadow-sm border border-gray-100 w-full sm:w-fit">
-        {[
-          { key: 'available', label: 'متاح للأداء', count: availableExams.length },
-          { key: 'results', label: 'النتائج السابقة', count: results.length },
-        ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex-1 sm:flex-initial px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
-              tab === t.key ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}>
-            <span>{t.label}</span>
-            {t.count > 0 && (
-              <span className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full ${
-                tab === t.key ? 'bg-white/30 text-white' : 'bg-gray-100 text-gray-600'
-              }`}>{t.count}</span>
-            )}
-          </button>
-        ))}
-      </div>
+        {/* Tabs: segmented, quiet */}
+        <div role="tablist" aria-label="أقسام الاختبارات"
+          style={{ display: 'inline-flex', gap: 4, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 14, padding: 4, marginBottom: 16 }}>
+          {tabs.map(t => (
+            <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
+              style={{
+                border: 'none', cursor: 'pointer', minHeight: 44, padding: '0 20px',
+                borderRadius: 10, fontSize: 14, fontWeight: 800,
+                background: tab === t.key ? HQ.MENTOR : 'transparent',
+                color: tab === t.key ? '#fff' : HQ.MUTED,
+              }}>
+              {t.label}{t.count > 0 ? ` (${t.count})` : ''}
+            </button>
+          ))}
+        </div>
 
-      {/* Available Exams */}
-      {tab === 'available' && (
-        <div>
-          {availableExams.length === 0 ? (
-            <div className="card-base p-8 sm:p-12 text-center">
-              <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-600 font-bold text-sm sm:text-base">لا توجد امتحانات متاحة الآن</p>
-              <p className="text-xs text-gray-400 mt-1">ستظهر هنا الامتحانات التي يضيفها المعلم لمجموعتك</p>
+        {tab === 'available' && (
+          availableExams.length === 0 ? (
+            <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 40, textAlign: 'center' }}>
+              <FileText size={40} color={HQ.LINE} style={{ margin: '0 auto 12px' }} />
+              <p style={{ margin: '0 0 4px', fontWeight: 800, fontSize: 16, color: HQ.INK }}>لا اختبارات معلقة</p>
+              <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>ستظهر هنا الاختبارات التي يضيفها المعلم لمجموعتك.</p>
             </div>
           ) : (
-            <div>
-              <div className="space-y-3 sm:space-y-4">
-                {availablePagination.paginatedItems.map((exam, i) => (
-                  <motion.div key={exam._id}
-                    initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                    className="card-base p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-primary-50 flex items-center justify-center flex-shrink-0 text-primary-500">
-                        <FileText className="w-5 h-5 sm:w-6 sm:h-6" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-gray-900 text-sm sm:text-base truncate">{exam.title}</h3>
-                        {exam.lessonTitle && (
-                          <p className="text-xs text-gray-400 mt-0.5 truncate">درس: {exam.lessonTitle}</p>
-                        )}
-                        <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
-                          <span className="text-[10px] sm:text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-semibold">
-                            {exam.questions?.length || 0} سؤال
-                          </span>
-                          {exam.duration && (
-                            <span className="text-[10px] sm:text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full flex items-center gap-1 font-semibold">
-                              <Clock className="w-3 h-3" />{exam.duration} دقيقة
-                            </span>
-                          )}
-                          <span className="text-[10px] sm:text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full font-semibold">
-                            {exam.questions?.some(q => q.type === 'recitation') ? '🎙️ يشمل شفهي' :
-                             exam.questions?.some(q => q.type === 'written') ? '✏️ يشمل إكمال' : '🔵 اختياري'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <button onClick={() => navigate(`/student/exams/${exam._id}/take`)}
-                      className="btn-primary w-full sm:w-auto py-2.5 px-5 text-xs sm:text-sm font-bold flex-shrink-0">
-                      <Play className="w-4 h-4" /> ابدأ الامتحان
-                    </button>
-                  </motion.div>
-                ))}
-              </div>
-
+            <>
+              <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {availablePagination.paginatedItems.map((exam, i) => {
+                  const required = i === 0 && availablePagination.currentPage === 1;
+                  return (
+                    <li key={exam._id} style={{
+                      background: required ? '#E2EFE7' : HQ.SURFACE,
+                      border: `1px solid ${required ? HQ.MENTOR : HQ.LINE}`,
+                      borderRadius: 18, marginBottom: 12, padding: 14,
+                      display: 'flex', alignItems: 'center', gap: 12,
+                    }}>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <strong style={{ fontSize: 16, color: required ? HQ.MENTOR : HQ.INK }}>{exam.title}</strong>
+                          {required && <HqBadge tone="mentor">ابدأ به</HqBadge>}
+                        </span>
+                        <span style={{ display: 'block', fontSize: 13, color: HQ.MUTED, marginTop: 2 }}>
+                          {exam.lessonTitle ? `درس: ${exam.lessonTitle} · ` : ''}{exam.questions?.length || 0} أسئلة
+                          {exam.duration ? ` · ${exam.duration} دقيقة` : ''} · {examKind(exam)}
+                        </span>
+                      </span>
+                      <button type="button" onClick={() => navigate(`/student/exams/${exam._id}/take`)}
+                        className="hq-action" aria-label={`ابدأ اختبار ${exam.title}`}
+                        style={{ flex: 'none', background: HQ.MENTOR, color: '#fff', padding: '0 20px', fontSize: 14 }}>
+                        <Play size={15} /> ابدأ
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
               <Pagination
                 currentPage={availablePagination.currentPage}
                 totalPages={availablePagination.totalPages}
@@ -114,68 +118,53 @@ export default function ExamsPage() {
                 itemName="امتحان"
                 className="mt-6"
               />
-            </div>
-          )}
-        </div>
-      )}
+            </>
+          )
+        )}
 
-      {/* Past Results */}
-      {tab === 'results' && (
-        <div>
-          {results.length === 0 ? (
-            <div className="card-base p-8 sm:p-12 text-center">
-              <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-500 text-sm">لا توجد نتائج سابقة بعد</p>
+        {tab === 'results' && (
+          results.length === 0 ? (
+            <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 40, textAlign: 'center' }}>
+              <FileText size={40} color={HQ.LINE} style={{ margin: '0 auto 12px' }} />
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: HQ.INK }}>لا نتائج بعد</p>
+              <p style={{ margin: '4px 0 0', fontSize: 14, color: HQ.MUTED }}>ستظهر هنا نتائجك فور أداء أول اختبار.</p>
             </div>
           ) : (
-            <div>
-              <div className="space-y-3 sm:space-y-4">
-                {resultsPagination.paginatedItems.map((result, i) => {
-                  const isPassed = result.isPassed;
+            <>
+              <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {resultsPagination.paginatedItems.map((result) => {
                   const score = result.totalPercentage ?? result.writtenPercentage ?? 0;
                   const isPending = result.status === 'pending_oral_review';
+                  const state = isPending ? 'pending' : result.isPassed ? 'passed' : 'review';
+                  const stateColor = { pending: '#B45309', passed: HQ.MENTOR, review: '#C2410C' }[state];
+                  const stateLabel = { pending: 'قيد المراجعة', passed: 'ناجح', review: 'يحتاج مراجعة' }[state];
                   return (
-                    <motion.div key={result._id}
-                      initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                      className="card-base p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                          isPending ? 'bg-yellow-50' : isPassed ? 'bg-green-50' : 'bg-red-50'}`}>
-                          {isPending ? <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
-                            : isPassed ? <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
-                            : <XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-gray-900 text-sm sm:text-base truncate">{result.exam?.title || 'امتحان'}</h3>
-                          {result.exam?.lessonTitle && (
-                            <p className="text-xs text-gray-400 mt-0.5 truncate">درس: {result.exam.lessonTitle}</p>
-                          )}
-                          <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">{formatDateAr(result.createdAt)}</p>
-                          {isPending && (
-                            <span className="text-[11px] sm:text-xs text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded-lg mt-1.5 inline-block font-semibold">
-                              ⏳ في انتظار مراجعة التسجيل الشفهي من المعلم
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-2 sm:pt-0">
-                        <div className="text-center">
-                          <div className={`text-xl sm:text-2xl font-black ${isPassed ? 'text-green-600' : score > 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                            {score > 0 ? `${score}%` : '—'}
-                          </div>
-                          <p className="text-[10px] text-gray-400">النتيجة</p>
-                        </div>
-                        <div>
-                          {isPending ? <span className="badge-gold">قيد المراجعة</span>
-                            : isPassed ? <span className="badge-green">ناجح ✓</span>
-                            : <span className="bg-red-50 text-red-500 text-xs font-semibold px-2.5 py-1 rounded-full">راجع إجاباتك</span>}
-                        </div>
-                      </div>
-                    </motion.div>
+                    <li key={result._id} style={{
+                      background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18,
+                      marginBottom: 12, padding: 14, display: 'flex', alignItems: 'center', gap: 12,
+                    }}>
+                      <span aria-hidden style={{ width: 30, height: 30, borderRadius: 9999, flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: state === 'passed' ? HQ.MENTOR : HQ.PAPER, border: `2px solid ${state === 'passed' ? HQ.MENTOR : HQ.LINE}`, color: state === 'passed' ? '#fff' : stateColor }}>
+                        {state === 'passed' ? <CheckCircle size={15} /> : state === 'pending' ? <Clock size={14} /> : <XCircle size={14} />}
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <strong style={{ display: 'block', fontSize: 16, color: HQ.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {result.exam?.title || 'امتحان'}
+                        </strong>
+                        <span style={{ display: 'block', fontSize: 13, color: HQ.MUTED, marginTop: 2 }}>
+                          {result.exam?.lessonTitle ? `درس: ${result.exam.lessonTitle} · ` : ''}{formatDateAr(result.createdAt)}
+                          {isPending ? ' · بانتظار مراجعة المعلم للتسجيل الشفهي' : ''}
+                        </span>
+                      </span>
+                      <span style={{ flex: 'none', textAlign: 'center' }}>
+                        <strong style={{ display: 'block', fontSize: 20, color: score > 0 ? stateColor : HQ.MUTED }}>
+                          {score > 0 ? `${score}%` : '—'}
+                        </strong>
+                        <span style={{ fontSize: 12, fontWeight: 800, color: stateColor }}>{stateLabel}</span>
+                      </span>
+                    </li>
                   );
                 })}
-              </div>
-
+              </ol>
               <Pagination
                 currentPage={resultsPagination.currentPage}
                 totalPages={resultsPagination.totalPages}
@@ -188,10 +177,10 @@ export default function ExamsPage() {
                 itemName="نتيجة امتحان"
                 className="mt-6"
               />
-            </div>
-          )}
-        </div>
-      )}
+            </>
+          )
+        )}
+      </div>
     </PageLayout>
   );
 }

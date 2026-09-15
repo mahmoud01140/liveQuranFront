@@ -1,11 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-
 import {
-  CheckCircle, BookOpen, Clock, Star, ExternalLink, Play, Video,
-  ChevronDown, ChevronUp, Lock, Unlock, Award, PenTool,
-  Trophy, Sparkles, PartyPopper, Users, Calendar, AlertTriangle, CreditCard,
+  CheckCircle, BookOpen, ExternalLink, Video,
+  Lock, Award, PenTool, Users, Calendar,
 } from 'lucide-react';
 import Navbar from '../../components/shared/Navbar';
 import Sidebar from '../../components/shared/Sidebar';
@@ -13,28 +10,25 @@ import MobileBottomNav from '../../components/shared/MobileBottomNav';
 import useAuthStore from '../../store/authStore';
 import useGroupStore from '../../store/groupStore';
 import api from '../../services/api';
-import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import VideoPlayer, { isVideoUrl } from '../../components/shared/VideoPlayer';
-import useLessonProgress, { BADGES, getRandomMotivation } from '../../hooks/useLessonProgress';
+import useLessonProgress, { getRandomMotivation } from '../../hooks/useLessonProgress';
 import { LESSON_TYPES_AR, DAYS_AR, SESSION_TYPES } from '../../utils/constants';
-import { getInitials, getAvatarColor, formatTime } from '../../utils/helpers';
+import { formatTime, getLevelLabel } from '../../utils/helpers';
 import toast from 'react-hot-toast';
+import '../../components/halaqa/halaqa.css';
+import { HQ, HqAvatar, HqBadge } from '../../components/halaqa/primitives';
+import { HqActionLink } from '../../components/halaqa/JourneyNode';
 
-/* ── Lesson type colors ──────────────────────────────────── */
-const LESSON_TYPE_COLORS = {
-  reading: 'bg-blue-50 text-blue-700', writing: 'bg-purple-50 text-purple-700',
-  dictation: 'bg-yellow-50 text-yellow-700', memorization: 'bg-green-50 text-green-700',
-  tajweed: 'bg-indigo-50 text-indigo-700', recitation: 'bg-teal-50 text-teal-700',
-  live_class: 'bg-red-50 text-red-700', review: 'bg-orange-50 text-orange-700',
-  exam: 'bg-gray-100 text-gray-700',
-};
+/* المنهج — part of the student's journey, not a cold academic dashboard.
+   Same endpoints and completion logic; only the hierarchy changed.
+   List-first: lessons are rows; the current lesson is unmistakable. */
 
-/* ── Step definitions per lesson ─────────────────────────── */
+/* ── Step definitions per lesson (logic unchanged) ── */
 const STEP_DEFS = {
-  readMaterial:  { key: 'readMaterial',  label: 'قراءة المادة',      icon: BookOpen, color: 'blue'   },
-  watchedVideo:  { key: 'watchedVideo',  label: 'مشاهدة الفيديو',    icon: Video,    color: 'purple' },
-  exercises:     { key: 'exercises',     label: 'حل التمارين',       icon: PenTool,  color: 'amber'  },
-  exam:          { key: 'exam',          label: 'اجتياز الاختبار',   icon: Award,    color: 'green'  },
+  readMaterial:  { key: 'readMaterial',  label: 'قراءة المادة',      icon: BookOpen },
+  watchedVideo:  { key: 'watchedVideo',  label: 'مشاهدة الفيديو',    icon: Video },
+  exercises:     { key: 'exercises',     label: 'حل التمارين',       icon: PenTool },
+  exam:          { key: 'exam',          label: 'اجتياز الاختبار',   icon: Award },
 };
 
 function getStepsForLesson(lesson) {
@@ -44,9 +38,6 @@ function getStepsForLesson(lesson) {
   return steps;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   CurriculumPage
-═══════════════════════════════════════════════════════════ */
 export default function CurriculumPage() {
   const { user } = useAuthStore();
   const [searchParams, setSearchParams]     = useSearchParams();
@@ -58,15 +49,14 @@ export default function CurriculumPage() {
   const [isLoading, setIsLoading]           = useState(true);
   const [completedLessons, setCompletedLessons] = useState(new Set());
   const [expandedLesson, setExpandedLesson] = useState(null);
-  const [showCelebration, setShowCelebration] = useState(false);
 
-  /* ── Progress hook ─────────────────────────────────────── */
+  /* ── Progress hook (logic unchanged) ── */
   const {
     toggleStep, isStepDone, completedCount,
     completionPct, allDone, totalFullyCompleted, earnedBadges,
   } = useLessonProgress();
 
-  /* ── Data fetching ─────────────────────────────────────── */
+  /* ── Data fetching (endpoints unchanged) ── */
   useEffect(() => {
     const fetch = async () => {
       setIsLoading(true);
@@ -80,7 +70,6 @@ export default function CurriculumPage() {
             const lessons = planRes.data.plan.customLessons;
             setCustomLessons(lessons);
             const userDone = new Set((user.completedLessons || []).map(id => id.toString()));
-            // Sync any lesson already marked completed in the plan
             lessons.forEach(l => {
               if (l.status === 'completed') userDone.add(l._id.toString());
             });
@@ -93,15 +82,12 @@ export default function CurriculumPage() {
     };
     fetch();
 
-    // Check active live session
     api.get('/live/active/me').then(res => {
-      if (res.data?.session) {
-        setActiveSession(res.data.session);
-      }
+      if (res.data?.session) setActiveSession(res.data.session);
     }).catch(() => {});
   }, [user]);
 
-  /* ── Derived state ─────────────────────────────────────── */
+  /* ── Derived state (logic unchanged) ── */
   const totalLessons   = customLessons.length;
   const backendCompleted = completedLessons.size;
 
@@ -115,8 +101,8 @@ export default function CurriculumPage() {
   const badges = useMemo(() =>
     earnedBadges(totalCompleted, totalLessons),
   [earnedBadges, totalCompleted, totalLessons]);
+  const earnedOnly = (badges || []).filter(b => b.earned);
 
-  /* ── Is lesson unlocked? ───────────────────────────────── */
   const isUnlocked = (index) => {
     if (index === 0) return true;
     const prev  = customLessons[index - 1];
@@ -124,15 +110,22 @@ export default function CurriculumPage() {
     return prev.status === 'completed' || completedLessons.has(prevId) || allDone(prevId, getStepsForLesson(prev));
   };
 
-  /* ── Step toggle handler ───────────────────────────────── */
+  const lessonDone = (lesson, lid) =>
+    lesson.status === 'completed' || completedLessons.has(lid) || completedLessons.has(lid?.toString());
+
+  /* Current lesson: first unlocked, incomplete — the clearest element */
+  const currentIndex = customLessons.findIndex((l, i) => {
+    const lid = l._id?.toString();
+    return isUnlocked(i) && !lessonDone(l, lid) && !(allDone(lid, getStepsForLesson(l)));
+  });
+
+  /* ── Step toggle handler (logic unchanged, calmer feedback) ── */
   const handleToggleStep = (lessonId, step, lessonIndex) => {
     const wasDone = isStepDone(lessonId, step.key);
     toggleStep(lessonId, step.key);
 
     if (!wasDone) {
-      toast.success(`✅ ${step.label}`, { icon: '📗', duration: 2000 });
-
-      // Check if this completes the lesson
+      toast.success(step.label);
       const lesson = customLessons[lessonIndex];
       const steps  = getStepsForLesson(lesson);
       const doneAfter = steps.filter(s =>
@@ -140,21 +133,14 @@ export default function CurriculumPage() {
       ).length;
 
       if (doneAfter === steps.length) {
-        // Lesson fully completed!
-        setShowCelebration(true);
-        setTimeout(() => setShowCelebration(false), 3000);
-        toast.success(`🎉 أكملت الدرس ${lesson.lessonNumber}: ${lesson.title}!`, { duration: 4000 });
-        toast(getRandomMotivation(), { icon: '💬', duration: 3000 });
-
-        // Auto mark complete in backend if not already
-        if (!completedLessons.has(lessonId)) {
-          markComplete(lessonId);
-        }
+        toast.success(`أكملت الدرس ${lesson.lessonNumber}: ${lesson.title}`, { duration: 4000 });
+        toast(getRandomMotivation(), { duration: 3000 });
+        if (!completedLessons.has(lessonId)) markComplete(lessonId);
       }
     }
   };
 
-  /* ── Mark complete in backend ──────────────────────────── */
+  /* ── Mark complete in backend (unchanged) ── */
   const markComplete = async (lessonId) => {
     try {
       await api.put(`/curriculum/complete-lesson/${lessonId}`);
@@ -162,683 +148,358 @@ export default function CurriculumPage() {
     } catch {}
   };
 
-  /* ── Loading ───────────────────────────────────────────── */
+  const h2 = { margin: 0, fontSize: 18, fontWeight: 800, color: HQ.INK };
+
+  /* ── Loading: skeleton of the known structure ── */
   if (isLoading) return (
-    <div className="min-h-screen bg-gray-50"><Navbar onMenuClick={() => setSidebarOpen(true)} />
-      <div className="pt-16 flex justify-center py-20"><LoadingSpinner size="lg" /></div>
+    <div className="halaqa" style={{ minHeight: '100vh', background: HQ.PAPER }}>
+      <Navbar onMenuClick={() => setSidebarOpen(true)} />
+      <main style={{ paddingTop: 64, paddingBottom: 80 }}>
+        <div style={{ maxWidth: 820, margin: '0 auto', padding: '24px 16px' }} aria-label="جارٍ تحميل المنهج">
+          <div className="hq-skeleton" style={{ height: 26, width: '40%', marginBottom: 8 }} />
+          <div className="hq-skeleton" style={{ height: 14, width: '65%', marginBottom: 20 }} />
+          <div className="hq-skeleton" style={{ height: 64, width: '100%', marginBottom: 12 }} />
+          <div className="hq-skeleton" style={{ height: 64, width: '100%', marginBottom: 12 }} />
+          <div className="hq-skeleton" style={{ height: 64, width: '100%' }} />
+        </div>
+      </main>
     </div>
   );
 
   const hasContent = customLessons.length > 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="halaqa" style={{ minHeight: '100vh', background: HQ.PAPER }}>
       <Navbar onMenuClick={() => setSidebarOpen(true)} />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Celebration overlay */}
-      <AnimatePresence>
-        {showCelebration && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center"
-          >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: [0, 1.3, 1] }}
-              transition={{ duration: 0.6 }}
-              className="text-8xl"
-            >
-              🎉
-            </motion.div>
-            {/* Confetti particles */}
-            {[...Array(20)].map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{
-                  opacity: 1,
-                  x: 0, y: 0,
-                  scale: 1,
-                }}
-                animate={{
-                  opacity: 0,
-                  x: (Math.random() - 0.5) * 400,
-                  y: (Math.random() - 0.5) * 400,
-                  scale: 0,
-                  rotate: Math.random() * 720,
-                }}
-                transition={{ duration: 1.5 + Math.random(), delay: 0.2 }}
-                className="absolute text-2xl"
-              >
-                {['⭐', '🌟', '✨', '🎊', '💫', '🏆'][i % 6]}
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <main className="lg:mr-64" style={{ paddingTop: 64, paddingBottom: 88 }}>
+        <div style={{ maxWidth: 820, margin: '0 auto', padding: '24px 16px' }}>
 
-      <main className="lg:mr-64 pt-16 pb-20 lg:pb-8">
-        <div className="page-container">
+          {/* ── Header: where am I ── */}
+          <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>
+            {user?.assignedLevel ? getLevelLabel(user.assignedLevel) : ''}{group?.name ? ` · ${group.name}` : ''}
+          </p>
+          <h1 style={{ margin: '2px 0 4px', fontSize: 26, fontWeight: 900, color: HQ.INK }}>منهجي</h1>
+          <p style={{ margin: '0 0 16px', fontSize: 14, color: HQ.MUTED }}>
+            {hasContent ? `${totalCompleted} من ${totalLessons} درسًا مكتملًا (${progressPct}%)` : 'خطة دروس مجموعتك'}
+          </p>
 
-          {/* ── Header & Tabs ───────────────────────────── */}
-          <div className="mb-4 sm:mb-6">
-            <h1 className="section-title flex items-center gap-2">
-              <BookOpen className="w-6 h-6 text-primary-400" /> المنهج الدراسي والمجموعة
-            </h1>
-            <p className="section-subtitle">خطة دراستك، الدروس المخصصة، ومعلومات مجموعتك وجدول الحلقات المباشرة</p>
-          </div>
-
-          {/* ── Navigation Tabs ──────────────────────────── */}
-          <div className="flex items-center gap-2 mb-6 border-b border-gray-200 pb-3">
-            <button
-              onClick={() => setSearchParams({ tab: 'curriculum' })}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                currentTab === 'curriculum'
-                  ? 'bg-primary-500 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              المنهج والدروس المقررة 📚
-            </button>
-            <button
-              onClick={() => setSearchParams({ tab: 'group' })}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                currentTab === 'group'
-                  ? 'bg-primary-500 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              معلومات المجموعة والجدول 👥 {group?.name ? `(${group.name})` : ''}
-            </button>
-          </div>
-
-          {/* ── Live Class Ongoing Banner ────────────────── */}
-          {activeSession && activeSession.status === 'live' && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-red-500/20"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center flex-shrink-0">
-                  <Video className="w-6 h-6 animate-pulse" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
-                    <span className="text-xs font-black bg-white/25 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                      الحصة المباشرة منعقدة الآن
-                    </span>
-                  </div>
-                  <h3 className="font-black text-base sm:text-lg mt-1">{activeSession.title}</h3>
-                  <p className="text-xs text-rose-100">
-                    الحصة المباشرة منعقدة الآن مع المعلم. انضم للتسميع والمشاركة في الحلقة!
-                  </p>
-                </div>
+          {/* ── Quiet progress (no second living element) ── */}
+          {hasContent && currentTab === 'curriculum' && (
+            <div style={{ marginBottom: 20 }} role="img" aria-label={`تقدم المنهج ${progressPct} بالمئة`}>
+              <div style={{ height: 8, borderRadius: 9999, background: HQ.LINE, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${progressPct}%`, background: HQ.MENTOR, borderRadius: 9999 }} />
               </div>
-              <Link
-                to="/student/live"
-                className="py-2.5 px-5 rounded-xl bg-white text-rose-700 hover:bg-rose-50 font-black text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 flex-shrink-0 self-stretch sm:self-auto justify-center"
-              >
-                <Video className="w-4 h-4" />
-                انضم للحصة المباشرة الآن ➔
+              {earnedOnly.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                  {earnedOnly.map(b => (
+                    <span key={b.id} title={b.desc}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#F8EDD3', color: HQ.INK, borderRadius: 9999, padding: '4px 12px', fontSize: 13, fontWeight: 700 }}>
+                      {b.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Tabs: segmented, quiet ── */}
+          <div role="tablist" aria-label="أقسام المنهج"
+            style={{ display: 'inline-flex', gap: 4, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 14, padding: 4, marginBottom: 20 }}>
+            {[
+              { key: 'curriculum', label: 'الدروس' },
+              { key: 'group', label: `المجموعة${group?.name ? ` · ${group.name}` : ''}` },
+            ].map(t => (
+              <button key={t.key} role="tab" aria-selected={currentTab === t.key}
+                onClick={() => setSearchParams({ tab: t.key })}
+                style={{
+                  border: 'none', cursor: 'pointer', minHeight: 44, padding: '0 20px',
+                  borderRadius: 10, fontSize: 14, fontWeight: 800,
+                  background: currentTab === t.key ? HQ.MENTOR : 'transparent',
+                  color: currentTab === t.key ? '#fff' : HQ.MUTED,
+                }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Live banner (functional, flat) ── */}
+          {activeSession && activeSession.status === 'live' && (
+            <div role="status" style={{ marginBottom: 20, background: '#C2410C', color: '#fff', borderRadius: 18, padding: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span className="hq-live-dot" aria-hidden style={{ background: '#fff', animation: 'none', opacity: 1 }} />
+              <span style={{ flex: 1, minWidth: 180 }}>
+                <strong style={{ display: 'block', fontSize: 15 }}>الحصة منعقدة الآن{activeSession.title ? `: ${activeSession.title}` : ''}</strong>
+                <span style={{ fontSize: 13, opacity: 0.9 }}>انضم للتسميع والمشاركة في الحلقة</span>
+              </span>
+              <Link to="/student/live" className="hq-action" style={{ background: '#fff', color: '#C2410C', padding: '0 20px', fontSize: 14, textDecoration: 'none' }}>
+                <Video size={16} /> انضم الآن
               </Link>
-            </motion.div>
+            </div>
           )}
 
           {currentTab === 'group' ? (
-            /* ── Group Tab Content ── */
-            <div className="space-y-6">
-              {!group ? (
-                <div className="card-base p-12 text-center max-w-md mx-auto">
-                  <Users className="w-14 h-14 text-gray-200 mx-auto mb-4" />
-                  <h2 className="font-black text-gray-900 text-lg mb-2">لم تُعيَّن في مجموعة بعد</h2>
-                  <p className="text-gray-500 text-sm">سيتم تعيينك في مجموعة من قِبَل الإدارة قريباً</p>
+            /* ── Group tab (same data, halaqa surfaces) ── */
+            !group ? (
+              <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 48, textAlign: 'center' }}>
+                <Users size={44} color={HQ.LINE} style={{ margin: '0 auto 12px' }} />
+                <h2 style={h2}>لم تُعيَّن في مجموعة بعد</h2>
+                <p style={{ color: HQ.MUTED, fontSize: 14 }}>سيتم تعيينك في مجموعة من قِبَل الإدارة قريبًا</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <section aria-label="معلومات المجموعة" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 16 }}>
+                  <h2 style={{ ...h2, marginBottom: 12 }}>مجموعتي</h2>
+                  <p style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 900, color: HQ.INK }}>{group.name}</p>
+                  <p style={{ margin: '0 0 12px', fontSize: 14, color: HQ.MUTED }}>{group.students?.length || 0} من {group.maxStudents || 15} طالبًا</p>
+                  {group.teacher && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 12, borderTop: `1px solid ${HQ.LINE}` }}>
+                      <HqAvatar firstName={group.teacher.firstName} lastName={group.teacher.lastName} size={40} />
+                      <div>
+                        <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: HQ.INK }}>الشيخ / {group.teacher.firstName} {group.teacher.lastName}</p>
+                        <HqBadge tone="guide">معلم المجموعة</HqBadge>
+                      </div>
+                    </div>
+                  )}
+                  {group.description && <p style={{ margin: '12px 0 0', fontSize: 14, color: HQ.MUTED, lineHeight: 1.8 }}>{group.description}</p>}
+                </section>
+
+                <section aria-label="أيام الدراسة والجدول" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 16 }}>
+                  <h2 style={{ ...h2, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}><Calendar size={18} /> المواعيد</h2>
+                  {group.days?.length > 0 ? (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: group.schedule?.length ? 12 : 0 }}>
+                      {group.days.map((day, i) => (
+                        <HqBadge key={i} tone="mentor">{DAYS_AR[day] || day}</HqBadge>
+                      ))}
+                    </div>
+                  ) : null}
+                  {group.schedule?.length > 0 ? (
+                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                      {group.schedule.map((s, i) => (
+                        <li key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '10px 4px', borderTop: i ? `1px solid ${HQ.LINE}` : 'none', fontSize: 14 }}>
+                          <strong style={{ color: HQ.INK }}>{DAYS_AR[s.dayOfWeek]}</strong>
+                          <span style={{ color: HQ.MUTED }}>{formatTime(s.startTime)} — {formatTime(s.endTime)}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: HQ.MUTED }}>{SESSION_TYPES[s.sessionType] || s.sessionType}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (!group.days?.length && <p style={{ color: HQ.MUTED, fontSize: 14, margin: 0 }}>لم يُحدد الجدول بعد</p>)}
+                </section>
+
+                <section aria-label="زملاء المجموعة" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 16 }}>
+                  <h2 style={{ ...h2, marginBottom: 8 }}>زملائي ({students?.length || 0})</h2>
+                  {students?.length > 0 ? (
+                    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                      {students.map((student) => (
+                        <li key={student._id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 4px', borderTop: `1px solid ${HQ.LINE}` }}>
+                          <HqAvatar firstName={student.firstName} lastName={student.lastName} size={36} />
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: HQ.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {student.firstName} {student.lastName}
+                              {student._id === user?._id && <span style={{ color: HQ.MENTOR, fontSize: 13 }}> (أنت)</span>}
+                            </span>
+                            <span style={{ display: 'block', fontSize: 13, color: HQ.MUTED }}>{student.memorizedVerses || 0} آية محفوظة</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p style={{ color: HQ.MUTED, fontSize: 14, margin: 0 }}>لا يوجد طلاب مسجلون في المجموعة بعد</p>
+                  )}
+                </section>
+              </div>
+            )
+          ) : (
+            /* ── Curriculum tab ── */
+            <>
+              {!hasContent ? (
+                <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 48, textAlign: 'center' }}>
+                  <BookOpen size={44} color={HQ.LINE} style={{ margin: '0 auto 12px' }} />
+                  <h2 style={h2}>لم يُعيَّن منهج بعد</h2>
+                  <p style={{ color: HQ.MUTED, fontSize: 14 }}>سيقوم المعلم أو الإدارة بتعيين منهجك الدراسي قريبًا</p>
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                    {/* Group info */}
-                    <div className="card-base p-4 sm:p-6">
-                      <h2 className="font-bold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base flex items-center gap-2">
-                        <Users className="w-4 h-4 text-primary-400" /> معلومات المجموعة
-                      </h2>
-                      <div className="space-y-3 text-xs sm:text-sm">
-                        <div>
-                          <p className="text-gray-500 text-xs">اسم المجموعة</p>
-                          <p className="font-bold text-gray-900 text-base">{group.name}</p>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div>
-                            <p className="text-gray-500">عدد الطلاب</p>
-                            <p className="font-bold text-gray-900">{group.students?.length || 0} / {group.maxStudents || 15}</p>
-                          </div>
-                        </div>
-                        {group.teacher && (
-                          <div className="flex items-start gap-3 pt-2 border-t border-gray-100">
-                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0"
-                              style={{ backgroundColor: getAvatarColor(`${group.teacher.firstName}${group.teacher.lastName}`) }}>
-                              {getInitials(group.teacher.firstName, group.teacher.lastName)}
-                            </div>
-                            <div>
-                              <p className="text-gray-500 text-xs">معلم المجموعة</p>
-                              <p className="font-bold text-gray-900">الشيخ / {group.teacher.firstName} {group.teacher.lastName}</p>
-                            </div>
-                          </div>
-                        )}
-                        {group.description && (
-                          <p className="text-gray-600 bg-gray-50 rounded-xl p-3 leading-relaxed text-xs">{group.description}</p>
-                        )}
-                      </div>
+                  {/* Graduation — gold only at a real milestone */}
+                  {progressPct >= 100 && (
+                    <div role="status" style={{ marginBottom: 20, background: '#F8EDD3', border: '1px solid #D9A441', borderRadius: 18, padding: 20, textAlign: 'center' }}>
+                      <h2 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 900, color: HQ.INK }}>مبارك! أتممت جميع دروس المنهج</h2>
+                      <p style={{ margin: '0 0 12px', fontSize: 14, color: HQ.MUTED }}>أكملت الدروس المخصصة لمجموعتك بنجاح</p>
+                      <HqActionLink to="/student/exams">الامتحانات والترقية للمستوى التالي</HqActionLink>
                     </div>
+                  )}
 
-                    {/* Days of study */}
-                    <div className="card-base p-4 sm:p-6">
-                      <h2 className="font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
-                        <Calendar className="w-4 h-4 text-primary-400" /> أيام الدراسة
-                      </h2>
-                      {group.days?.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {group.days.map((day, i) => (
-                            <span key={i} className="badge-green text-xs font-semibold px-3 py-1 rounded-xl">
-                              {DAYS_AR[day] || day}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-gray-400 text-xs">لم تُحدد أيام الدراسة بعد</p>
-                      )}
-                    </div>
+                  {/* ── Lesson list: rows, current unmistakable ── */}
+                  <h2 style={{ ...h2, marginBottom: 4 }}>الدروس ({totalLessons})</h2>
+                  <ol style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
+                    {customLessons.map((lesson, i) => {
+                      const lid         = lesson._id;
+                      const lidStr      = lid?.toString();
+                      const steps       = getStepsForLesson(lesson);
+                      const isDone      = lessonDone(lesson, lid) || lessonDone(lesson, lidStr) || allDone(lid, steps);
+                      const unlocked    = isUnlocked(i);
+                      const isExpanded  = expandedLesson === lid;
+                      const hasVideo    = isVideoUrl(lesson.resources);
+                      const pct         = isDone ? 100 : completionPct(lid, steps);
+                      const doneSteps   = isDone ? steps.length : completedCount(lid, steps);
+                      const isCurrent   = i === currentIndex;
+                      const isLiveForThis = activeSession && activeSession.status === 'live' && (activeSession.lessonCovered?.toString() === lidStr || (!activeSession.lessonCovered && i === 0));
 
-                    {/* Schedule */}
-                    <div className="card-base p-4 sm:p-6">
-                      <h2 className="font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
-                        <Clock className="w-4 h-4 text-primary-400" /> الجدول الأسبوعي
-                      </h2>
-                      {group.schedule?.length > 0 ? (
-                        <div className="space-y-2">
-                          {group.schedule.map((s, i) => (
-                            <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-xl p-2.5">
-                              <span className="font-bold text-gray-700">{DAYS_AR[s.dayOfWeek]}</span>
-                              <span className="text-gray-500 font-mono">{formatTime(s.startTime)} — {formatTime(s.endTime)}</span>
-                              <span className="badge-green text-[10px]">{SESSION_TYPES[s.sessionType] || s.sessionType}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-gray-400 text-xs">لم يُحدد الجدول بعد</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Classmates */}
-                  <div className="card-base p-4 sm:p-6">
-                    <h2 className="font-bold text-gray-900 mb-4 text-sm sm:text-base flex items-center gap-2">
-                      <Users className="w-4 h-4 text-primary-400" /> زملاء المجموعة ({students?.length || 0})
-                    </h2>
-                    {students && students.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {students.map((student) => (
-                          <div key={student._id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
-                              style={{ backgroundColor: getAvatarColor(`${student.firstName}${student.lastName}`) }}>
-                              {getInitials(student.firstName, student.lastName)}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-bold text-gray-900 text-xs sm:text-sm truncate">
-                                {student.firstName} {student.lastName}
-                                {student._id === user?._id && <span className="text-primary-600 mr-1 text-xs font-bold">(أنت)</span>}
-                              </p>
-                              <p className="text-[11px] text-gray-400 mt-0.5">
-                                {student.memorizedVerses || 0} آية محفوظة
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-gray-400 text-xs">لا يوجد طلاب مسجلين في المجموعة بعد</p>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            /* ── Curriculum Tab Content ── */
-            <>
-
-          {/* ── Guidance Banner: Curriculum vs. Daily Task ── */}
-          <div className="mb-6 card-base p-4 sm:p-5 bg-gradient-to-r from-emerald-50 via-teal-50 to-primary-50 border border-emerald-200">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-gray-900 text-sm sm:text-base flex items-center gap-2">
-                    دليل الطالب: ما الفرق بين المنهج والورد اليومي؟
-                  </h3>
-                  <div className="mt-1 text-xs text-gray-600 space-y-1">
-                    <p>
-                      <strong className="text-emerald-700">📚 المنهج والدروس:</strong> الخطة التعليمية الشاملة لمجموعتك (الدروس المعرفية، التجويد، والقواعد المقررة).
-                    </p>
-                    <p>
-                      <strong className="text-primary-700">📋 المطلوب مني اليوم:</strong> وردك القرآني اليومي (الحفظ الجديد، الماضي القريب، الماضي البعيد) والامتحانات المستحقة.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <Link
-                to="/student"
-                className="btn-primary text-xs py-2.5 px-4 whitespace-nowrap shadow-sm self-stretch sm:self-auto text-center"
-              >
-                الانتقال إلى المطلوب مني اليوم ➔
-              </Link>
-            </div>
-          </div>
-
-          {!hasContent ? (
-            <div className="card-base p-12 text-center max-w-md mx-auto">
-              <BookOpen className="w-14 h-14 text-gray-200 mx-auto mb-4" />
-              <h2 className="font-black text-gray-900 text-lg mb-2">لم يُعيَّن منهج بعد</h2>
-              <p className="text-gray-500 text-sm">سيقوم المعلم أو الإدارة بتعيين منهجك الدراسي قريباً</p>
-            </div>
-          ) : (
-            <>
-              {/* ── Curriculum 100% Completion Graduation Card ── */}
-              {progressPct >= 100 && (
-                <motion.div
-                  initial={{ scale: 0.95, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="mb-6 card-base p-6 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-lg relative overflow-hidden"
-                >
-                  <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 text-center md:text-right">
-                      <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
-                        🎓
-                      </div>
-                      <div>
-                        <span className="text-[11px] font-bold uppercase tracking-wider bg-white/25 px-2.5 py-0.5 rounded-full inline-block mb-1">
-                          إنجاز استثنائي
-                        </span>
-                        <h2 className="text-lg sm:text-xl font-black">مبارك! أتممت جميع دروس المنهج المقرر 🎉</h2>
-                        <p className="text-xs text-yellow-100 mt-1">
-                          لقد أكملت جميع الدروس المخصصة لمجموعتك بنجاح وحصلت على شارة "خاتم المنهج".
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap justify-center">
-                      <Link
-                        to="/student"
-                        className="py-2.5 px-4 rounded-xl bg-white text-amber-800 hover:bg-yellow-50 font-bold text-xs shadow-md transition-all flex items-center gap-1.5"
-                      >
-                        <Trophy className="w-4 h-4 text-amber-600" />
-                        الامتحانات المستحقة والترقية للمستوى التالي
-                      </Link>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {/* ── Overall progress + badges ──────────── */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-
-                {/* Progress card */}
-                <div className="lg:col-span-2 card-base p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-emerald-500 flex items-center justify-center text-white">
-                        <Trophy className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <span className="font-bold text-gray-900">تقدمك في المنهج</span>
-                        <p className="text-xs text-gray-400">{totalCompleted} من {totalLessons} درس مكتمل</p>
-                      </div>
-                    </div>
-                    <div className="text-left">
-                      <span className="text-2xl font-black text-primary-500">{progressPct}%</span>
-                    </div>
-                  </div>
-                  <div className="progress-bar mb-2 h-3 rounded-full">
-                    <motion.div
-                      className="progress-fill h-full rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressPct}%` }}
-                      transition={{ duration: 1, ease: 'easeOut' }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>البداية</span>
-                    <span>{progressPct >= 100 ? '🎉 مكتمل!' : `متبقي ${totalLessons - totalCompleted} دروس`}</span>
-                    <span>الإتمام</span>
-                  </div>
-                </div>
-
-                {/* Badges card */}
-                <div className="card-base p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-5 h-5 text-amber-400" />
-                    <span className="font-bold text-gray-900 text-sm">شارات الإنجاز</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {badges.map((b) => (
-                      <motion.div
-                        key={b.id}
-                        whileHover={{ scale: 1.1 }}
-                        className={`flex flex-col items-center p-2 rounded-xl min-w-[60px] transition-all ${
-                          b.earned
-                            ? 'bg-gradient-to-b from-amber-50 to-yellow-50 border border-amber-200 shadow-sm'
-                            : 'bg-gray-50 border border-gray-100 opacity-40'
-                        }`}
-                        title={b.desc}
-                      >
-                        <span className="text-xl mb-0.5">{b.emoji}</span>
-                        <span className={`text-[10px] font-bold ${b.earned ? 'text-amber-700' : 'text-gray-400'}`}>
-                          {b.name}
-                        </span>
-                        {b.earned && (
-                          <span className="text-[9px] text-green-500 font-bold">✓</span>
-                        )}
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Lesson cards ───────────────────────────── */}
-              <div className="flex items-center gap-2 mb-4">
-                <Star className="w-4 h-4 text-amber-400" />
-                <h2 className="font-bold text-gray-900 text-sm">الدروس المخصصة لمجموعتك</h2>
-                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
-                  {customLessons.length} درس
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {customLessons.map((lesson, i) => {
-                  const lid         = lesson._id;
-                  const steps       = getStepsForLesson(lesson);
-                  const isDone      = lesson.status === 'completed' || completedLessons.has(lid) || completedLessons.has(lid?.toString()) || allDone(lid, steps);
-                  const unlocked    = isUnlocked(i);
-                  const isExpanded  = expandedLesson === lid;
-                  const hasVideo    = isVideoUrl(lesson.resources);
-                  const pct         = isDone ? 100 : completionPct(lid, steps);
-                  const doneSteps   = isDone ? steps.length : completedCount(lid, steps);
-                  const isLiveForThis = activeSession && activeSession.status === 'live' && (activeSession.lessonCovered?.toString() === lid?.toString() || (!activeSession.lessonCovered && i === 0));
-
-                  return (
-                    <motion.div
-                      key={lid || i}
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      className={`card-base overflow-hidden transition-all ${
-                        !unlocked ? 'opacity-60' : ''
-                      } ${isDone ? 'ring-1 ring-primary-200' : ''} ${isLiveForThis ? 'ring-2 ring-red-500 shadow-lg' : ''}`}
-                    >
-                      {/* ── Lesson header ──────────────────── */}
-                      <div
-                        className={`p-4 cursor-pointer transition-colors ${
-                          isLiveForThis ? 'bg-gradient-to-l from-red-50/90 to-rose-50/70' :
-                          isDone ? 'bg-gradient-to-l from-primary-50/60 to-emerald-50/60' :
-                          unlocked ? 'hover:bg-gray-50' : 'bg-gray-50/50'
-                        }`}
-                        onClick={() => unlocked && setExpandedLesson(isExpanded ? null : lid)}
-                      >
-                        <div className="flex items-center gap-3">
-                          {/* Number / status icon */}
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0 ${
-                            isDone
-                              ? 'bg-gradient-to-br from-primary-400 to-emerald-500 text-white shadow-md'
-                              : unlocked
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-gray-200 text-gray-400'
-                          }`}>
-                            {isDone ? <CheckCircle className="w-5 h-5" /> :
-                             unlocked ? lesson.lessonNumber :
-                             <Lock className="w-4 h-4" />}
-                          </div>
-
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                              <p className={`text-sm font-bold ${
-                                isDone ? 'text-primary-700' :
-                                unlocked ? 'text-gray-900' : 'text-gray-400'
-                              }`}>
-                                {lesson.title}
-                              </p>
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                                LESSON_TYPE_COLORS[lesson.type] || 'bg-gray-100 text-gray-600'
-                              }`}>
-                                {LESSON_TYPES_AR?.[lesson.type] || lesson.type}
-                              </span>
-                              {isLiveForThis && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-black flex items-center gap-1 animate-pulse">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
-                                  🔴 الحصة المباشرة الآن
-                                </span>
-                              )}
-                              {hasVideo && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold flex items-center gap-0.5">
-                                  <Video className="w-2.5 h-2.5" /> فيديو
-                                </span>
-                              )}
-                              {isDone && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 font-bold">
-                                  ✓ مكتمل
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-gray-400">
-                              <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {lesson.duration} دقيقة</span>
-                              {lesson.isLiveRequired && <span className="text-red-400 font-medium">· مباشر</span>}
-                              {unlocked && <span className="text-primary-400 font-medium">{doneSteps}/{steps.length} مراحل</span>}
-                            </div>
-                          </div>
-
-                          {/* Progress circle + expand */}
-                          <div className="flex items-center gap-3 flex-shrink-0">
-                            {isLiveForThis && (
-                              <Link
-                                to="/student/live"
-                                onClick={(e) => e.stopPropagation()}
-                                className="flex items-center gap-1.5 py-1.5 px-3.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-red-500/30 animate-pulse flex-shrink-0"
-                              >
-                                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                                <Video className="w-3.5 h-3.5" />
-                                <span>انضم للحصة المباشرة</span>
-                              </Link>
-                            )}
-                            {unlocked && (
-                              <Link
-                                to={`/student/lessons/${lid}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="flex items-center gap-1.5 py-1.5 px-3.5 bg-primary-400 hover:bg-primary-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex-shrink-0"
-                              >
-                                {isDone ? 'مراجعة الدرس' : 'ابدأ الدرس ➔'}
-                              </Link>
-                            )}
-                            {unlocked && (
-                              <div className="relative w-10 h-10 flex-shrink-0">
-                                <svg className="w-10 h-10 -rotate-90" viewBox="0 0 36 36">
-                                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e5e7eb" strokeWidth="3" />
-                                  <circle
-                                    cx="18" cy="18" r="15.5" fill="none"
-                                    stroke={isDone ? '#1D9E75' : '#fbbf24'}
-                                    strokeWidth="3"
-                                    strokeDasharray={`${pct} ${100 - pct}`}
-                                    strokeLinecap="round"
-                                    className="transition-all duration-500"
-                                  />
-                                </svg>
-                                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-gray-600">
-                                  {pct}%
-                                </span>
-                              </div>
-                            )}
-                            {unlocked && (
-                              <button className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors flex-shrink-0">
-                                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                              </button>
-                            )}
-                          </div>
-
-                        </div>
-
-                        {/* Locked message */}
-                        {!unlocked && (
-                          <div className="mt-2 flex items-center gap-2 text-xs text-gray-400 bg-gray-100 rounded-lg px-3 py-2">
-                            <Lock className="w-3.5 h-3.5" />
-                            <span>أكمل الدرس السابق لفتح هذا الدرس</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* ── Expanded content ───────────────── */}
-                      <AnimatePresence>
-                        {isExpanded && unlocked && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="overflow-hidden"
+                      return (
+                        <li key={lid || i}
+                          style={{
+                            background: isCurrent ? '#E2EFE7' : HQ.SURFACE,
+                            border: `1px solid ${isCurrent ? HQ.MENTOR : HQ.LINE}`,
+                            borderRadius: 18, marginBottom: 12, overflow: 'hidden',
+                            opacity: !unlocked ? 0.65 : 1,
+                          }}>
+                          {/* Row header */}
+                          <div
+                            role="button" tabIndex={unlocked ? 0 : -1} aria-disabled={!unlocked}
+                            aria-expanded={isExpanded}
+                            onClick={() => unlocked && setExpandedLesson(isExpanded ? null : lid)}
+                            onKeyDown={(e) => { if (unlocked && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setExpandedLesson(isExpanded ? null : lid); } }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, cursor: unlocked ? 'pointer' : 'default', minHeight: 64 }}
                           >
-                            <div className="px-4 pb-4 pt-2 border-t border-gray-100 space-y-4">
+                            <span aria-hidden
+                              className={isCurrent ? 'hq-now-pulse' : ''}
+                              style={{
+                                width: 30, height: 30, borderRadius: 9999, flex: 'none',
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 13, fontWeight: 800,
+                                background: isDone ? HQ.MENTOR : isCurrent ? HQ.SURFACE : 'transparent',
+                                color: isDone ? '#fff' : isCurrent ? HQ.MENTOR : HQ.MUTED,
+                                border: `2px solid ${isDone || isCurrent ? HQ.MENTOR : HQ.LINE}`,
+                              }}>
+                              {isDone ? <CheckCircle size={15} /> : !unlocked ? <Lock size={13} /> : (lesson.lessonNumber || i + 1)}
+                            </span>
 
-                              {/* Description */}
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <strong style={{ fontSize: 16, color: isDone ? HQ.MENTOR : HQ.INK }}>
+                                  {lesson.title}
+                                </strong>
+                                {isCurrent && <HqBadge tone="mentor">درسك الحالي</HqBadge>}
+                                {isLiveForThis && (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 800, color: '#C2410C' }}>
+                                    <span className="hq-live-dot" aria-hidden /> الحصة الآن
+                                  </span>
+                                )}
+                              </span>
+                              <span style={{ display: 'block', fontSize: 13, color: HQ.MUTED, marginTop: 2 }}>
+                                {LESSON_TYPES_AR?.[lesson.type] || lesson.type}
+                                {lesson.duration ? ` · ${lesson.duration} دقيقة` : ''}
+                                {lesson.isLiveRequired ? ' · يتطلب حضورًا مباشرًا' : ''}
+                                {unlocked && !isDone ? ` · ${doneSteps}/${steps.length} مراحل` : ''}
+                                {hasVideo ? ' · فيديو' : ''}
+                              </span>
+                              {!unlocked && (
+                                <span style={{ display: 'block', fontSize: 13, color: HQ.MUTED, marginTop: 2 }}>
+                                  ستتاح بعد إتمام الدرس السابق
+                                </span>
+                              )}
+                            </span>
+
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                              {isLiveForThis && (
+                                <Link to="/student/live" className="hq-action" style={{ background: '#C2410C', color: '#fff', padding: '0 16px', fontSize: 13, textDecoration: 'none' }}>
+                                  <Video size={15} /> انضم
+                                </Link>
+                              )}
+                              {unlocked && (
+                                <Link to={`/student/lessons/${lid}`} className="hq-action"
+                                  style={{
+                                    background: isCurrent ? HQ.MENTOR : HQ.PAPER, color: isCurrent ? '#fff' : HQ.MENTOR,
+                                    border: isCurrent ? 'none' : `1.5px solid ${HQ.MENTOR}`,
+                                    padding: '0 16px', fontSize: 13, textDecoration: 'none',
+                                  }}>
+                                  {isDone ? 'مراجعة' : 'ابدأ'}
+                                </Link>
+                              )}
+                            </span>
+                          </div>
+
+                          {/* Expanded: steps + video + resources + confirm */}
+                          {isExpanded && unlocked && (
+                            <div style={{ borderTop: `1px solid ${HQ.LINE}`, padding: 14 }}>
                               {lesson.description && (
-                                <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 rounded-xl p-3">
-                                  {lesson.description}
-                                </p>
+                                <p style={{ margin: '0 0 12px', fontSize: 14, color: HQ.MUTED, lineHeight: 1.8 }}>{lesson.description}</p>
                               )}
 
-                              {/* ── Progress stepper ─────────── */}
-                              <div>
-                                <h4 className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1.5">
-                                  <Sparkles className="w-3.5 h-3.5 text-amber-400" /> مراحل إكمال الدرس
-                                </h4>
-                                <div className="flex items-start gap-0">
-                                  {steps.map((step, si) => {
-                                    const done   = isStepDone(lid, step.key);
-                                    const Icon   = step.icon;
-                                    const isLast = si === steps.length - 1;
-
-                                    return (
-                                      <div key={step.key} className="flex items-start flex-1">
-                                        {/* Step card */}
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleToggleStep(lid, step, i);
-                                          }}
-                                          className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl
-                                                      transition-all w-full min-w-0 group ${
-                                            done
-                                              ? 'bg-gradient-to-b from-primary-50 to-emerald-50 border border-primary-200 shadow-sm'
-                                              : 'bg-gray-50 border border-gray-200 hover:border-primary-300 hover:bg-primary-50/30'
-                                          }`}
-                                        >
-                                          <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                                            done
-                                              ? 'bg-primary-400 text-white shadow-md'
-                                              : 'bg-white text-gray-400 group-hover:text-primary-400 border border-gray-200'
-                                          }`}>
-                                            {done ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
-                                          </div>
-                                          <span className={`text-[10px] font-bold text-center leading-tight ${
-                                            done ? 'text-primary-700' : 'text-gray-500'
-                                          }`}>
-                                            {step.label}
-                                          </span>
-                                        </button>
-
-                                        {/* Connector line */}
-                                        {!isLast && (
-                                          <div className="flex items-center h-8 mt-3 px-0.5 flex-shrink-0">
-                                            <div className={`w-3 h-0.5 ${done ? 'bg-primary-300' : 'bg-gray-200'}`} />
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
+                              <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 800, color: HQ.MUTED }}>مراحل إكمال الدرس</p>
+                              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }} role="group" aria-label="مراحل الدرس">
+                                {steps.map((step) => {
+                                  const sDone = isStepDone(lid, step.key);
+                                  const Icon = step.icon;
+                                  return (
+                                    <button key={step.key} type="button" aria-pressed={sDone}
+                                      onClick={() => handleToggleStep(lid, step, i)}
+                                      style={{
+                                        flex: 1, minWidth: 0, minHeight: 64, cursor: 'pointer',
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+                                        background: sDone ? '#E2EFE7' : HQ.PAPER,
+                                        border: `1px solid ${sDone ? HQ.MENTOR : HQ.LINE}`,
+                                        borderRadius: 12, padding: 8,
+                                      }}>
+                                      <span style={{
+                                        width: 30, height: 30, borderRadius: 9999,
+                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                        background: sDone ? HQ.MENTOR : HQ.SURFACE, color: sDone ? '#fff' : HQ.MUTED,
+                                        border: `1px solid ${sDone ? HQ.MENTOR : HQ.LINE}`,
+                                      }}>
+                                        {sDone ? <CheckCircle size={15} /> : <Icon size={15} />}
+                                      </span>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: sDone ? HQ.MENTOR : HQ.MUTED, textAlign: 'center', lineHeight: 1.5 }}>
+                                        {step.label}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
                               </div>
 
-                              {/* ── Video player ─────────────── */}
                               {hasVideo && (
-                                <div>
-                                  <VideoPlayer
-                                    url={lesson.resources}
-                                    title={lesson.title}
-                                  />
+                                <div style={{ marginBottom: 12 }}>
+                                  <VideoPlayer url={lesson.resources} title={lesson.title} />
                                 </div>
                               )}
 
-                              {/* Non-video resources */}
                               {lesson.resources && !hasVideo && (
-                                <a
-                                  href={lesson.resources}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="flex items-center gap-2 text-sm text-primary-500 hover:text-primary-600
-                                             bg-primary-50 rounded-xl px-4 py-2.5 transition-colors"
-                                >
-                                  <ExternalLink className="w-4 h-4" /> فتح مصادر الدرس
+                                <a href={lesson.resources} target="_blank" rel="noreferrer"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, color: HQ.MENTOR, background: '#E2EFE7', borderRadius: 12, padding: '12px 16px', textDecoration: 'none', minHeight: 48 }}>
+                                  <ExternalLink size={16} /> فتح مصادر الدرس
                                 </a>
                               )}
 
-                              {/* Action bar */}
-                              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${HQ.LINE}` }}>
                                 {isDone ? (
-                                  <div className="flex items-center gap-2 text-sm text-primary-600 font-bold">
-                                    <CheckCircle className="w-4 h-4" /> تم إكمال جميع المراحل
-                                  </div>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: HQ.MENTOR, fontWeight: 800 }}>
+                                    <CheckCircle size={16} /> تم إكمال جميع المراحل
+                                  </span>
                                 ) : (
-                                  <p className="text-xs text-gray-400">
-                                    اضغط على كل مرحلة عند إكمالها
-                                  </p>
+                                  <span style={{ fontSize: 13, color: HQ.MUTED }}>اضغط على كل مرحلة عند إكمالها</span>
                                 )}
-
                                 {!isDone && allDone(lid, steps) && !completedLessons.has(lid) && (
-                                  <button
-                                    onClick={() => markComplete(lid)}
-                                    className="text-xs bg-primary-400 text-white px-4 py-2 rounded-xl
-                                               hover:bg-primary-500 transition-colors font-bold"
-                                  >
-                                    ✓ تأكيد الإكمال
+                                  <button type="button" onClick={() => markComplete(lid)} className="hq-action"
+                                    style={{ background: HQ.MENTOR, color: '#fff', padding: '0 20px', fontSize: 14 }}>
+                                    تأكيد الإكمال
                                   </button>
                                 )}
                               </div>
                             </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })}
-              </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ol>
 
-              {/* ── Completion message ──────────────────────── */}
-              {progressPct >= 100 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="card-base p-8 text-center mt-6 bg-gradient-to-br from-primary-50 via-emerald-50 to-teal-50
-                             border border-primary-200"
-                >
-                  <div className="text-5xl mb-3">🎊</div>
-                  <h2 className="text-xl font-black text-primary-700 mb-2">تهانينا! أكملت جميع الدروس!</h2>
-                  <p className="text-sm text-gray-500">ما شاء الله — بارك الله فيك وزادك علماً وحفظاً</p>
-                </motion.div>
+                  {progressPct >= 100 && (
+                    <div role="status" style={{ marginTop: 8, background: '#F8EDD3', border: '1px solid #D9A441', borderRadius: 18, padding: 24, textAlign: 'center' }}>
+                      <h2 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 900, color: HQ.INK }}>تهانينا! أكملت جميع الدروس</h2>
+                      <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>بارك الله فيك وزادك علمًا وحفظًا</p>
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
             </>
           )}
         </div>

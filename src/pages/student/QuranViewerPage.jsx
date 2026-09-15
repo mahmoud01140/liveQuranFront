@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BookOpen, ChevronLeft, ChevronRight, Search, Check, Loader2, Volume2,
-  Eye, EyeOff, Sparkles, Repeat, HelpCircle, X, ExternalLink,
-  BookMarked, Info
+  BookOpen, ChevronLeft, ChevronRight, Search, Check, Loader2,
+  Eye, EyeOff, Sparkles, Repeat, X, BookMarked, Info
 } from 'lucide-react';
 import PageLayout from '../../components/shared/PageLayout';
 import QuranAudioPlayer from '../../components/shared/QuranAudioPlayer';
@@ -12,6 +10,12 @@ import { MUTASHABIHAT_ITEMS, getMutashabihForAyah } from '../../utils/mutashabih
 import useQuranAudio from '../../hooks/useQuranAudio';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
+
+/* المصحف — the text leads, progress stays secondary.
+   Same surah/audio/blur/mutashabihat logic; calmer shell.
+   Verses remain Amiri; no JuzMap rebuild here. */
 
 export default function QuranViewerPage() {
   const [selectedSurah, setSelectedSurah] = useState(1);
@@ -21,15 +25,15 @@ export default function QuranViewerPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSurahList, setShowSurahList] = useState(true);
 
-  // ── Memorization & Blur Mode states ────────────────────────
+  // ── Memorization & Blur Mode states (unchanged) ──
   const [isBlurMode, setIsBlurMode] = useState(false);
   const [revealedVerses, setRevealedVerses] = useState(new Set());
 
-  // ── Mutashabihat Popover & Modal states ──────────────────────
+  // ── Mutashabihat states (unchanged) ──
   const [selectedMutashabih, setSelectedMutashabih] = useState(null);
   const [isMutashabihatModalOpen, setIsMutashabihatModalOpen] = useState(false);
 
-  // ── Audio hook ──────────────────────────────────────────────
+  // ── Audio hook (unchanged) ──
   const audio = useQuranAudio();
   const {
     currentVerseIndex, isPlaying, reciter, loadSurahAudio, playVerse,
@@ -39,14 +43,14 @@ export default function QuranViewerPage() {
   const versesContainerRef = useRef(null);
   const surah = QURAN_SURAHS.find(s => s.number === selectedSurah);
 
-  // ── Fetch memorization map ──────────────────────────────────
+  // ── Fetch memorization map (unchanged) ──
   useEffect(() => {
     api.get('/daily-records/memorization-map')
       .then(res => setMemorizedVerses(res.data.memorizedVerses || {}))
       .catch(() => {});
   }, []);
 
-  // ── Fetch surah text ────────────────────────────────────────
+  // ── Fetch surah text (unchanged) ──
   const fetchVerses = useCallback(async (surahNum) => {
     setLoadingVerses(true);
     try {
@@ -54,7 +58,6 @@ export default function QuranViewerPage() {
       const data = await res.json();
       if (data.code === 200) {
         setVerses(data.data.ayahs || []);
-        // Reset revealed verses on surah change
         setRevealedVerses(new Set());
       }
     } catch {
@@ -65,26 +68,25 @@ export default function QuranViewerPage() {
 
   useEffect(() => { fetchVerses(selectedSurah); }, [selectedSurah, fetchVerses]);
 
-  // ── Load audio when surah or reciter changes ────────────────
+  // ── Load audio when surah or reciter changes (unchanged) ──
   useEffect(() => {
     loadSurahAudio(selectedSurah, reciter);
   }, [selectedSurah, reciter, loadSurahAudio]);
 
-  // ── Auto-scroll to playing verse ────────────────────────────
+  // ── Auto-scroll to playing verse (unchanged) ──
   useEffect(() => {
     if (currentVerseIndex >= 0) {
       const el = document.querySelector(`[data-verse-index="${currentVerseIndex}"]`);
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-      // If playing in blur mode, auto-reveal playing verse
       if (isBlurMode) {
         setRevealedVerses(prev => new Set(prev).add(currentVerseIndex));
       }
     }
   }, [currentVerseIndex, isBlurMode]);
 
-  // ── Stats ───────────────────────────────────────────────────
+  // ── Stats (unchanged math) ──
   const memorizedSet = new Set(memorizedVerses[selectedSurah] || []);
   const totalVerses = surah?.verses || 0;
   const memorizedCount = memorizedSet.size;
@@ -131,464 +133,330 @@ export default function QuranViewerPage() {
 
   const handleHideAll = () => {
     setRevealedVerses(new Set());
-    toast.success('تم إخفاء الآيات للاختبار الغيبي 👁️');
+    toast.success('تم إخفاء الآيات للاختبار');
   };
 
   const handleSetLoop = (count) => {
     changePlayMode('repeat');
     changeRepeatCount(count);
-    toast.success(`تم تعيين التكرار: ${count === 999 ? 'لا نهائي ∞' : `${count} مرات`}`);
+    toast.success(`تم تعيين التكرار: ${count === 999 ? 'لا نهائي' : `${count} مرات`}`);
   };
 
   return (
     <PageLayout>
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="halaqa" style={{ maxWidth: 900, margin: '0 auto' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
           <div>
-            <h1 className="section-title flex items-center gap-2">
-              <BookOpen className="w-6 h-6 text-primary-500" /> المصحف المكرر وتثبيت المتشابهات 📖
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: HQ.INK, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <BookOpen size={24} color={HQ.MENTOR} /> المصحف
             </h1>
-            <p className="section-subtitle">
-              تكرار الآيات، الاختبار الغيبي، وضبط المتشابهات اللفظية بأعلى درجات الإتقان
+            <p style={{ margin: '4px 0 0', fontSize: 14, color: HQ.MUTED }}>
+              {totalMemorizedVerses.toLocaleString()} آية محفوظة · {overallPct}% من المصحف · {surahsComplete} سورة مكتملة
             </p>
           </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Mutashabihat Bank button */}
-            <button
-              onClick={() => setIsMutashabihatModalOpen(true)}
-              className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all"
-            >
-              <Sparkles className="w-4 h-4 text-amber-200" />
-              <span>بنك المتشابهات ({MUTASHABIHAT_ITEMS.length})</span>
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Progress Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {[
-          { label: 'إجمالي المحفوظ', value: totalMemorizedVerses.toLocaleString(), sub: `من ${totalQuranVerses.toLocaleString()} آية`, color: 'text-primary-600', bg: 'bg-primary-50' },
-          { label: 'نسبة الختم الكلية', value: `${overallPct}%`, sub: 'من المصحف الشريف', color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'سور مكتملة الحفظ', value: surahsComplete, sub: `من 114 سورة`, color: 'text-amber-600', bg: 'bg-amber-50' },
-          { label: 'السورة الحالية', value: surah?.name || '', sub: `${progressPct}% مكتمل`, color: 'text-purple-600', bg: 'bg-purple-50' },
-        ].map((s, i) => (
-          <motion.div key={i} whileHover={{ y: -2 }} className="stat-card">
-            <div className={`w-2 h-10 ${s.bg} rounded-full`} style={{ backgroundColor: 'currentColor' }} />
-            <div>
-              <p className={`text-lg font-black ${s.color}`}>{s.value}</p>
-              <p className="text-[10px] text-gray-400 font-bold">{s.label}</p>
-              <p className="text-[10px] text-gray-400">{s.sub}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="grid lg:grid-cols-4 gap-5">
-        {/* Surah list */}
-        <div className={`lg:col-span-1 ${showSurahList ? '' : 'hidden lg:block'}`}>
-          <div className="card-base overflow-hidden sticky top-20">
-            <div className="p-3 border-b border-gray-100">
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="ابحث عن سورة..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="input-base pr-9 py-2 text-xs"
-                />
-              </div>
-            </div>
-            <div className="max-h-[58vh] overflow-y-auto divide-y divide-gray-50">
-              {filteredSurahs.map(s => {
-                const mem = memorizedVerses[s.number] || [];
-                const pct = Math.round((mem.length / s.verses) * 100);
-                const isComplete = mem.length >= s.verses;
-                const isSelected = selectedSurah === s.number;
-                return (
-                  <button
-                    key={s.number}
-                    onClick={() => goToSurah(s.number)}
-                    className={`w-full p-2.5 flex items-center gap-2.5 text-right transition-colors hover:bg-gray-50 ${
-                      isSelected ? 'bg-primary-50/80 border-r-4 border-primary-500' : ''
-                    }`}
-                  >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                      isComplete ? 'bg-emerald-600 text-white' : isSelected ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {isComplete ? <Check className="w-4 h-4" /> : s.number}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-bold truncate ${isSelected ? 'text-primary-700' : 'text-gray-900'}`}>{s.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              isComplete ? 'bg-emerald-500' : pct > 0 ? 'bg-primary-400' : ''
-                            }`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="text-[10px] text-gray-400 font-bold flex-shrink-0">{pct}%</span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <button type="button" onClick={() => setIsMutashabihatModalOpen(true)} className="hq-action"
+            style={{ background: HQ.SURFACE, border: `1.5px solid ${HQ.MENTOR}`, color: HQ.MENTOR, padding: '0 18px', fontSize: 14 }}>
+            <BookMarked size={16} /> بنك المتشابهات ({MUTASHABIHAT_ITEMS.length})
+          </button>
         </div>
 
-        {/* Main Quran Content Area */}
-        <div className="lg:col-span-3 space-y-4">
-          {/* Smart Toolbar (Memorization Mode, Loop Controls, Surah Navigator) */}
-          <div className="card-base p-4">
-            <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => selectedSurah > 1 && setSelectedSurah(selectedSurah - 1)}
-                  disabled={selectedSurah <= 1}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors disabled:opacity-30"
-                  title="السورة السابقة"
-                >
-                  <ChevronRight className="w-5 h-5 text-gray-600" />
-                </button>
-                <div className="text-center min-w-[130px]">
-                  <h2 className="text-2xl font-black text-gray-900" style={{ fontFamily: "'Amiri', serif" }}>
-                    سورة {surah?.name}
-                  </h2>
-                  <p className="text-xs text-gray-400 font-bold">{surah?.verses} آية — الجزء {surah?.juz || '—'}</p>
-                </div>
-                <button
-                  onClick={() => selectedSurah < 114 && setSelectedSurah(selectedSurah + 1)}
-                  disabled={selectedSurah >= 114}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors disabled:opacity-30"
-                  title="السورة التالية"
-                >
-                  <ChevronLeft className="w-5 h-5 text-gray-600" />
-                </button>
-              </div>
-
-              {/* Blur Mode Toggle & Reveal Actions */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={() => {
-                    const nextMode = !isBlurMode;
-                    setIsBlurMode(nextMode);
-                    if (nextMode) handleHideAll();
-                  }}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
-                    isBlurMode
-                      ? 'bg-amber-500 text-white ring-2 ring-amber-300'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
-                >
-                  {isBlurMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  <span>{isBlurMode ? 'وضع الاختبار الغيبي (مفعل)' : 'وضع الاختبار الغيبي'}</span>
-                </button>
-
-                {isBlurMode && (
-                  <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-xl p-0.5">
-                    <button
-                      onClick={handleRevealAll}
-                      className="px-2.5 py-1 text-[11px] font-bold text-amber-800 hover:bg-amber-100 rounded-lg transition-colors"
-                    >
-                      كشف الكل
-                    </button>
-                    <button
-                      onClick={handleHideAll}
-                      className="px-2.5 py-1 text-[11px] font-bold text-amber-800 hover:bg-amber-100 rounded-lg transition-colors"
-                    >
-                      إخفاء الكل
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Ayah Repeat Loop Bar */}
-            <div className="flex items-center justify-between flex-wrap gap-2 pt-3 text-xs">
-              <div className="flex items-center gap-2">
-                <Repeat className="w-4 h-4 text-primary-500" />
-                <span className="font-bold text-gray-700">تكرار الآية للتثبيت:</span>
-                <div className="flex items-center gap-1">
-                  {[1, 3, 5, 10, 999].map(cnt => (
-                    <button
-                      key={cnt}
-                      onClick={() => handleSetLoop(cnt)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                        repeatCount === cnt && playMode === 'repeat'
-                          ? 'bg-primary-600 text-white shadow-sm'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                      }`}
-                    >
-                      {cnt === 999 ? '∞' : `${cnt}x`}
-                    </button>
-                  ))}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          {/* Surah list */}
+          <div className={showSurahList ? '' : 'hidden lg:block'} style={{ width: 240, flex: 'none' }}>
+            <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, overflow: 'hidden', position: 'sticky', top: 80 }}>
+              <div style={{ padding: 12, borderBottom: `1px solid ${HQ.LINE}` }}>
+                <div style={{ position: 'relative' }}>
+                  <Search size={15} color={HQ.MUTED} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }} />
+                  <input type="text" placeholder="ابحث عن سورة..." value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)} aria-label="البحث عن سورة"
+                    style={{ width: '100%', background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '10px 36px 10px 12px', fontSize: 13, color: HQ.INK, fontFamily: 'inherit', minHeight: 44 }} />
                 </div>
               </div>
-
-              <div className="flex items-center gap-3 text-gray-400 text-xs">
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> محفوظ
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" /> متشابهة
-                </span>
-                <span className="font-bold text-primary-600">{memorizedCount} / {totalVerses} آية</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Verses Quran Flow */}
-          {loadingVerses ? (
-            <div className="card-base p-16 text-center">
-              <Loader2 className="w-10 h-10 mx-auto animate-spin text-primary-400 mb-3" />
-              <p className="text-xs font-bold text-gray-500">جارٍ تحميل آيات السورة...</p>
-            </div>
-          ) : (
-            <div className="card-base p-6 sm:p-8" ref={versesContainerRef}>
-              {/* Bismillah */}
-              {selectedSurah !== 1 && selectedSurah !== 9 && (
-                <div className="text-center mb-8 pb-5 border-b border-gray-100">
-                  <p className="text-2xl text-gray-800" style={{ fontFamily: "'Amiri', serif" }}>
-                    بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-                  </p>
-                </div>
-              )}
-
-              {/* Verses Flow with Blur & Mutashabihat */}
-              <div
-                className="leading-[3.2] text-right"
-                dir="rtl"
-                style={{ fontFamily: "'Amiri', 'Traditional Arabic', serif" }}
-              >
-                {verses.map((verse, index) => {
-                  const verseNum = verse.numberInSurah;
-                  const isMemorized = memorizedSet.has(verseNum);
-                  const isCurrentVerse = currentVerseIndex === index;
-                  const isVersePlaying = isCurrentVerse && isPlaying;
-                  const mutashabih = getMutashabihForAyah(selectedSurah, verseNum);
-                  const isRevealed = !isBlurMode || revealedVerses.has(index);
-
+              <div style={{ maxHeight: '56vh', overflowY: 'auto' }}>
+                {filteredSurahs.map(s => {
+                  const mem = memorizedVerses[s.number] || [];
+                  const pct = Math.round((mem.length / s.verses) * 100);
+                  const isComplete = mem.length >= s.verses;
+                  const isSelected = selectedSurah === s.number;
                   return (
-                    <span key={verse.number} className="inline-block relative group/verse mx-1" data-verse-index={index}>
-                      {/* Verse Text */}
-                      <span
-                        onClick={() => handleVerseClick(verseNum, index)}
-                        className={`text-2xl inline px-1.5 py-0.5 rounded-lg transition-all cursor-pointer select-none ${
-                          !isRevealed
-                            ? 'filter blur-[7px] bg-amber-50/70 text-gray-400 hover:blur-[3px]'
-                            : isCurrentVerse
-                            ? 'bg-primary-50 text-primary-900 font-bold ring-2 ring-primary-300'
-                            : isMemorized
-                            ? 'text-gray-900 bg-emerald-50/40 hover:bg-emerald-50'
-                            : 'text-gray-800 hover:bg-gray-100'
-                        }`}
-                        title={
-                          !isRevealed
-                            ? 'انقر لكشف الآية واختبار حفظك غيباً'
-                            : `آية ${verseNum} — اضغط للاستماع`
-                        }
-                      >
-                        {verse.text}
+                    <button key={s.number} type="button" onClick={() => goToSurah(s.number)}
+                      aria-current={isSelected}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: 10,
+                        background: isSelected ? '#E2EFE7' : 'transparent', border: 'none', cursor: 'pointer',
+                        textAlign: 'right', minHeight: 52,
+                      }}>
+                      <span aria-hidden style={{
+                        width: 32, height: 32, borderRadius: 10, flex: 'none',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 13, fontWeight: 800,
+                        background: isComplete ? HQ.MENTOR : isSelected ? HQ.MENTOR : HQ.PAPER,
+                        color: isComplete || isSelected ? '#fff' : HQ.MUTED,
+                        border: `1px solid ${isComplete || isSelected ? HQ.MENTOR : HQ.LINE}`,
+                      }}>
+                        {isComplete ? <Check size={15} strokeWidth={3} /> : s.number}
                       </span>
-
-                      {/* Verse Number Pill */}
-                      <span
-                        onClick={() => handleVerseClick(verseNum, index)}
-                        className={`inline-flex items-center justify-center w-8 h-8 mx-1 rounded-full text-xs font-bold align-middle cursor-pointer transition-all ${
-                          isVersePlaying
-                            ? 'bg-gradient-to-br from-primary-500 to-emerald-500 text-white shadow-md scale-110'
-                            : isCurrentVerse
-                            ? 'bg-primary-500 text-white shadow-sm'
-                            : isMemorized
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-gray-100 text-gray-500 hover:bg-primary-100 hover:text-primary-700'
-                        }`}
-                      >
-                        {isVersePlaying ? '♪' : verseNum}
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: 14, fontWeight: 800, color: isSelected ? HQ.MENTOR : HQ.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {s.name}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                          <span style={{ flex: 1, height: 4, borderRadius: 9999, background: HQ.LINE, overflow: 'hidden' }}>
+                            <span style={{ display: 'block', height: '100%', width: `${pct}%`, background: HQ.MENTOR }} />
+                          </span>
+                          <span style={{ fontSize: 11, color: HQ.MUTED, fontWeight: 700, flex: 'none' }}>{pct}%</span>
+                        </span>
                       </span>
-
-                      {/* Mutashabih Badge if exists */}
-                      {mutashabih && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedMutashabih(mutashabih);
-                          }}
-                          className="inline-flex items-center gap-1 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-[10px] font-black px-2 py-0.5 rounded-full align-middle mx-1 shadow-sm transition-transform hover:scale-105"
-                          title="توجد آية مشابهة — اضغط لمعرفة الفارق والضابط"
-                        >
-                          <Sparkles className="w-3 h-3 text-amber-600" />
-                          متشابهة
-                        </button>
-                      )}
-
-                      {/* Reveal Eye toggle if in blur mode */}
-                      {isBlurMode && (
-                        <button
-                          type="button"
-                          onClick={(e) => toggleVerseReveal(index, e)}
-                          className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700 text-[10px] align-middle mx-0.5"
-                          title={isRevealed ? 'إخفاء' : 'كشف'}
-                        >
-                          {isRevealed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                        </button>
-                      )}
-                    </span>
+                    </button>
                   );
                 })}
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Bottom spacer for sticky player */}
-          <div className="h-44" />
-        </div>
-      </div>
-
-      {/* ── Audio Player (sticky bottom) ──────────────────────── */}
-      <QuranAudioPlayer
-        audio={audio}
-        surahName={surah?.name}
-        totalSurahVerses={totalVerses}
-      />
-
-      {/* ── Mutashabihat Ayah Detail Popover / Modal ─────────── */}
-      <AnimatePresence>
-        {selectedMutashabih && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" dir="rtl">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl border-2 border-amber-300 text-right"
-            >
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
-                    <Sparkles className="w-5 h-5" />
+          {/* Main reading area */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Toolbar */}
+            <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 14, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', paddingBottom: 12, borderBottom: `1px solid ${HQ.LINE}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button type="button" onClick={() => selectedSurah > 1 && setSelectedSurah(selectedSurah - 1)}
+                    disabled={selectedSurah <= 1} aria-label="السورة السابقة"
+                    style={{ width: 44, height: 44, borderRadius: 12, border: 'none', background: HQ.PAPER, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', opacity: selectedSurah <= 1 ? 0.35 : 1 }}>
+                    <ChevronRight size={20} color={HQ.INK} />
+                  </button>
+                  <div style={{ textAlign: 'center', minWidth: 130 }}>
+                    <h2 className="hq-quran" style={{ margin: 0, fontSize: 24, fontWeight: 700, color: HQ.INK }}>
+                      سورة {surah?.name}
+                    </h2>
+                    <p style={{ margin: 0, fontSize: 12, color: HQ.MUTED, fontWeight: 700 }}>{surah?.verses} آية</p>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-sm sm:text-base">ضابط المتشابهات اللفظية 💡</h3>
-                    <p className="text-[11px] text-gray-400">{selectedMutashabih.category}</p>
-                  </div>
+                  <button type="button" onClick={() => selectedSurah < 114 && setSelectedSurah(selectedSurah + 1)}
+                    disabled={selectedSurah >= 114} aria-label="السورة التالية"
+                    style={{ width: 44, height: 44, borderRadius: 12, border: 'none', background: HQ.PAPER, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', opacity: selectedSurah >= 114 ? 0.35 : 1 }}>
+                    <ChevronLeft size={20} color={HQ.INK} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setSelectedMutashabih(null)}
-                  className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100"
-                >
-                  <X className="w-5 h-5" />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <button type="button" aria-pressed={isBlurMode}
+                    onClick={() => { const next = !isBlurMode; setIsBlurMode(next); if (next) handleHideAll(); }}
+                    className="hq-action"
+                    style={{ background: isBlurMode ? HQ.MENTOR : HQ.PAPER, color: isBlurMode ? '#fff' : HQ.INK, border: isBlurMode ? 'none' : `1px solid ${HQ.LINE}`, padding: '0 16px', fontSize: 13 }}>
+                    {isBlurMode ? <EyeOff size={15} /> : <Eye size={15} />} الاختبار الغيبي
+                  </button>
+                  {isBlurMode && (
+                    <>
+                      <button type="button" onClick={handleRevealAll} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 800, color: HQ.MENTOR, minHeight: 44, padding: '0 8px' }}>
+                        كشف الكل
+                      </button>
+                      <button type="button" onClick={handleHideAll} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 800, color: HQ.MUTED, minHeight: 44, padding: '0 8px' }}>
+                        إخفاء الكل
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Repeat + legend */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', paddingTop: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Repeat size={15} color={HQ.MENTOR} />
+                  <span style={{ fontSize: 13, fontWeight: 800, color: HQ.INK }}>التكرار:</span>
+                  {[1, 3, 5, 10, 999].map(cnt => (
+                    <button key={cnt} type="button" onClick={() => handleSetLoop(cnt)}
+                      aria-pressed={repeatCount === cnt && playMode === 'repeat'}
+                      style={{
+                        minWidth: 44, minHeight: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
+                        fontSize: 13, fontWeight: 800,
+                        background: repeatCount === cnt && playMode === 'repeat' ? HQ.MENTOR : HQ.PAPER,
+                        color: repeatCount === cnt && playMode === 'repeat' ? '#fff' : HQ.MUTED,
+                      }}>
+                      {cnt === 999 ? '∞' : `${cnt}x`}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: HQ.MUTED }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span aria-hidden style={{ width: 9, height: 9, borderRadius: 9999, background: HQ.MENTOR }} /> محفوظ
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span aria-hidden style={{ width: 9, height: 9, borderRadius: 9999, background: '#D9A441' }} /> متشابهة
+                  </span>
+                  <strong style={{ color: HQ.INK }}>{memorizedCount} / {totalVerses}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Verses — Amiri leads */}
+            {loadingVerses ? (
+              <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 48, textAlign: 'center' }} aria-label="جارٍ تحميل الآيات">
+                <Loader2 size={32} color={HQ.MENTOR} className="animate-spin" style={{ margin: '0 auto 8px' }} />
+                <p style={{ fontSize: 13, fontWeight: 700, color: HQ.MUTED, margin: 0 }}>جارٍ تحميل آيات السورة...</p>
+              </div>
+            ) : (
+              <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 'clamp(16px, 4vw, 32px)' }} ref={versesContainerRef}>
+                {selectedSurah !== 1 && selectedSurah !== 9 && (
+                  <p className="hq-quran" style={{ textAlign: 'center', fontSize: 24, color: HQ.INK, margin: '0 0 20px', paddingBottom: 16, borderBottom: `1px solid ${HQ.LINE}` }}>
+                    بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+                  </p>
+                )}
+                <div className="hq-quran" dir="rtl" style={{ fontSize: 24, lineHeight: 2.6, textAlign: 'right' }}>
+                  {verses.map((verse, index) => {
+                    const verseNum = verse.numberInSurah;
+                    const isMemorized = memorizedSet.has(verseNum);
+                    const isCurrentVerse = currentVerseIndex === index;
+                    const isVersePlaying = isCurrentVerse && isPlaying;
+                    const mutashabih = getMutashabihForAyah(selectedSurah, verseNum);
+                    const isRevealed = !isBlurMode || revealedVerses.has(index);
+
+                    return (
+                      <span key={verse.number} data-verse-index={index} style={{ display: 'inline-block', position: 'relative', margin: '0 4px' }}>
+                        <span role="button" tabIndex={0}
+                          onClick={() => handleVerseClick(verseNum, index)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleVerseClick(verseNum, index); } }}
+                          title={!isRevealed ? 'انقر لكشف الآية واختبار حفظك' : `آية ${verseNum} — اضغط للاستماع`}
+                          style={{
+                            display: 'inline', padding: '2px 6px', borderRadius: 8, cursor: 'pointer',
+                            filter: !isRevealed ? 'blur(7px)' : 'none',
+                            background: !isRevealed ? HQ.PAPER : isCurrentVerse ? '#E2EFE7' : isMemorized ? '#E2EFE7' : 'transparent',
+                            color: !isRevealed ? HQ.MUTED : isCurrentVerse ? HQ.MENTOR : HQ.INK,
+                            fontWeight: isCurrentVerse ? 700 : 400,
+                            outline: isCurrentVerse ? `2px solid ${HQ.MENTOR}` : 'none',
+                          }}>
+                          {verse.text}
+                        </span>
+                        <span role="button" tabIndex={0} aria-label={`استماع للآية ${verseNum}`}
+                          onClick={() => handleVerseClick(verseNum, index)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleVerseClick(verseNum, index); } }}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 30, height: 30, margin: '0 4px', borderRadius: 9999,
+                            fontSize: 12, fontWeight: 800, cursor: 'pointer', verticalAlign: 'middle',
+                            fontFamily: 'Tajawal, sans-serif',
+                            background: isVersePlaying || isCurrentVerse ? HQ.MENTOR : isMemorized ? '#E2EFE7' : HQ.PAPER,
+                            color: isVersePlaying || isCurrentVerse ? '#fff' : isMemorized ? HQ.MENTOR : HQ.MUTED,
+                            border: `1px solid ${isVersePlaying || isCurrentVerse || isMemorized ? HQ.MENTOR : HQ.LINE}`,
+                          }}>
+                          {verseNum}
+                        </span>
+                        {mutashabih && (
+                          <button type="button"
+                            onClick={(e) => { e.stopPropagation(); setSelectedMutashabih(mutashabih); }}
+                            title="آية مشابهة — اضغط لمعرفة الفارق"
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                              background: '#F8EDD3', color: HQ.INK, border: '1px solid #D9A441',
+                              fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 9999,
+                              verticalAlign: 'middle', margin: '0 4px', minHeight: 30,
+                            }}>
+                            <Sparkles size={12} /> متشابهة
+                          </button>
+                        )}
+                        {isBlurMode && (
+                          <button type="button" onClick={(e) => toggleVerseReveal(index, e)}
+                            aria-label={isRevealed ? 'إخفاء الآية' : 'كشف الآية'}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              width: 32, height: 32, borderRadius: 9999, border: `1px solid ${HQ.LINE}`,
+                              background: HQ.PAPER, color: HQ.MUTED, cursor: 'pointer',
+                              verticalAlign: 'middle', margin: '0 2px',
+                            }}>
+                            {isRevealed ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div style={{ height: 180 }} aria-hidden />
+          </div>
+        </div>
+
+        <QuranAudioPlayer audio={audio} surahName={surah?.name} totalSurahVerses={totalVerses} />
+
+        {/* Mutashabih detail modal */}
+        {selectedMutashabih && (
+          <div dir="rtl" style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(12,12,29,0.72)' }}>
+            <div role="dialog" aria-modal="true" aria-label="ضابط المتشابهة"
+              style={{ background: HQ.SURFACE, borderRadius: 18, padding: 24, maxWidth: 520, width: '100%', border: `1px solid ${HQ.LINE}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12, borderBottom: `1px solid ${HQ.LINE}`, marginBottom: 16 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 900, color: HQ.INK }}>ضابط المتشابهة</h3>
+                  <p style={{ margin: 0, fontSize: 12, color: HQ.MUTED }}>{selectedMutashabih.category}</p>
+                </div>
+                <button type="button" onClick={() => setSelectedMutashabih(null)} aria-label="إغلاق"
+                  style={{ width: 44, height: 44, borderRadius: 12, border: 'none', background: HQ.PAPER, color: HQ.MUTED, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={19} />
                 </button>
               </div>
-
-              {/* Verses comparison box */}
-              <div className="space-y-3 mb-5">
-                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs">
-                  <p className="font-bold text-primary-700 mb-1">
-                    📖 سورة {surah?.name || ''} [آية {selectedMutashabih.verseNumber}]:
-                  </p>
-                  <p className="text-gray-900 text-sm font-semibold leading-relaxed" style={{ fontFamily: "'Amiri', serif" }}>
-                    «{selectedMutashabih.verseText}»
-                  </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+                <div style={{ background: HQ.PAPER, padding: 14, borderRadius: 12, border: `1px solid ${HQ.LINE}`, fontSize: 13 }}>
+                  <p style={{ margin: '0 0 4px', fontWeight: 800, color: HQ.MENTOR }}>سورة {surah?.name || ''} — آية {selectedMutashabih.verseNumber}</p>
+                  <p className="hq-quran" style={{ margin: 0, fontSize: 18, color: HQ.INK }}>«{selectedMutashabih.verseText}»</p>
                 </div>
-
-                <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200 text-xs">
-                  <p className="font-bold text-amber-800 mb-1">
-                    📖 الموضع المشابه في سورة {selectedMutashabih.similarSurahName} [آية {selectedMutashabih.similarVerseNumber}]:
-                  </p>
-                  <p className="text-gray-900 text-sm font-semibold leading-relaxed" style={{ fontFamily: "'Amiri', serif" }}>
-                    «{selectedMutashabih.similarVerseText}»
-                  </p>
+                <div style={{ background: '#F8EDD3', padding: 14, borderRadius: 12, border: '1px solid #D9A441', fontSize: 13 }}>
+                  <p style={{ margin: '0 0 4px', fontWeight: 800, color: HQ.INK }}>الموضع المشابه — سورة {selectedMutashabih.similarSurahName} — آية {selectedMutashabih.similarVerseNumber}</p>
+                  <p className="hq-quran" style={{ margin: 0, fontSize: 18, color: HQ.INK }}>«{selectedMutashabih.similarVerseText}»</p>
                 </div>
               </div>
-
-              {/* Golden Rule / Memory Hook */}
-              <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white p-4 rounded-2xl shadow-md mb-4 text-xs sm:text-sm leading-relaxed">
-                <p className="font-black text-amber-100 mb-1 flex items-center gap-1.5">
-                  <Info className="w-4 h-4" /> الفارق والضابط التثبيتي:
+              <div style={{ background: '#D9A441', padding: 14, borderRadius: 12, marginBottom: 16 }}>
+                <p style={{ margin: '0 0 4px', fontWeight: 900, color: HQ.INK, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Info size={15} /> الفارق والضابط
                 </p>
-                <p className="font-bold">{selectedMutashabih.rule}</p>
+                <p style={{ margin: 0, fontWeight: 700, color: HQ.INK, fontSize: 14 }}>{selectedMutashabih.rule}</p>
                 {selectedMutashabih.difference && (
-                  <p className="text-xs text-amber-100 mt-2 opacity-95">{selectedMutashabih.difference}</p>
+                  <p style={{ margin: '8px 0 0', fontSize: 13, color: HQ.INK }}>{selectedMutashabih.difference}</p>
                 )}
               </div>
-
-              <button
-                onClick={() => setSelectedMutashabih(null)}
-                className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-bold transition-colors"
-              >
-                فهمت الضابط، إغلاق
+              <button type="button" onClick={() => setSelectedMutashabih(null)} className="hq-action"
+                style={{ width: '100%', background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK, fontSize: 14 }}>
+                فهمت الضابط
               </button>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
 
-      {/* ── Mutashabihat Full Bank Modal ────────────────────── */}
-      <AnimatePresence>
+        {/* Mutashabihat bank modal */}
         {isMutashabihatModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" dir="rtl">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-3xl p-6 sm:p-7 max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl text-right"
-            >
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100 flex-shrink-0">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-700 flex items-center justify-center font-bold">
-                    <BookMarked className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-base">بنك المتشابهات والضوابط الذهبية 🧠</h3>
-                    <p className="text-xs text-gray-400">دليلك لضبط وتثبيت الآيات المتشابهة وحمايتها من التداخل</p>
-                  </div>
+          <div dir="rtl" style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(12,12,29,0.72)' }}>
+            <div role="dialog" aria-modal="true" aria-label="بنك المتشابهات"
+              style={{ background: HQ.SURFACE, borderRadius: 18, padding: 24, maxWidth: 640, width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', border: `1px solid ${HQ.LINE}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12, borderBottom: `1px solid ${HQ.LINE}`, flex: 'none' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: HQ.INK, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <BookMarked size={19} color={HQ.MENTOR} /> بنك المتشابهات
+                  </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: 13, color: HQ.MUTED }}>ضوابط تثبيت الآيات المتشابهة</p>
                 </div>
-                <button
-                  onClick={() => setIsMutashabihatModalOpen(false)}
-                  className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100"
-                >
-                  <X className="w-5 h-5" />
+                <button type="button" onClick={() => setIsMutashabihatModalOpen(false)} aria-label="إغلاق"
+                  style={{ width: 44, height: 44, borderRadius: 12, border: 'none', background: HQ.PAPER, color: HQ.MUTED, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={19} />
                 </button>
               </div>
-
-              <div className="flex-1 overflow-y-auto py-4 space-y-3.5 pr-1">
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {MUTASHABIHAT_ITEMS.map((item, idx) => (
-                  <div key={item.id} className="p-4 rounded-2xl border border-amber-200 bg-amber-50/30 space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold text-amber-800">
-                      <span>{item.category}</span>
-                      <span className="text-[10px] bg-amber-100 px-2.5 py-0.5 rounded-full">ضابط #{idx + 1}</span>
-                    </div>
-                    <div className="text-xs space-y-1 text-gray-800">
-                      <p><span className="font-bold text-primary-700">الموضع 1:</span> «{item.verseText}»</p>
-                      <p><span className="font-bold text-amber-700">الموضع 2:</span> «{item.similarVerseText}»</p>
-                    </div>
-                    <div className="bg-amber-100/70 p-2.5 rounded-xl text-xs text-amber-950 font-bold">
-                      {item.rule}
-                    </div>
+                  <div key={item.id} style={{ padding: 14, borderRadius: 14, border: `1px solid ${HQ.LINE}`, background: HQ.PAPER }}>
+                    <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 800, color: HQ.MENTOR }}>{item.category} · ضابط {idx + 1}</p>
+                    <p style={{ margin: '0 0 4px', fontSize: 13, color: HQ.INK }}><strong>الموضع 1:</strong> «{item.verseText}»</p>
+                    <p style={{ margin: '0 0 8px', fontSize: 13, color: HQ.INK }}><strong>الموضع 2:</strong> «{item.similarVerseText}»</p>
+                    <p style={{ margin: 0, background: '#F8EDD3', borderRadius: 10, padding: '8px 12px', fontSize: 13, fontWeight: 700, color: HQ.INK }}>{item.rule}</p>
                   </div>
                 ))}
               </div>
-
-              <div className="pt-3 border-t border-gray-100 flex justify-end flex-shrink-0">
-                <button
-                  onClick={() => setIsMutashabihatModalOpen(false)}
-                  className="btn-primary py-2 px-6 text-xs font-bold"
-                >
+              <div style={{ paddingTop: 12, borderTop: `1px solid ${HQ.LINE}`, display: 'flex', justifyContent: 'flex-end', flex: 'none' }}>
+                <button type="button" onClick={() => setIsMutashabihatModalOpen(false)} className="hq-action"
+                  style={{ background: HQ.MENTOR, color: '#fff', padding: '0 24px', fontSize: 14 }}>
                   إغلاق
                 </button>
               </div>
-            </motion.div>
+            </div>
           </div>
         )}
-      </AnimatePresence>
-
+      </div>
     </PageLayout>
   );
 }

@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowRight, CheckCircle, XCircle, Clock, Users, BarChart2, Mic, Eye } from 'lucide-react';
-import Navbar from '../../components/shared/Navbar';
-import Sidebar from '../../components/shared/Sidebar';
+import { ArrowRight, Mic } from 'lucide-react';
 import PageLayout from '../../components/shared/PageLayout';
 import useExamStore from '../../store/examStore';
 import { formatDateAr } from '../../utils/helpers';
@@ -12,6 +9,10 @@ import Pagination from '../../components/shared/Pagination';
 import usePagination from '../../hooks/usePagination';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import '../../components/halaqa/halaqa.css';
+import { HQ, HqAvatar, HqBadge } from '../../components/halaqa/primitives';
+
+/* نتائج الامتحان — disciplined table, clear states, same review flow. */
 
 export default function AdminExamResultsPage() {
   const { examId } = useParams();
@@ -27,7 +28,6 @@ export default function AdminExamResultsPage() {
   useEffect(() => {
     fetchExamResults(examId);
     api.get(`/exams/group/any`).catch(() => {});
-    // Fetch exam info from results
   }, [examId]);
 
   useEffect(() => {
@@ -54,159 +54,151 @@ export default function AdminExamResultsPage() {
     ? Math.round(examResults.reduce((s, r) => s + (r.totalPercentage || r.writtenPercentage || 0), 0) / examResults.length)
     : 0;
 
+  const inputStyle = {
+    width: '100%', padding: '12px 14px', borderRadius: 12, border: `1px solid ${HQ.LINE}`,
+    background: HQ.SURFACE, fontSize: 14, color: HQ.INK, fontFamily: 'inherit', minHeight: 48,
+  };
+
   return (
     <PageLayout>
-      <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-              <ArrowRight className="w-5 h-5 text-gray-400" />
-            </button>
-            <div>
-              <h1 className="section-title">{exam?.title || 'نتائج الامتحان'}</h1>
-              {exam?.lessonTitle && <p className="section-subtitle">درس: {exam.lessonTitle}</p>}
-            </div>
+      <div className="halaqa" style={{ maxWidth: 900, margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <button type="button" onClick={() => navigate(-1)} aria-label="رجوع"
+            style={{ width: 44, height: 44, borderRadius: 12, border: `1px solid ${HQ.LINE}`, background: HQ.SURFACE, color: HQ.MUTED, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+            <ArrowRight size={19} />
+          </button>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: HQ.INK }}>{exam?.title || 'نتائج الامتحان'}</h1>
+            {exam?.lessonTitle && <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>درس: {exam.lessonTitle}</p>}
           </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {[
-              { label: 'المتقدمون', value: examResults.length, icon: Users, color: 'text-blue-600 bg-blue-50' },
-              { label: 'ناجح', value: passed, icon: CheckCircle, color: 'text-green-600 bg-green-50' },
-              { label: 'راسب', value: failed, icon: XCircle, color: 'text-red-500 bg-red-50' },
-              { label: 'متوسط الدرجات', value: `${avgScore}%`, icon: BarChart2, color: 'text-primary-600 bg-primary-50' },
-            ].map((s, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                className="card-base p-5 flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${s.color}`}>
-                  <s.icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-2xl font-black text-gray-900">{s.value}</p>
-                  <p className="text-xs text-gray-500">{s.label}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {isLoading ? (
-            <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
-          ) : examResults.length === 0 ? (
-            <div className="card-base p-12 text-center">
-              <Users className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-500">لم يؤدِ أي طالب هذا الامتحان بعد</p>
-            </div>
-          ) : (
-            <div className="card-base overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className="text-right p-4 font-bold text-gray-600">الطالب</th>
-                    <th className="text-center p-4 font-bold text-gray-600">الدرجة</th>
-                    <th className="text-center p-4 font-bold text-gray-600">الحالة</th>
-                    <th className="text-center p-4 font-bold text-gray-600">التاريخ</th>
-                    <th className="text-center p-4 font-bold text-gray-600">إجراء</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resultsPagination.paginatedItems.map((result, i) => {
-                    const score = result.totalPercentage ?? result.writtenPercentage ?? 0;
-                    const isPending = result.status === 'pending_oral_review';
-                    return (
-                      <motion.tr key={result._id}
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
-                        className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-gradient-quran flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                              {result.student?.firstName?.[0]}{result.student?.lastName?.[0]}
-                            </div>
-                            <span className="font-semibold text-gray-800">
-                              {result.student?.firstName} {result.student?.lastName}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-4 text-center">
-                          <span className={`text-lg font-black ${result.isPassed ? 'text-green-600' : score > 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                            {score > 0 ? `${score}%` : '—'}
-                          </span>
-                        </td>
-                        <td className="p-4 text-center">
-                          {isPending ? <span className="badge-gold">قيد المراجعة</span>
-                            : result.isPassed ? <span className="badge-green">ناجح</span>
-                            : <span className="bg-red-50 text-red-500 text-xs font-semibold px-2.5 py-1 rounded-full">راسب</span>}
-                        </td>
-                        <td className="p-4 text-center text-gray-400 text-xs">
-                          {formatDateAr(result.submittedAt)}
-                        </td>
-                        <td className="p-4 text-center">
-                          {isPending && result.oralRecordings?.length > 0 && (
-                            <button onClick={() => { setReviewModal(result); setReviewForm({ oralScore: '', teacherNotes: '' }); }}
-                              className="text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 px-3 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-1 mx-auto">
-                              <Mic className="w-3 h-3" /> مراجعة التسجيل
-                            </button>
-                          )}
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              <Pagination
-                currentPage={resultsPagination.currentPage}
-                totalPages={resultsPagination.totalPages}
-                totalItems={resultsPagination.totalItems}
-                pageSize={resultsPagination.pageSize}
-                onPageChange={resultsPagination.setCurrentPage}
-                onPageSizeChange={resultsPagination.setPageSize}
-                showPageSize={true}
-                pageSizeOptions={[5, 10, 20, 50]}
-                itemName="طالب"
-                className="border-t border-gray-100 p-4"
-              />
-            </div>
-          )}
-
-      {/* Review Modal */}
-      {reviewModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-3xl p-7 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-black text-gray-900 mb-4">
-              مراجعة تسجيل — {reviewModal.student?.firstName} {reviewModal.student?.lastName}
-            </h2>
-            <div className="space-y-4 mb-6">
-              <div className="text-sm font-semibold text-gray-700 mb-2">التسجيلات الصوتية:</div>
-              {reviewModal.oralRecordings?.map((rec, i) => (
-                <div key={i} className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-500 mb-2">تسجيل {i + 1}</p>
-                  <audio controls src={rec.audioUrl} className="w-full" />
-                </div>
-              ))}
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">الدرجة (من 100)</label>
-                <input type="number" min="0" max="100"
-                  value={reviewForm.oralScore}
-                  onChange={e => setReviewForm(p => ({ ...p, oralScore: e.target.value }))}
-                  className="input-base" placeholder="مثال: 85" />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">ملاحظات المعلم</label>
-                <textarea value={reviewForm.teacherNotes}
-                  onChange={e => setReviewForm(p => ({ ...p, teacherNotes: e.target.value }))}
-                  className="input-base resize-none h-24" placeholder="أضف ملاحظاتك..." />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setReviewModal(null)} className="btn-ghost flex-1">إلغاء</button>
-              <button onClick={handleReview} disabled={saving || !reviewForm.oralScore}
-                className="btn-primary flex-1 disabled:opacity-50">
-                {saving ? <LoadingSpinner size="sm" color="white" /> : 'حفظ التقييم'}
-              </button>
-            </div>
-          </motion.div>
         </div>
-      )}
+
+        {/* Facts */}
+        <div className="hq-facts" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 16, marginBottom: 16 }}>
+          <span><strong>{examResults.length}</strong> <span>متقدم</span></span>
+          <span><strong>{passed}</strong> <span>ناجح</span></span>
+          <span><strong>{failed}</strong> <span>يحتاج مراجعة</span></span>
+          <span><strong>{pending}</strong> <span>قيد المراجعة الشفهية</span></span>
+          <span><strong>{avgScore}%</strong> <span>المتوسط</span></span>
+        </div>
+
+        {isLoading ? (
+          <div aria-label="جارٍ تحميل النتائج">
+            <div className="hq-skeleton" style={{ height: 56, width: '100%', marginBottom: 8 }} />
+            <div className="hq-skeleton" style={{ height: 56, width: '100%', marginBottom: 8 }} />
+            <div className="hq-skeleton" style={{ height: 56, width: '100%' }} />
+          </div>
+        ) : examResults.length === 0 ? (
+          <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 48, textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: HQ.INK }}>لم يؤدِ أي طالب هذا الامتحان بعد</p>
+          </div>
+        ) : (
+          <div className="hq-table-wrap">
+            <table className="hq-table">
+              <thead>
+                <tr>
+                  <th>الطالب</th>
+                  <th style={{ textAlign: 'center' }}>الدرجة</th>
+                  <th style={{ textAlign: 'center' }}>الحالة</th>
+                  <th style={{ textAlign: 'center' }}>التاريخ</th>
+                  <th style={{ textAlign: 'center' }}>إجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resultsPagination.paginatedItems.map((result) => {
+                  const score = result.totalPercentage ?? result.writtenPercentage ?? 0;
+                  const isPending = result.status === 'pending_oral_review';
+                  return (
+                    <tr key={result._id}>
+                      <td>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <HqAvatar firstName={result.student?.firstName} lastName={result.student?.lastName} size={34} />
+                          <strong>{result.student?.firstName} {result.student?.lastName}</strong>
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <strong style={{ fontSize: 18, color: result.isPassed ? HQ.MENTOR : score > 0 ? '#C2410C' : HQ.MUTED }}>
+                          {score > 0 ? `${score}%` : '—'}
+                        </strong>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {isPending ? <HqBadge tone="gold">قيد المراجعة</HqBadge>
+                          : result.isPassed ? <HqBadge tone="mentor">ناجح</HqBadge>
+                          : <HqBadge tone="neutral">يحتاج مراجعة</HqBadge>}
+                      </td>
+                      <td style={{ textAlign: 'center', fontSize: 13, color: HQ.MUTED, whiteSpace: 'nowrap' }}>
+                        {formatDateAr(result.submittedAt)}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {isPending && result.oralRecordings?.length > 0 && (
+                          <button type="button"
+                            onClick={() => { setReviewModal(result); setReviewForm({ oralScore: '', teacherNotes: '' }); }}
+                            className="hq-action" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK, padding: '0 14px', fontSize: 13 }}>
+                            <Mic size={14} /> مراجعة التسجيل
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <Pagination
+              currentPage={resultsPagination.currentPage}
+              totalPages={resultsPagination.totalPages}
+              totalItems={resultsPagination.totalItems}
+              pageSize={resultsPagination.pageSize}
+              onPageChange={resultsPagination.setCurrentPage}
+              onPageSizeChange={resultsPagination.setPageSize}
+              showPageSize={true}
+              pageSizeOptions={[5, 10, 20, 50]}
+              itemName="طالب"
+              className="border-t p-4"
+              style={{ borderColor: HQ.LINE }}
+            />
+          </div>
+        )}
+
+        {/* Review Modal — same fields and PUT */}
+        {reviewModal && (
+          <div dir="rtl" style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(12,12,29,0.72)' }}>
+            <div role="dialog" aria-modal="true" aria-label="مراجعة التسجيل"
+              style={{ background: HQ.SURFACE, borderRadius: 18, padding: 24, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${HQ.LINE}` }}>
+              <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 900, color: HQ.INK }}>
+                مراجعة تسجيل — {reviewModal.student?.firstName} {reviewModal.student?.lastName}
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: HQ.MUTED }}>التسجيلات الصوتية</span>
+                {reviewModal.oralRecordings?.map((rec, i) => (
+                  <div key={i} style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: 10 }}>
+                    <p style={{ margin: '0 0 6px', fontSize: 12, color: HQ.MUTED }}>تسجيل {i + 1}</p>
+                    <audio controls src={rec.audioUrl} style={{ width: '100%', height: 36 }} />
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: HQ.INK, marginBottom: 6 }} htmlFor="rev-score">الدرجة (من 100)</label>
+                <input id="rev-score" type="number" min="0" max="100" value={reviewForm.oralScore}
+                  onChange={e => setReviewForm(p => ({ ...p, oralScore: e.target.value }))}
+                  style={inputStyle} placeholder="مثال: 85" />
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: HQ.INK, marginBottom: 6 }} htmlFor="rev-notes">ملاحظات المعلم</label>
+                <textarea id="rev-notes" value={reviewForm.teacherNotes}
+                  onChange={e => setReviewForm(p => ({ ...p, teacherNotes: e.target.value }))}
+                  style={{ ...inputStyle, minHeight: 96, resize: 'vertical', paddingTop: 10 }} placeholder="أضف ملاحظاتك..." />
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" onClick={() => setReviewModal(null)} className="hq-action" style={{ flex: 1, background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK, fontSize: 14 }}>إلغاء</button>
+                <button type="button" onClick={handleReview} disabled={saving || !reviewForm.oralScore} className="hq-action"
+                  style={{ flex: 1, background: HQ.MENTOR, color: '#fff', fontSize: 14, opacity: (saving || !reviewForm.oralScore) ? 0.5 : 1 }}>
+                  {saving ? <LoadingSpinner size="sm" color="white" /> : 'حفظ التقييم'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </PageLayout>
   );
 }
-

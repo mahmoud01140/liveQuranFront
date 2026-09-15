@@ -16,6 +16,8 @@ import useLiveStore from '../../store/liveStore';
 import { getSocket } from '../../services/socket';
 import api from '../../services/api';
 import { formatCountdown } from '../../utils/helpers';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
 
 export default function LiveBroadcastPage() {
   const { user } = useAuthStore();
@@ -160,12 +162,12 @@ export default function LiveBroadcastPage() {
   if (!isBroadcasting) {
     if (loadingLesson) {
       return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="halaqa" style={{ minHeight: '100vh', background: HQ.PAPER }}>
           <Navbar />
-          <div className="pt-16 flex items-center justify-center min-h-screen">
-            <div className="text-center">
-              <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-gray-500 text-sm font-semibold">جاري تحضير بيانات الدرس...</p>
+          <div style={{ paddingTop: 64, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div className="hq-skeleton" style={{ width: 40, height: 40, borderRadius: 9999, margin: '0 auto 16px' }} />
+              <p style={{ color: HQ.MUTED, fontSize: 14, fontWeight: 700 }}>جاري تحضير بيانات الدرس...</p>
             </div>
           </div>
         </div>
@@ -173,77 +175,79 @@ export default function LiveBroadcastPage() {
     }
 
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="halaqa" style={{ minHeight: '100vh', background: HQ.PAPER }}>
         <Navbar />
-        <div className="pt-16 flex items-center justify-center min-h-screen">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="card-base p-8 w-full max-w-lg mx-4">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-gradient-quran rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                <Radio className="w-8 h-8 text-white" />
+        <div style={{ paddingTop: 64, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}
+            style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 'clamp(20px,4vw,32px)', width: '100%', maxWidth: 560 }}>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <div style={{ width: 64, height: 64, background: HQ.MENTOR, borderRadius: 18, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Radio size={30} color="#fff" />
               </div>
-              <h2 className="text-xl font-black text-gray-900">بدء بث مباشر جديد</h2>
-              <p className="text-gray-500 text-sm mt-1">تأكد من بيانات الجلسة ثم انطلق</p>
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: HQ.INK, margin: '0 0 4px' }}>بدء بث مباشر جديد</h2>
+              <p style={{ color: HQ.MUTED, fontSize: 14, margin: 0 }}>تأكد من بيانات الجلسة ثم انطلق</p>
             </div>
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Group & Lesson Info (read-only, pre-selected from curriculum) */}
-              <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-2xl space-y-3">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-emerald-600" />
-                  <span className="text-sm font-bold text-emerald-950">بيانات الدرس والمجموعة</span>
+              <div style={{ padding: 16, background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <BookOpen size={16} color={HQ.MENTOR} />
+                  <span style={{ fontSize: 14, fontWeight: 800, color: HQ.INK }}>بيانات الدرس والمجموعة</span>
                 </div>
 
-                <div className="bg-white rounded-xl p-3 border border-emerald-100 space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500 font-medium">المجموعة:</span>
-                    <span className="font-bold text-gray-900">{currentGroup?.name || location.state?.groupName || '—'}</span>
+                <div style={{ background: HQ.SURFACE, borderRadius: 12, padding: 12, border: `1px solid ${HQ.LINE}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
+                    <span style={{ color: HQ.MUTED, fontWeight: 500 }}>المجموعة:</span>
+                    <span style={{ fontWeight: 800, color: HQ.INK }}>{currentGroup?.name || location.state?.groupName || '—'}</span>
                   </div>
                   {selectedLessonData && (
                     <>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500 font-medium">الدرس:</span>
-                        <span className="font-bold text-emerald-700">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
+                        <span style={{ color: HQ.MUTED, fontWeight: 500 }}>الدرس:</span>
+                        <span style={{ fontWeight: 800, color: HQ.MENTOR }}>
                           {selectedLessonData.lessonNumber ? `الدرس ${selectedLessonData.lessonNumber}: ` : ''}{selectedLessonData.title}
                         </span>
                       </div>
                       {selectedLessonData.duration && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-500 font-medium">المدة المقررة:</span>
-                          <span className="font-semibold text-gray-700">{selectedLessonData.duration} دقيقة</span>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 14 }}>
+                          <span style={{ color: HQ.MUTED, fontWeight: 500 }}>المدة المقررة:</span>
+                          <span style={{ fontWeight: 700, color: HQ.INK }}>{selectedLessonData.duration} دقيقة</span>
                         </div>
                       )}
                     </>
                   )}
                 </div>
 
-                <div className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-100/70 px-3 py-1.5 rounded-xl font-bold">
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: HQ.MENTOR, background: '#E2EFE7', padding: '8px 12px', borderRadius: 12, fontWeight: 700, marginTop: 12 }}>
+                  <CheckCircle size={15} />
                   تم ربط البث بالدرس من منهج المجموعة
                 </div>
 
                 <button
                   onClick={() => navigate(`/admin/groups/${selectedGroup}/curriculum`)}
-                  className="w-full text-xs text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded-lg py-1.5 transition-colors font-semibold flex items-center justify-center gap-1"
+                  style={{ width: '100%', fontSize: 13, color: HQ.MENTOR, background: 'none', border: 'none', borderRadius: 8, padding: '10px 0 0', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 44 }}
                 >
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight size={14} />
                   الرجوع لصفحة المنهج واختيار درس آخر
                 </button>
               </div>
 
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">عنوان الجلسة المباشرة *</label>
+                <label style={{ fontSize: 14, fontWeight: 700, color: HQ.INK, marginBottom: 6, display: 'block' }}>عنوان الجلسة المباشرة *</label>
                 <input
                   value={sessionTitle}
                   onChange={e => setSessionTitle(e.target.value)}
                   className="input-base font-semibold"
                   placeholder="عنوان الجلسة..."
+                  style={{ borderColor: HQ.LINE }}
                 />
-                <p className="text-[11px] text-gray-400 mt-1">
+                <p style={{ fontSize: 12, color: HQ.MUTED, marginTop: 4 }}>
                   سيظهر هذا الاسم للطلاب في الإشعار المباشر وأعلى شاشة الحصة.
                 </p>
               </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">نوع الجلسة</label>
-                <select value={sessionType} onChange={e => setSessionType(e.target.value)} className="input-base">
+                <label style={{ fontSize: 14, fontWeight: 700, color: HQ.INK, marginBottom: 6, display: 'block' }}>نوع الجلسة</label>
+                <select value={sessionType} onChange={e => setSessionType(e.target.value)} className="input-base" style={{ borderColor: HQ.LINE }}>
                   <option value="lesson">درس جديد</option>
                   <option value="review">مراجعة</option>
                   <option value="exam">امتحان</option>
@@ -252,27 +256,29 @@ export default function LiveBroadcastPage() {
               </div>
               {/* Homework */}
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block flex items-center gap-1">
-                  <ClipboardList className="w-4 h-4 text-amber-500" /> الواجب (اختياري)
+                <label style={{ fontSize: 14, fontWeight: 700, color: HQ.INK, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <ClipboardList size={16} color="#B45309" /> الواجب (اختياري)
                 </label>
                 <textarea
                   value={homeworkText}
                   onChange={e => setHomeworkText(e.target.value)}
                   className="input-base resize-none h-20"
                   placeholder="اكتب الواجب المطلوب من الطلاب..."
+                  style={{ borderColor: HQ.LINE }}
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">موعد تسليم الواجب (اختياري)</label>
+                <label style={{ fontSize: 14, fontWeight: 700, color: HQ.INK, marginBottom: 6, display: 'block' }}>موعد تسليم الواجب (اختياري)</label>
                 <input type="date"
                   value={homeworkDeadline}
                   onChange={e => setHomeworkDeadline(e.target.value)}
                   className="input-base"
+                  style={{ borderColor: HQ.LINE }}
                   min={new Date().toISOString().split('T')[0]}
                 />
               </div>
-              <button onClick={handleStartBroadcast} className="btn-primary w-full py-4 text-base">
-                <Radio className="w-5 h-5" />
+              <button onClick={handleStartBroadcast} className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', fontSize: 16, width: '100%' }}>
+                <Radio size={20} />
                 انطلق — ابدأ البث الآن
               </button>
             </div>
@@ -284,66 +290,71 @@ export default function LiveBroadcastPage() {
 
   // Live broadcast view with Jitsi Meet
   return (
-    <div className="h-screen h-[100dvh] max-h-[100dvh] bg-gray-900 flex flex-col overflow-hidden">
-      {/* Top bar */}
-      <div className="bg-gray-800 px-6 py-3 flex items-center justify-between flex-shrink-0 border-b border-gray-700">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-bold">
-            <div className="w-2 h-2 rounded-full bg-white animate-ping" />
+    <div className="halaqa" dir="rtl" style={{ height: '100vh', maxHeight: '100dvh', background: HQ.PAPER, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Top bar — paper chrome, the stage below is the only dark area */}
+      <div style={{ background: HQ.SURFACE, borderBottom: `1px solid ${HQ.LINE}`, padding: '0 16px', height: 56, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#C2410C', color: '#fff', padding: '6px 12px', borderRadius: 12, fontSize: 13, fontWeight: 800, flex: 'none' }}>
+            <span className="hq-live-dot" aria-hidden />
             بث مباشر
-          </div>
-          <h1 className="text-white font-bold text-sm hidden sm:block">{sessionTitle}</h1>
+          </span>
+          <h1 style={{ color: HQ.INK, fontWeight: 800, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} className="hidden sm:block">{sessionTitle}</h1>
           {selectedLessonData && (
-            <span className="hidden md:inline-flex items-center gap-1 text-xs bg-emerald-900/60 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
-              <BookOpen className="w-3 h-3 text-emerald-400" />
+            <span className="hidden md:inline-flex" style={{ alignItems: 'center', gap: 4, fontSize: 12, background: '#E2EFE7', color: HQ.MENTOR, padding: '4px 10px', borderRadius: 9999, fontWeight: 700 }}>
+              <BookOpen size={12} />
               الدرس المرتبط بالبث
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <span className="text-gray-300 text-sm font-mono hidden sm:inline">{formatCountdown(duration)}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
+          <span style={{ color: HQ.MUTED, fontSize: 13, fontWeight: 700 }} className="hidden sm:inline">{formatCountdown(duration)}</span>
 
           {/* Recitation Queue & Wird Drawer Button */}
           <button
             onClick={() => setShowRecitationDrawer(true)}
-            className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-700/20"
+            className="hq-action"
+            style={{ background: HQ.MENTOR, color: '#fff', padding: '0 14px', fontSize: 13 }}
             title="إدارة طابور التسميع والأوراد الفردية"
           >
-            <Mic className="w-4 h-4 text-emerald-200" />
-            <span>طابور التسميع والورد</span>
+            <Mic size={16} />
+            <span className="hidden sm:inline">طابور التسميع والورد</span>
           </button>
 
           {/* Attendance Drawer Button */}
           <button
             onClick={() => setShowAttendanceDrawer(true)}
-            className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-colors"
+            className="hq-action"
+            style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK, padding: '0 14px', fontSize: 13 }}
             title="كشف الحضور والغياب"
           >
-            <UserCheck className="w-4 h-4" />
-            <span>كشف الحضور</span>
+            <UserCheck size={16} />
+            <span className="hidden sm:inline">كشف الحضور</span>
           </button>
 
 
           <button
             onClick={handleEndBroadcast}
-            className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-colors"
+            className="hq-action"
+            style={{ background: '#C2410C', color: '#fff', padding: '0 14px', fontSize: 13 }}
           >
-            <PhoneOff className="w-4 h-4" />
-            <span>إنهاء البث</span>
+            <PhoneOff size={16} />
+            <span className="hidden sm:inline">إنهاء البث</span>
           </button>
         </div>
       </div>
 
-      {/* Jitsi Meeting Container */}
-      <div className="flex-1 min-h-0 w-full h-full relative overflow-hidden flex flex-col">
-        <JitsiMeeting
-          roomName={session?.liveRoomName || `QuranPlatform_${session?._id || 'Session'}`}
-          displayName={`أ. ${user?.firstName || ''} ${user?.lastName || ''}`}
-          userEmail={user?.email || ''}
-          isTeacher={true}
-          onLeave={handleEndBroadcast}
-          onApiReady={(api) => { jitsiApiRef.current = api; }}
-        />
+      {/* Jitsi Meeting Container — the dark stage */}
+      <div style={{ flex: 1, minHeight: 0, padding: 16, paddingTop: 8 }}>
+        <div className="halaqa-stage" style={{ height: '100%', borderRadius: 18, overflow: 'hidden', position: 'relative' }}>
+          <JitsiMeeting
+            roomName={session?.liveRoomName || `QuranPlatform_${session?._id || 'Session'}`}
+            displayName={`أ. ${user?.firstName || ''} ${user?.lastName || ''}`}
+            userEmail={user?.email || ''}
+            isTeacher={true}
+            onLeave={handleEndBroadcast}
+            onApiReady={(api) => { jitsiApiRef.current = api; }}
+          />
+        </div>
       </div>
 
       {/* Live Recitation & Individual Wird Drawer */}

@@ -115,7 +115,7 @@ export default function App() {
             <Route path="/student/live" element={<ProtectedRoute role="student"><LiveClassPage /></ProtectedRoute>} />
             <Route path="/student/curriculum" element={<ProtectedRoute role="student"><CurriculumPage /></ProtectedRoute>} />
             <Route path="/student/exams" element={<ProtectedRoute role="student"><ExamsPage /></ProtectedRoute>} />
-            <Route path="/student/progress" element={<Navigate to="/student" replace />} />
+            <Route path="/student/progress" element={<ProtectedRoute role="student"><ProgressPage /></ProtectedRoute>} />
             <Route path="/student/subscription" element={<ProtectedRoute role="student"><SubscriptionPage /></ProtectedRoute>} />
             <Route path="/student/homework" element={<ProtectedRoute role="student"><HomeworkPage /></ProtectedRoute>} />
             <Route path="/student/exams/:examId/take" element={<ProtectedRoute role="student"><TakeExamPage /></ProtectedRoute>} />

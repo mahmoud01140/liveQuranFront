@@ -11,6 +11,8 @@ import PageLayout from '../../components/shared/PageLayout';
 import useExamStore from '../../store/examStore';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import { formatDateAr } from '../../utils/helpers';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
 
 const TARGET_FILTERS = [
   { id: 'all', label: 'كافة الامتحانات', icon: FileText },
@@ -85,14 +87,14 @@ export default function AdminExamsPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6 pb-12">
+      <div className="halaqa space-y-6 pb-12" style={{ maxWidth: 1000, margin: '0 auto' }}>
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-              <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-                إدارة وبنك الامتحانات 📝
+              <span className="hq-live-dot" aria-hidden style={{ background: '#177B58', animation: 'none', opacity: 1 }} />
+              <h1 className="text-2xl font-black flex items-center gap-2" style={{ color: HQ.INK }}>
+                بنك الامتحانات
               </h1>
             </div>
             <p className="text-sm text-gray-500">

@@ -1,15 +1,22 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Search, Filter, CheckCircle, X, Volume2, Eye, ChevronDown } from 'lucide-react';
+import { Search, CheckCircle, X, Volume2, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
 import api from '../../services/api';
-import { getLevelLabel, getLevelColor, formatDateAr, getInitials, getAvatarColor } from '../../utils/helpers';
+import { getLevelLabel, formatDateAr } from '../../utils/helpers';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import Pagination from '../../components/shared/Pagination';
 import usePagination from '../../hooks/usePagination';
+import '../../components/halaqa/halaqa.css';
+import { HQ, HqAvatar, HqBadge } from '../../components/halaqa/primitives';
+
+/* إدارة المستخدمين — approve fast, browse clearly.
+   Same endpoints, approval flow, filters, and pagination. */
 
 const LEVELS = ['foundation', 'memorization', 'teacher_prep', 'senior'];
+
+const ROLE_LABEL = { admin: 'إدارة ومعلمون', teacher: 'إدارة ومعلمون', parent: 'ولي أمر', student: 'طالب' };
+const ROLE_TONE = { admin: 'gold', teacher: 'gold', parent: 'neutral', student: 'mentor' };
 
 export default function UsersManagement() {
   const [users, setUsers] = useState([]);
@@ -18,6 +25,7 @@ export default function UsersManagement() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [approvingId, setApprovingId] = useState(null);
   const [selectedLevel, setSelectedLevel] = useState({});
 
@@ -27,6 +35,7 @@ export default function UsersManagement() {
 
   const fetchData = async () => {
     setIsLoading(true);
+    setLoadFailed(false);
     try {
       const [allRes, pendingRes] = await Promise.all([
         api.get('/users', { params: { limit: 200 } }),
@@ -34,7 +43,10 @@ export default function UsersManagement() {
       ]);
       setUsers(allRes.data.users || []);
       setPending(pendingRes.data.users || []);
-    } catch { toast.error('خطأ في جلب البيانات'); }
+    } catch {
+      setLoadFailed(true);
+      toast.error('خطأ في جلب البيانات');
+    }
     finally { setIsLoading(false); }
   };
 
@@ -76,171 +88,141 @@ export default function UsersManagement() {
     paginatedItems,
   } = usePagination(displayUsers, 10);
 
+  const selectStyle = {
+    background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 12,
+    padding: '0 12px', minHeight: 48, fontSize: 14, color: HQ.INK, fontFamily: 'inherit',
+  };
+
   return (
     <PageLayout>
-      <div className="mb-6">
-        <h1 className="section-title">إدارة المستخدمين</h1>
-        <p className="section-subtitle">مراجعة وإدارة حسابات الطلاب والمعلمين</p>
-      </div>
+      <div className="halaqa" style={{ maxWidth: 860, margin: '0 auto' }}>
+        <h1 style={{ margin: '0 0 4px', fontSize: 26, fontWeight: 900, color: HQ.INK }}>المستخدمون</h1>
+        <p style={{ margin: '0 0 16px', fontSize: 14, color: HQ.MUTED }}>
+          {pending.length ? `${pending.length} بانتظار موافقتك` : 'راجع الحسابات واعتمد المستويات'}
+        </p>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        {[
-          { id: 'pending', label: `بانتظار الموافقة (${pending.length})` },
-          { id: 'all', label: 'كل المستخدمين' },
-        ].map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${
-              tab === t.id ? 'bg-primary-400 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-primary-200'
-            }`}
-          >
-            {t.label}
-            {t.id === 'pending' && pending.length > 0 && (
-              <span className="mr-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs inline-flex items-center justify-center">
-                {pending.length}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+        {/* Tabs */}
+        <div className="hq-tabs" role="tablist" aria-label="قوائم المستخدمين" style={{ marginBottom: 16 }}>
+          {[
+            { id: 'pending', label: `بانتظار الموافقة (${pending.length})` },
+            { id: 'all', label: 'الكل' },
+          ].map((t) => (
+            <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-      {/* Search & Filter (for all tab) */}
-      {tab === 'all' && (
-        <div className="flex gap-3 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              className="input-base pr-10" placeholder="بحث بالاسم أو البريد..." />
+        {/* Search & filter */}
+        {tab === 'all' && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+              <Search size={16} color={HQ.MUTED} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }} />
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="بحث بالاسم أو البريد..." aria-label="بحث عن مستخدم"
+                style={{ ...selectStyle, width: '100%', paddingRight: 38 }} />
+            </div>
+            <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} aria-label="تصفية بالدور" style={{ ...selectStyle, minWidth: 150 }}>
+              <option value="">جميع الأدوار</option>
+              <option value="student">الطلاب</option>
+              <option value="parent">أولياء الأمور</option>
+              <option value="admin">المعلم والمدير</option>
+            </select>
           </div>
-          <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="input-base w-44">
-            <option value="">جميع الأدوار</option>
-            <option value="student">الطلاب</option>
-            <option value="parent">أولياء الأمور</option>
-            <option value="admin">المعلم والمدير</option>
-          </select>
-        </div>
-      )}
+        )}
 
-      {isLoading ? (
-        <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
-      ) : displayUsers.length === 0 ? (
-        <div className="card-base p-12 text-center text-gray-400">
-          <CheckCircle className="w-12 h-12 mx-auto mb-3 text-gray-200" />
-          <p>{tab === 'pending' ? 'لا يوجد طلاب بانتظار الموافقة' : 'لا يوجد مستخدمون'}</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {paginatedItems.map((user, i) => {
-            const levelColor = getLevelColor(user.assignedLevel);
-            return (
-              <motion.div key={user._id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="card-base p-5"
-              >
-                <div className="flex flex-wrap items-start gap-4">
-                  {/* Avatar */}
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0"
-                    style={{ backgroundColor: getAvatarColor(`${user.firstName}${user.lastName}`) }}>
-                    {getInitials(user.firstName, user.lastName)}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-bold text-gray-900">{user.firstName} {user.lastName}</h3>
-                      {user.role === 'admin' ? (
-                        <span className="badge-gold text-xs">المعلم والمدير 👑</span>
-                      ) : user.role === 'parent' ? (
-                        <span className="badge-blue text-xs">ولي أمر</span>
-                      ) : (
-                        <span className="badge-green text-xs">طالب</span>
-                      )}
-                      {user.registrationType && (
-                        <span className="badge-gray text-xs">{
-                          user.registrationType === 'student' ? 'مسار التأسيس' :
-                          user.registrationType === 'teacher' ? 'مسار إعداد معلمين' : 'مسار كبار السن'
-                        }</span>
-                      )}
-                      {user.assignedLevel && (
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: levelColor.bg, color: levelColor.text }}>
-                          {getLevelLabel(user.assignedLevel)}
-                        </span>
+        {isLoading ? (
+          <div aria-label="جارٍ تحميل المستخدمين">
+            <div className="hq-skeleton" style={{ height: 76, width: '100%', marginBottom: 10 }} />
+            <div className="hq-skeleton" style={{ height: 76, width: '100%', marginBottom: 10 }} />
+            <div className="hq-skeleton" style={{ height: 76, width: '100%' }} />
+          </div>
+        ) : loadFailed && displayUsers.length === 0 ? (
+          <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 40, textAlign: 'center' }} role="alert">
+            <p style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 900, color: HQ.INK }}>تعذّر تحميل البيانات</p>
+            <p style={{ margin: '0 0 20px', fontSize: 14, color: HQ.MUTED }}>تحقق من الاتصال ثم حاول مرة أخرى.</p>
+            <button type="button" onClick={fetchData} className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', padding: '0 24px', fontSize: 15 }}>
+              <RotateCcw size={16} /> إعادة المحاولة
+            </button>
+          </div>
+        ) : displayUsers.length === 0 ? (
+          <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 40, textAlign: 'center' }}>
+            <CheckCircle size={40} color={HQ.MENTOR} style={{ margin: '0 auto 12px' }} />
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 800, color: HQ.INK }}>
+              {tab === 'pending' ? 'لا أحد بانتظار الموافقة — عمل منجز' : 'لا نتائج مطابقة للبحث'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {paginatedItems.map((u) => (
+                <li key={u._id} style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, marginBottom: 12, padding: 16 }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <HqAvatar firstName={u.firstName} lastName={u.lastName} size={48} />
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+                        <strong style={{ fontSize: 16, color: HQ.INK }}>{u.firstName} {u.lastName}</strong>
+                        <HqBadge tone={ROLE_TONE[u.role] || 'neutral'}>{ROLE_LABEL[u.role] || u.role}</HqBadge>
+                        {u.assignedLevel && <HqBadge tone="mentor">{getLevelLabel(u.assignedLevel)}</HqBadge>}
+                      </div>
+                      <p style={{ margin: 0, fontSize: 13, color: HQ.MUTED, direction: 'ltr', textAlign: 'right' }}>{u.email}</p>
+                      <p style={{ margin: '4px 0 0', fontSize: 13, color: HQ.MUTED }}>
+                        {u.country ? `${u.country} · ` : ''}
+                        {u.placementExamScore !== undefined ? `الاختبار: ${u.placementExamScore}% · ` : ''}
+                        {formatDateAr(u.createdAt)}
+                      </p>
+                      {tab === 'pending' && u.oralExamRecordings?.length > 0 && (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                          {u.oralExamRecordings.map((url, j) => (
+                            <span key={j} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 10, padding: '6px 10px', fontSize: 12, color: HQ.MUTED }}>
+                              تسجيل {j + 1}
+                              <audio src={url} controls style={{ height: 28, width: 130 }} />
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500">{user.email}</p>
-                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-gray-400">
-                      {user.country && <span>🌍 {user.country}</span>}
-                      {user.placementExamScore !== undefined && (
-                        <span>📝 الاختبار: <strong>{user.placementExamScore}%</strong></span>
-                      )}
-                      <span>📅 {formatDateAr(user.createdAt)}</span>
-                    </div>
-
-                    {/* Oral recordings */}
-                    {tab === 'pending' && user.oralExamRecordings?.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="text-xs text-gray-500 mt-1">التسجيلات الشفهية:</span>
-                        {user.oralExamRecordings.map((url, j) => (
-                          <div key={j} className="flex items-center gap-2 bg-primary-50 rounded-xl px-3 py-1.5">
-                            <Volume2 className="w-3.5 h-3.5 text-primary-400" />
-                            <audio src={url} controls className="h-6 w-32" />
-                          </div>
-                        ))}
+                    {tab === 'pending' && (
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
+                        <select value={selectedLevel[u._id] || ''}
+                          onChange={(e) => setSelectedLevel(prev => ({ ...prev, [u._id]: e.target.value }))}
+                          aria-label={`مستوى ${u.firstName}`}
+                          style={{ ...selectStyle, flex: 1, minWidth: 150 }}>
+                          <option value="">تحديد المستوى...</option>
+                          {LEVELS.map(l => (
+                            <option key={l} value={l}>{getLevelLabel(l)}</option>
+                          ))}
+                        </select>
+                        <button type="button" onClick={() => handleApprove(u._id)}
+                          disabled={approvingId === u._id || !selectedLevel[u._id]}
+                          className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', padding: '0 20px', fontSize: 14, opacity: (approvingId === u._id || !selectedLevel[u._id]) ? 0.5 : 1 }}>
+                          {approvingId === u._id ? <LoadingSpinner size="sm" color="white" /> : <><CheckCircle size={16} /> قبول</>}
+                        </button>
+                        <button type="button" onClick={() => handleReject(u._id)} aria-label={`رفض ${u.firstName}`}
+                          className="hq-action" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: '#C2410C', padding: '0 14px', fontSize: 14 }}>
+                          <X size={16} />
+                        </button>
                       </div>
                     )}
                   </div>
-
-                  {/* Actions (pending tab) */}
-                  {tab === 'pending' && (
-                    <div className="flex flex-col gap-2 flex-shrink-0">
-                      <select
-                        value={selectedLevel[user._id] || ''}
-                        onChange={(e) => setSelectedLevel(prev => ({ ...prev, [user._id]: e.target.value }))}
-                        className="input-base text-sm py-2 w-44"
-                      >
-                        <option value="">تحديد المستوى...</option>
-                        {LEVELS.map(l => (
-                          <option key={l} value={l}>{getLevelLabel(l)}</option>
-                        ))}
-                      </select>
-                      <div className="flex gap-2">
-                        <button onClick={() => handleApprove(user._id)}
-                          disabled={approvingId === user._id || !selectedLevel[user._id]}
-                          className="btn-primary text-sm py-2 flex-1 disabled:opacity-50">
-                          {approvingId === user._id ? <LoadingSpinner size="sm" color="white" /> : (
-                            <><CheckCircle className="w-4 h-4" /> قبول</>
-                          )}
-                        </button>
-                        <button onClick={() => handleReject(user._id)} className="btn-danger text-sm py-2 px-3">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            pageSize={pageSize}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-            showPageSize={true}
-            pageSizeOptions={[5, 10, 20, 50]}
-            itemName="مستخدم"
-            className="pt-2"
-          />
-        </div>
-      )}
+                </li>
+              ))}
+            </ol>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              showPageSize={true}
+              pageSizeOptions={[5, 10, 20, 50]}
+              itemName="مستخدم"
+              className="pt-2"
+            />
+          </>
+        )}
+      </div>
     </PageLayout>
   );
 }
-
-

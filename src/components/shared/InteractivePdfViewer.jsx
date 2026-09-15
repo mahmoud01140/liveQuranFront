@@ -703,16 +703,17 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
                       }}
                       className="group transition-all"
                     >
-                      {/* Delete button on hover */}
+                      {/* Delete button — always visible for touch */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteAnnotation(h.id);
                         }}
-                        className="absolute -top-3 -left-3 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
+                        aria-label="حذف التظليل"
+                        className="absolute -top-3 -left-3 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600"
                         title="حذف التظليل"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))}
