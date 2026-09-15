@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -40,6 +40,7 @@ export default function LiveBroadcastPage() {
   const [duration, setDuration] = useState(0);
   const [session, setSession] = useState(null);
   const [loadingLesson, setLoadingLesson] = useState(true);
+  const jitsiApiRef = useRef(null);
 
   const socket = getSocket();
 
@@ -283,7 +284,7 @@ export default function LiveBroadcastPage() {
 
   // Live broadcast view with Jitsi Meet
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col h-screen overflow-hidden">
+    <div className="h-screen h-[100dvh] max-h-[100dvh] bg-gray-900 flex flex-col overflow-hidden">
       {/* Top bar */}
       <div className="bg-gray-800 px-6 py-3 flex items-center justify-between flex-shrink-0 border-b border-gray-700">
         <div className="flex items-center gap-3">
@@ -334,13 +335,14 @@ export default function LiveBroadcastPage() {
       </div>
 
       {/* Jitsi Meeting Container */}
-      <div className="flex-1 w-full h-full relative overflow-hidden">
+      <div className="flex-1 min-h-0 w-full h-full relative overflow-hidden flex flex-col">
         <JitsiMeeting
           roomName={session?.liveRoomName || `QuranPlatform_${session?._id || 'Session'}`}
           displayName={`أ. ${user?.firstName || ''} ${user?.lastName || ''}`}
           userEmail={user?.email || ''}
           isTeacher={true}
           onLeave={handleEndBroadcast}
+          onApiReady={(api) => { jitsiApiRef.current = api; }}
         />
       </div>
 
@@ -351,6 +353,7 @@ export default function LiveBroadcastPage() {
         sessionId={session?._id}
         sessionTitle={sessionTitle}
         groupName={groups.find(g => g._id === selectedGroup)?.name}
+        jitsiApi={jitsiApiRef.current}
       />
 
       {/* Live Attendance Drawer */}

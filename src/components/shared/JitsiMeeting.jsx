@@ -3,6 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 /**
  * JitsiMeeting Component
  * Embeds a Jitsi Meet video conference inside the React application using the Jitsi External API.
+ *
+ * Optimizations for Quran Learning Platform:
+ * 1. Students join audio-muted by default
+ * 2. Auto-pin reciting student via onApiReady (exposes pinParticipantByName)
+ * 3. Noise suppression enabled by default for clear recitation
+ * 4. Students join video-off with no camera controls (audio-only experience)
  */
 export default function JitsiMeeting({
   roomName,
@@ -26,6 +32,34 @@ export default function JitsiMeeting({
   const sanitizedRoomName = (roomName || 'quran_platform_session')
     .replace(/[^a-zA-Z0-9_-]/g, '_')
     .toLowerCase();
+
+  // أزرار المعلم: تحكم كامل
+  const teacherToolbarButtons = [
+    'camera',
+    'chat',
+    'closedcaptions',
+    'desktop',
+    'fullscreen',
+    'hangup',
+    'microphone',
+    'noisesuppression',
+    'participants-pane',
+    'raisehand',
+    'select-background',
+    'settings',
+    'toggle-camera',
+    'videoquality',
+  ];
+
+  // أزرار الطالب: صوت فقط مخصصة للهواتف بدون زحمة
+  const studentToolbarButtons = [
+    'microphone',
+    'raisehand',
+    'chat',
+    'fullscreen',
+    'hangup',
+    'settings',
+  ];
 
   useEffect(() => {
     let isMounted = true;
@@ -76,34 +110,47 @@ export default function JitsiMeeting({
             email: userEmail,
           },
           configOverwrite: {
+            // تحسين 1: الطلاب يدخلون صامتين
             startWithAudioMuted: !isTeacher,
-            startWithVideoMuted: false,
+            // تحسين 4: الطلاب بدون كاميرا (صوت فقط)
+            startWithVideoMuted: !isTeacher,
             disableDeepLinking: true,
+            disableThirdPartyRequests: true,
+            enableNoisyMicDetection: false, // توفير استهلاك البطارية والمعالج على الهواتف
+            p2p: { enabled: false }, // إجبار الاتصال عبر SFU لضمان ثبات اتصال الهواتف وشبكات 4G/5G
             prejoinPageEnabled: false,
             lobbyModeEnabled: false,
             enableWelcomePage: false,
             enableClosePage: false,
             defaultLanguage: 'ar',
-            toolbarButtons: [
-              'camera',
-              'chat',
-              'closedcaptions',
-              'desktop',
-              'fullscreen',
-              'handraising',
-              'microphone',
-              'noisesuppression',
-              'participants-pane',
-              'raisehand',
-              'select-background',
-              'settings',
-              'shading',
-              'sharedvideo',
-              'tileview',
-              'toggle-camera',
-              'videoquality',
-              'hangup',
-            ],
+
+            // تحسين دقة الفيديو لتناسب شاشات الهواتف وتمنع التقطيع والحرارة
+            constraints: {
+              video: {
+                height: { ideal: 480, max: 720 },
+              },
+            },
+
+            // Stage View: المعلم كبير في المنتصف والطلاب شريط جانبي
+            disableTileView: true,
+            filmstrip: {
+              disabled: false,
+              minParticipantCountForFilmstrip: 2,
+            },
+
+            // تحسين 3: تفعيل كشف الضوضاء افتراضياً لوضوح التلاوة
+            disableNS: false,
+            noiseSuppression: {
+              enabled: true,
+            },
+
+            // تحسين 4: منع الطلاب من تفعيل الكاميرا
+            ...(!isTeacher && {
+              videoMuted: true,
+            }),
+
+            // أزرار مختلفة حسب الدور
+            toolbarButtons: isTeacher ? teacherToolbarButtons : studentToolbarButtons,
           },
           interfaceConfigOverwrite: {
             SHOW_JITSI_WATERMARK: false,
@@ -112,13 +159,77 @@ export default function JitsiMeeting({
             DEFAULT_BACKGROUND: '#111827',
             TOOLBAR_ALWAYS_VISIBLE: true,
             MOBILE_APP_PROMO: false,
+            HIDE_DEEP_LINKING_LOGO: true,
+            DISABLE_FOCUS_INDICATOR: true,
+            // تحسين 4: إخفاء خلفية الفيديو للطلاب
+            ...(!isTeacher && {
+              DISABLE_VIDEO_BACKGROUND: true,
+            }),
           },
         };
 
         const api = new window.JitsiMeetExternalAPI(domain, options);
         jitsiApiRef.current = api;
 
+        // تحسين 2: تجهيز خريطة المشاركين لتثبيت الطالب المُسمّع تلقائياً
+        const participantsMap = new Map(); // displayName -> jitsiParticipantId
+
+        api.addEventListener('participantJoined', (participant) => {
+          participantsMap.set(participant.displayName, participant.id);
+        });
+
+        api.addEventListener('participantLeft', (participant) => {
+          for (const [name, id] of participantsMap.entries()) {
+            if (id === participant.id) {
+              participantsMap.delete(name);
+              break;
+            }
+          }
+        });
+
+        // Expose enhanced API with helper methods
         if (onApiReady) {
+          // دالة تثبيت طالب بالاسم — تُستخدم من طابور التسميع
+          api.pinParticipantByName = (name) => {
+            let participantId = participantsMap.get(name);
+            if (!participantId) {
+              for (const [pName, pId] of participantsMap.entries()) {
+                if (pName.includes(name) || name.includes(pName)) {
+                  participantId = pId;
+                  break;
+                }
+              }
+            }
+            if (participantId) {
+              api.pinParticipant(participantId);
+              return true;
+            }
+            return false;
+          };
+
+          // دالة إلغاء التثبيت
+          api.unpinAll = () => {
+            api.pinParticipant(null);
+          };
+
+          // دالة لكتم مايك طالب معين (للمعلم فقط)
+          api.muteParticipantByName = (name) => {
+            let participantId = participantsMap.get(name);
+            if (!participantId) {
+              for (const [pName, pId] of participantsMap.entries()) {
+                if (pName.includes(name) || name.includes(pName)) {
+                  participantId = pId;
+                  break;
+                }
+              }
+            }
+            if (participantId) {
+              api.executeCommand('muteEveryone', participantId);
+              return true;
+            }
+            return false;
+          };
+
           onApiReady(api);
         }
 
@@ -176,13 +287,18 @@ export default function JitsiMeeting({
   }
 
   return (
-    <div className="relative w-full h-full min-h-[500px] bg-gray-950 rounded-2xl overflow-hidden shadow-2xl">
+    <div className="relative w-full h-full min-h-0 bg-gray-950 rounded-none sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col">
       {loading && (
         <div className="absolute inset-0 z-10 bg-gray-900 flex flex-col items-center justify-center text-white">
           <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-4" />
           <p className="text-gray-300 font-semibold text-sm animate-pulse">
             جارٍ تجهيز الغرفة المباشرة (Jitsi Meet)...
           </p>
+          {!isTeacher && (
+            <p className="text-gray-500 text-xs mt-2">
+              🎧 ستنضم بوضع الصوت فقط — لتوفير الإنترنت والتركيز على التلاوة
+            </p>
+          )}
         </div>
       )}
       <div ref={containerRef} style={{ width, height }} className="w-full h-full" />

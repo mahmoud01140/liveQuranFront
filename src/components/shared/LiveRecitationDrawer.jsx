@@ -24,6 +24,7 @@ export default function LiveRecitationDrawer({
   sessionId,
   sessionTitle,
   groupName,
+  jitsiApi,
 }) {
   const [loading, setLoading] = useState(true);
   const [queue, setQueue] = useState([]);
@@ -144,6 +145,15 @@ export default function LiveRecitationDrawer({
         return q;
       }));
       setCurrentSpeaker(student);
+
+      // تحسين 2: تثبيت الطالب المُسمّع تلقائياً في Jitsi
+      if (jitsiApi?.pinParticipantByName) {
+        const studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim();
+        const pinned = jitsiApi.pinParticipantByName(studentName);
+        if (pinned) {
+          toast.success(`📌 تم تثبيت ${student.firstName} في الشاشة الرئيسية`);
+        }
+      }
     } catch {
       toast.error('فشل في بدء دور التسميع');
     }

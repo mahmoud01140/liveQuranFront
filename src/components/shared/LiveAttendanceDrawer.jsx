@@ -57,12 +57,29 @@ export default function LiveAttendanceDrawer({
       }
     };
 
+    const handleStudentLeftSession = ({ sessionId: leftSessionId, studentId, leftAt }) => {
+      if (leftSessionId && leftSessionId.toString() !== sessionId.toString()) return;
+      setRecords(prev => prev.map(item => {
+        if (item.student._id === studentId) {
+          return {
+            ...item,
+            status: item.status === 'excused' ? 'excused' : 'absent',
+            isOnline: false,
+            leftAt: leftAt || new Date(),
+          };
+        }
+        return item;
+      }));
+    };
+
     socket.on('attendance-pong-received', handlePongReceived);
     socket.on('attendance-updated', handleAttendanceUpdated);
+    socket.on('student-left-session', handleStudentLeftSession);
 
     return () => {
       socket.off('attendance-pong-received', handlePongReceived);
       socket.off('attendance-updated', handleAttendanceUpdated);
+      socket.off('student-left-session', handleStudentLeftSession);
     };
   }, [socket, sessionId]);
 
@@ -215,13 +232,25 @@ export default function LiveAttendanceDrawer({
                 </div>
               </div>
 
-              <button
-                onClick={onClose}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors"
-                title="إغلاق"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fetchAttendanceSheet}
+                  disabled={loading}
+                  className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                  title="إعادة تحميل الكشف"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-primary-400' : ''}`} />
+                  <span className="hidden sm:inline">إعادة تحميل</span>
+                </button>
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors"
+                  title="إغلاق"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Quick Stats Bar */}

@@ -12,7 +12,7 @@ import JitsiMeeting from '../../components/shared/JitsiMeeting';
 import useAuthStore from '../../store/authStore';
 import useLiveStore from '../../store/liveStore';
 import useSocket from '../../hooks/useSocket';
-import { joinGroupRoom } from '../../services/socket';
+import { joinGroupRoom, getSocket } from '../../services/socket';
 import api from '../../services/api';
 import { formatCountdown } from '../../utils/helpers';
 
@@ -281,11 +281,45 @@ export default function LiveClassPage() {
   };
 
   const handleLeave = () => {
+    // إرسال event للباكيند لتسجيل وقت المغادرة في كشف الحضور
+    const socket = getSocket();
+    if (socket && session?._id) {
+      socket.emit('leave-session', {
+        sessionId: session._id,
+        groupId: session.group?._id || session.group,
+      });
+    }
     setVoluntarilyLeft(true);
     resetLive();
     setDuration(0);
     toast('خرجت من الجلسة', { icon: '👋' });
   };
+
+  // تسجيل الخروج تلقائياً عند مغادرة الصفحة أو إغلاق التبويب
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const socket = getSocket();
+      if (socket && session?._id) {
+        socket.emit('leave-session', {
+          sessionId: session._id,
+          groupId: session.group?._id || session.group,
+        });
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      const socket = getSocket();
+      if (socket && session?._id) {
+        socket.emit('leave-session', {
+          sessionId: session._id,
+          groupId: session.group?._id || session.group,
+        });
+      }
+    };
+  }, [session?._id, session?.group]);
 
   const handleRejoin = async () => {
     setVoluntarilyLeft(false);
@@ -429,86 +463,91 @@ export default function LiveClassPage() {
   const myTask = myId ? tasksMap[myId] : null;
 
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col h-screen overflow-hidden font-sans" dir="rtl">
-      {/* Top status bar */}
-      <header className="bg-gray-800/90 backdrop-blur border-b border-gray-700 px-4 py-2.5 flex items-center justify-between z-20 flex-shrink-0 flex-wrap gap-2">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${isSessionLive ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
-            <span className="text-white font-black text-sm">{session?.title || 'الحلقة المباشرة'}</span>
+    <div className="h-screen h-[100dvh] max-h-[100dvh] w-full bg-gray-950 flex flex-col overflow-hidden font-sans select-none" dir="rtl">
+      {/* Top status bar - Single-line, perfectly fits mobile without wrapping */}
+      <header className="bg-gray-900/95 backdrop-blur-md border-b border-gray-800 px-2.5 sm:px-4 h-12 sm:h-14 flex items-center justify-between z-20 flex-shrink-0 gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <span className={`w-2.5 h-2.5 rounded-full ${isSessionLive ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
+            <span className="text-white font-bold text-xs sm:text-sm truncate max-w-[95px] xs:max-w-[130px] sm:max-w-xs" title={session?.title}>
+              {session?.title || 'الحلقة المباشرة'}
+            </span>
           </div>
 
           {session?.group?.name && (
-            <span className="hidden sm:inline text-xs bg-gray-700 text-gray-300 px-2.5 py-0.5 rounded-full">
+            <span className="hidden md:inline text-[11px] bg-gray-800 text-gray-300 px-2 py-0.5 rounded-full truncate max-w-[100px]">
               {session.group.name}
             </span>
           )}
 
           {/* Turn status badges */}
           {isMyTurn && (
-            <span className="inline-flex items-center gap-1.5 text-xs bg-emerald-500 text-white px-3 py-1 rounded-xl font-bold animate-pulse shadow-md shadow-emerald-500/30">
-              <Mic className="w-3.5 h-3.5" />
-              أنت تُسمّع الآن مع المعلم! 🎙️
+            <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-emerald-500 text-white px-2 py-0.5 sm:py-1 rounded-xl font-bold animate-pulse shadow-sm flex-shrink-0">
+              <Mic className="w-3 h-3" />
+              <span className="hidden xs:inline">أنت تُسمّع الآن!</span>
+              <span className="xs:hidden">دورك الآن 🎙️</span>
             </span>
           )}
 
           {!isMyTurn && currentSpeaker && (
-            <span className="hidden md:inline-flex items-center gap-1.5 text-xs bg-blue-900/60 text-blue-200 border border-blue-500/30 px-2.5 py-1 rounded-xl">
+            <span className="hidden lg:inline-flex items-center gap-1 text-xs bg-blue-900/60 text-blue-200 border border-blue-500/30 px-2.5 py-0.5 rounded-xl">
               <Mic className="w-3 h-3 text-blue-400" />
-              المعلم يستمع الآن لـ: {currentSpeaker.firstName} {currentSpeaker.lastName || ''}
+              يُسمّع: {currentSpeaker.firstName}
             </span>
           )}
 
           {isCompleted && !isMyTurn && (
-            <span className="inline-flex items-center gap-1.5 text-xs bg-green-900/60 text-green-300 border border-green-500/30 px-2.5 py-1 rounded-xl font-bold">
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-              تم تقييمك ({myTurn?.evaluation?.score || 100}%)
+            <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-xl font-bold flex-shrink-0">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              <span>{myTurn?.evaluation?.score || 100}%</span>
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           {/* Hand Raise Toggle Button */}
           {!isCompleted && !isMyTurn && (
             <button
               onClick={handleToggleHand}
               disabled={raisingHand}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
                 hasHandRaised
                   ? 'bg-amber-500 hover:bg-amber-600 text-white animate-bounce'
-                  : 'bg-gray-700 hover:bg-gray-600 text-gray-200 hover:text-white'
+                  : 'bg-gray-800 hover:bg-gray-700 text-gray-200 hover:text-white'
               }`}
               title={hasHandRaised ? 'إنزال اليد' : 'طلب دور التسميع'}
             >
               <Hand className={`w-3.5 h-3.5 ${hasHandRaised ? 'fill-current' : ''}`} />
-              <span>{hasHandRaised ? 'تم رفع اليد ✋' : 'طلب دور التسميع'}</span>
+              <span className="hidden sm:inline">{hasHandRaised ? 'تم رفع اليد ✋' : 'طلب التسميع'}</span>
             </button>
           )}
 
           {/* Toggle My Daily Wird Card */}
           <button
             onClick={() => setShowWirdCard(prev => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
               showWirdCard
-                ? 'bg-emerald-600/90 text-white shadow-md shadow-emerald-900/30'
-                : 'bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white'
             }`}
+            title="وردي القرآني اليومي"
           >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">وردي اليومي</span>
+            <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">وردي</span>
             {showWirdCard ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
 
           {isSessionLive && (
-            <div className="hidden sm:flex items-center gap-1.5 text-xs text-gray-300 bg-gray-700/60 px-3 py-1.5 rounded-xl font-mono">
-              <Clock className="w-3.5 h-3.5 text-primary-400" />
+            <div className="hidden md:flex items-center gap-1 text-xs text-gray-400 bg-gray-800/80 px-2 py-1.5 rounded-xl font-mono">
+              <Clock className="w-3 h-3 text-emerald-400" />
               <span>{formatCountdown(duration)}</span>
             </div>
           )}
 
           <button
             onClick={handleLeave}
-            className="flex items-center gap-1.5 text-xs font-bold bg-red-600/80 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl transition-all"
+            className="flex items-center gap-1 text-xs font-bold bg-rose-600/80 hover:bg-rose-600 text-white px-2.5 py-1.5 rounded-xl transition-all"
+            title="مغادرة الحصة"
           >
             <PhoneOff className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">مغادرة</span>
@@ -517,7 +556,7 @@ export default function LiveClassPage() {
       </header>
 
       {/* Main meeting area */}
-      <div className="flex-1 relative bg-black">
+      <div className="flex-1 min-h-0 relative bg-black overflow-hidden flex flex-col">
         {session?._id && (
           <JitsiMeeting
             roomName={session?.liveRoomName || `QuranPlatform_${session._id}`}
@@ -531,13 +570,13 @@ export default function LiveClassPage() {
         <AnimatePresence>
           {showWirdCard && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className={`absolute top-4 left-4 z-30 max-w-sm w-full rounded-2xl shadow-2xl backdrop-blur-md border p-4 transition-all ${
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              className={`absolute inset-x-2 top-2 sm:inset-x-auto sm:top-4 sm:left-4 sm:max-w-sm max-h-[75dvh] overflow-y-auto z-30 rounded-2xl shadow-2xl backdrop-blur-md border p-3.5 sm:p-4 transition-all ${
                 isMyTurn
                   ? 'bg-gray-900/95 border-emerald-500 ring-2 ring-emerald-500/40'
-                  : 'bg-gray-900/90 border-gray-700/80'
+                  : 'bg-gray-900/95 border-gray-700/80'
               }`}
             >
               <div className="flex items-center justify-between border-b border-gray-700/80 pb-2 mb-2.5">
@@ -648,7 +687,7 @@ export default function LiveClassPage() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="absolute bottom-6 right-6 z-40 bg-white rounded-3xl shadow-2xl p-6 border-2 border-primary-500 max-w-sm w-full"
+              className="absolute inset-x-3 bottom-3 sm:inset-x-auto sm:bottom-6 sm:right-6 z-40 bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-6 border-2 border-primary-500 max-w-sm w-auto sm:w-full"
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-primary-100 text-primary-700 flex items-center justify-center font-bold">
