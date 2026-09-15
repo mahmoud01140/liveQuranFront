@@ -35,12 +35,8 @@ export default function LiveBroadcastPage() {
   const [selectedLessonData, setSelectedLessonData] = useState(null);
   const [homeworkText, setHomeworkText] = useState('');
   const [homeworkDeadline, setHomeworkDeadline] = useState('');
-  const [savingHomework, setSavingHomework] = useState(false);
-  const [showHomeworkModal, setShowHomeworkModal] = useState(false);
   const [showAttendanceDrawer, setShowAttendanceDrawer] = useState(false);
   const [showRecitationDrawer, setShowRecitationDrawer] = useState(false);
-  const [liveHomework, setLiveHomework] = useState('');
-  const [liveHomeworkDeadline, setLiveHomeworkDeadline] = useState('');
   const [duration, setDuration] = useState(0);
   const [session, setSession] = useState(null);
   const [loadingLesson, setLoadingLesson] = useState(true);
@@ -157,22 +153,6 @@ export default function LiveBroadcastPage() {
     setDuration(0);
     resetLive();
     toast('انتهى البث المباشر', { icon: '📴' });
-  };
-
-  // Save homework during live session
-  const handleSaveLiveHomework = async () => {
-    if (!liveHomework.trim()) { toast.error('اكتب الواجب أولاً'); return; }
-    if (!session?._id) return;
-    setSavingHomework(true);
-    try {
-      await api.put(`/live/${session._id}/homework`, {
-        homework: liveHomework,
-        homeworkDeadline: liveHomeworkDeadline || null,
-      });
-      setShowHomeworkModal(false);
-      toast.success('✅ تم إرسال الواجب للطلاب!');
-    } catch { toast.error('خطأ في حفظ الواجب'); }
-    finally { setSavingHomework(false); }
   };
 
   // Pre-broadcast setup — lesson is pre-selected from curriculum page
@@ -342,14 +322,7 @@ export default function LiveBroadcastPage() {
             <span>كشف الحضور</span>
           </button>
 
-          <button
-            onClick={() => setShowHomeworkModal(true)}
-            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-colors"
-            title="إضافة واجب للطلاب"
-          >
-            <ClipboardList className="w-4 h-4" />
-            <span className="hidden sm:inline">إضافة واجب</span>
-          </button>
+
           <button
             onClick={handleEndBroadcast}
             className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition-colors"
@@ -390,57 +363,6 @@ export default function LiveBroadcastPage() {
         socket={socket}
       />
 
-      {/* Homework Modal */}
-      {showHomeworkModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-7 w-full max-w-md shadow-2xl">
-            <h2 className="text-lg font-black text-gray-900 mb-1 flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-amber-500" />
-              إضافة واجب للطلاب
-            </h2>
-            <p className="text-xs text-gray-400 mb-5">سيصل الواجب فوراً لجميع طلاب المجموعة كإشعار</p>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">نص الواجب *</label>
-                <textarea
-                  value={liveHomework}
-                  onChange={e => setLiveHomework(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-right resize-none h-28 focus:outline-none focus:ring-2 focus:ring-primary-300"
-                  placeholder="اكتب الواجب المطلوب من الطلاب..."
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700 mb-1 block">موعد التسليم (اختياري)</label>
-                <input
-                  type="date"
-                  value={liveHomeworkDeadline}
-                  onChange={e => setLiveHomeworkDeadline(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowHomeworkModal(false)}
-                className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-colors"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={handleSaveLiveHomework}
-                disabled={savingHomework || !liveHomework.trim()}
-                className="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-white font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {savingHomework
-                  ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  : <><ClipboardList className="w-4 h-4" /> إرسال الواجب</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
