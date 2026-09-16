@@ -5,43 +5,51 @@ import { HqAvatar, HqStars, HQ } from './primitives';
    come from the page through props. No mock data anywhere. */
 
 export function SpeakerStage({ speaker, isMe, teacherName, isLive, myTurnLabel = 'دورك الآن' }) {
+  const statusText = speaker ? (isMe ? myTurnLabel : 'يُسمّع الآن') : null;
   return (
-    <div className="halaqa-stage" role="status" aria-live="polite"
-      aria-label={speaker ? `يُسمّع الآن: ${speaker.firstName}` : 'بانتظار بدء التسميع'}
-      style={{ borderRadius: 18, padding: 24, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: 8,
-        border: `1px solid ${HQ.MENTOR}`, borderRadius: 9999,
-        padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff',
-        background: 'rgba(255,255,255,0.06)',
-      }}>
-        <span className="hq-live-dot" aria-hidden />
-        {isLive ? 'حلقة جارية الآن' : 'بانتظار البث'}
-      </span>
+    <div className="halaqa-stage hq-speaker" role="status" aria-live="polite"
+      aria-label={speaker ? `يُسمّع الآن: ${speaker.firstName}` : 'بانتظار بدء التسميع'}>
+      <div className="hq-speaker-top">
+        <span className="hq-speaker-live">
+          <span className="hq-live-dot" aria-hidden />
+          {isLive ? 'حلقة جارية الآن' : 'بانتظار البث'}
+        </span>
 
-      {speaker ? (
-        <div style={{ marginTop: 16 }}>
-          <HqAvatar firstName={speaker.firstName} lastName={speaker.lastName} size={72} ring={isMe} />
-          <p style={{ margin: '12px 0 4px', fontSize: 24, fontWeight: 900, color: '#fff' }}>
-            {speaker.firstName} {speaker.lastName}
-          </p>
-            <p style={{ margin: 0, fontSize: 15, color: isMe ? '#E2EFE7' : 'rgba(255,255,255,0.7)', fontWeight: 800 }}>
-            {isMe ? myTurnLabel : 'يُسمّع الآن'}
-          </p>
-          {teacherName && (
-            <p style={{ margin: '8px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>
-              مع {teacherName}
+        {speaker && (
+          <span className="hq-speaker-avm" aria-hidden>
+            <HqAvatar firstName={speaker.firstName} lastName={speaker.lastName} size={44} ring={isMe} />
+          </span>
+        )}
+        {speaker && (
+          <span className="hq-speaker-avd" aria-hidden>
+            <HqAvatar firstName={speaker.firstName} lastName={speaker.lastName} size={72} ring={isMe} />
+          </span>
+        )}
+
+        {speaker ? (
+          <div className="hq-speaker-id">
+            <p className="hq-speaker-name">
+              {speaker.firstName} {speaker.lastName}
             </p>
-          )}
-        </div>
-      ) : (
-        <div style={{ marginTop: 16 }}>
-          <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#fff' }}>لم يبدأ التسميع بعد</p>
-          <p style={{ margin: '4px 0 0', fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>
-            سيظهر هنا اسم من يُسمّع فور بدء الدور
-          </p>
-        </div>
-      )}
+            <p className="hq-speaker-sub" style={isMe ? { color: '#E2EFE7' } : undefined}>
+              {statusText}
+              {teacherName && <span className="hq-speaker-tsuffix"> • مع {teacherName}</span>}
+            </p>
+            {teacherName && (
+              <p className="hq-speaker-teacher">
+                مع {teacherName}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="hq-speaker-id">
+            <p className="hq-speaker-name">لم يبدأ التسميع بعد</p>
+            <p className="hq-speaker-sub">
+              سيظهر هنا اسم من يُسمّع فور بدء الدور
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

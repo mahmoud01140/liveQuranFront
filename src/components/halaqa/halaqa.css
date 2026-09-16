@@ -97,6 +97,83 @@
   color: #fff;
 }
 
+/* ── SpeakerStage: compact row on phones, hero block on desktop ── */
+.hq-speaker {
+  border-radius: 18px;
+  padding: 10px 14px;
+  position: relative;
+  overflow: hidden;
+}
+.hq-speaker-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hq-speaker-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  border: 1px solid var(--hq-mentor);
+  border-radius: 9999px;
+  padding: 4px 10px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+  order: 3;
+  margin-right: auto;
+}
+.hq-speaker-avm { display: inline-flex; flex: none; }
+.hq-speaker-avd { display: none; }
+.hq-speaker-id { flex: 1; min-width: 0; }
+.hq-speaker-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hq-speaker-sub {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hq-speaker-teacher { display: none; }
+
+@media (min-width: 1024px) {
+  .hq-speaker { padding: 24px; text-align: center; }
+  .hq-speaker-top { flex-direction: column; gap: 0; }
+  .hq-speaker-live { order: 0; margin: 0; font-size: 13px; padding: 4px 12px; }
+  .hq-speaker-avm { display: none; }
+  .hq-speaker-avd { display: inline-flex; margin-top: 16px; }
+  .hq-speaker-id { margin-top: 12px; }
+  .hq-speaker-name { font-size: 24px; font-weight: 900; white-space: normal; }
+  .hq-speaker-sub { font-size: 1rem; margin-top: 4px; white-space: normal; }
+  .hq-speaker-sub .hq-speaker-tsuffix { display: none; }
+  .hq-speaker-teacher { display: block; margin: 8px 0 0; font-size: 13px; color: rgba(255, 255, 255, 0.6); }
+}
+
+/* ── Live room mobile ergonomics ── */
+.hq-stagebox { padding: 8px; gap: 8px; }
+@media (min-width: 1024px) {
+  .hq-stagebox { padding: 12px; gap: 12px; }
+}
+.hq-ping { padding: 16px; }
+@media (max-width: 1023.5px) {
+  /* The sheet handle already opens the wird — hide the duplicate button
+     so the two remaining actions get real room. */
+  .hq-actionbar .hq-wird-btn { display: none; }
+  .hq-ping { padding: 10px 12px; }
+}
+
 /* Bottom action bar (live) */
 .hq-actionbar {
   background: var(--hq-surface);

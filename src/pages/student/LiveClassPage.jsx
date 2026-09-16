@@ -440,7 +440,7 @@ export default function LiveClassPage() {
       {/* Body: stage + rail (desktop) / stage + sheet (mobile) */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: 16, padding: 16, paddingBottom: 8 }}>
         {/* ── Stage: the only dark surface ── */}
-        <div className="halaqa-stage" style={{ flex: 1, minWidth: 0, borderRadius: 18, padding: 12, display: 'flex', flexDirection: 'column', gap: 12, overflow: 'hidden' }}>
+        <div className="halaqa-stage hq-stagebox" style={{ flex: 1, minWidth: 0, borderRadius: 18, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <SpeakerStage speaker={speakerObj} isMe={isMyTurn} isLive={isSessionLive}
             teacherName={session?.teacher ? `${session.teacher.firstName || ''} ${session.teacher.lastName || ''}`.trim() : ''} />
           <div style={{ padding: '0 4px' }}>
@@ -490,9 +490,9 @@ export default function LiveClassPage() {
 
       {/* Attendance ping — paper alert above the action bar, never floating glass */}
       {pingActive && (
-        <div role="alert" style={{
+        <div role="alert" className="hq-ping" style={{
           flex: 'none', margin: '8px 16px 0', background: HQ.SURFACE,
-          border: `2px solid ${HQ.MENTOR}`, borderRadius: 18, padding: 16,
+          border: `2px solid ${HQ.MENTOR}`, borderRadius: 18,
           display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
         }}>
           <span style={{ width: 44, height: 44, borderRadius: 12, background: HQ.PAPER, color: HQ.MENTOR, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
@@ -528,7 +528,7 @@ export default function LiveClassPage() {
             دورك في التسميع الآن
           </span>
         )}
-        <button type="button" onClick={() => { setDrawerOpen(true); setShowWirdCard(true); }} className="hq-action"
+        <button type="button" onClick={() => { setDrawerOpen(true); setShowWirdCard(true); }} className="hq-action hq-wird-btn"
           style={{ flex: 1, maxWidth: 180, fontSize: 15, background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK }}>
           <BookOpen size={18} /> وردي
         </button>
