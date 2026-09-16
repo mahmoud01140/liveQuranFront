@@ -1,10 +1,10 @@
 // App constants
 
 export const LEVELS = {
-  foundation: { label: 'التأسيس', color: '#1D9E75', bg: '#E1F5EE' },
-  memorization: { label: 'التحفيظ', color: '#534AB7', bg: '#EDE9FF' },
-  teacher_prep: { label: 'إعداد معلم', color: '#BA7517', bg: '#FEF3E2' },
-  senior: { label: 'كبار السن', color: '#C9A227', bg: '#FEFCE8' },
+  foundation: { label: 'التأسيس', color: '#177B58', bg: '#E2EFE7' },
+  memorization: { label: 'التحفيظ', color: '#4A3F6B', bg: '#ECE9F4' },
+  teacher_prep: { label: 'إعداد معلم', color: '#4A3F6B', bg: '#ECE9F4' },
+  senior: { label: 'كبار السن', color: '#2A2438', bg: '#FBF7EE' },
 };
 
 export const REGISTRATION_TYPES = {

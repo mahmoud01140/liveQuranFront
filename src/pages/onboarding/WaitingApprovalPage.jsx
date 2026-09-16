@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Clock, CheckCircle, BookOpen, RefreshCw, LogOut } from 'lucide-react';
+import { motion, MotionConfig } from 'framer-motion';
+import { Clock, Check, BookOpen, RefreshCw, LogOut } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
-import { getLevelLabel } from '../../utils/helpers';
+import './Onboarding.css';
 
 export default function WaitingApprovalPage() {
   const { user, checkAuth, logout } = useAuthStore();
@@ -36,112 +36,106 @@ export default function WaitingApprovalPage() {
     navigate('/login');
   };
 
+  const steps = [
+    { label: 'إنشاء الحساب', done: true },
+    { label: 'امتحان تحديد المستوى', done: true },
+    { label: 'مراجعة النتائج', done: false, current: true },
+    { label: 'تعيين المجموعة', done: false },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 200 }}
-        className="w-full max-w-lg"
-      >
-        <div className="card-base p-8 text-center">
-          {/* Animated icon */}
-          <div className="relative mx-auto w-24 h-24 mb-6">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-              className="absolute inset-0 rounded-full border-4 border-dashed border-primary-200"
-            />
-            <div className="absolute inset-2 bg-gradient-quran rounded-full flex items-center justify-center shadow-green">
-              <Clock className="w-10 h-10 text-white" />
-            </div>
-          </div>
+    <MotionConfig reducedMotion="user">
+      <div className="onb" dir="rtl">
+        <div className="min-h-screen flex items-center justify-center px-4 py-12">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="w-full max-w-lg"
+          >
+            <div className="onb-card text-center">
+              {/* Calm status mark */}
+              <span
+                aria-hidden
+                className="mx-auto mb-6 flex items-center justify-center"
+                style={{ width: 88, height: 88, borderRadius: 22, background: '#E2EFE7' }}
+              >
+                <Clock size={40} style={{ color: '#177B58' }} />
+              </span>
 
-          <h1 className="text-2xl font-black text-gray-900 mb-3">
-            جارٍ مراجعة امتحانك
-          </h1>
+              <h1 className="font-extrabold mb-3" style={{ fontSize: '1.5rem', color: '#2A2438' }}>
+                جارٍ مراجعة امتحانك
+              </h1>
 
-          <p className="text-gray-500 leading-relaxed mb-6">
-            لقد أتممت امتحان تحديد المستوى بنجاح! 🎉
-            <br />
-            فريقنا يراجع إجاباتك وتسجيلاتك الشفهية لتحديد مستواك النهائي.
-          </p>
-
-          {/* Status steps */}
-          <div className="bg-gray-50 rounded-2xl p-5 mb-6 text-right">
-            <div className="space-y-4">
-              {[
-                { label: 'إنشاء الحساب', done: true },
-                { label: 'امتحان تحديد المستوى', done: true },
-                { label: 'مراجعة النتائج', done: false, current: true },
-                { label: 'تعيين المجموعة', done: false },
-              ].map((step, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    step.done ? 'bg-green-100 text-green-600' :
-                    step.current ? 'bg-primary-100 text-primary-500 animate-pulse' :
-                    'bg-gray-200 text-gray-400'
-                  }`}>
-                    {step.done ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      <span className="text-xs font-bold">{i + 1}</span>
-                    )}
-                  </div>
-                  <span className={`text-sm font-medium ${
-                    step.done ? 'text-green-700' :
-                    step.current ? 'text-primary-600 font-bold' :
-                    'text-gray-400'
-                  }`}>
-                    {step.label}
-                    {step.current && (
-                      <span className="text-xs text-primary-400 mr-2">⏳ قيد المراجعة</span>
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Expected time */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex gap-3 text-right">
-            <Clock className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-bold text-amber-800">الوقت المتوقع</p>
-              <p className="text-xs text-amber-700">
-                ستصلك رسالة إشعار خلال <strong>24 ساعة</strong> عند اكتمال المراجعة.
+              <p className="mb-6" style={{ color: '#756E85', lineHeight: 1.8 }}>
+                لقد أتممت امتحان تحديد المستوى بنجاح!
+                <br />
+                فريقنا يراجع إجاباتك وتسجيلاتك الشفهية لتحديد مستواك النهائي.
               </p>
+
+              {/* Status steps */}
+              <ol className="rounded-2xl p-5 mb-6 text-right" style={{ background: '#FBF7EE', listStyle: 'none', margin: 0 }}>
+                <div className="space-y-4">
+                  {steps.map((step, i) => (
+                    <li key={i} className="flex items-center gap-3">
+                      <span aria-hidden className={`onb-stepdot${step.done ? ' done' : step.current ? ' now' : ''}`}>
+                        {step.done ? <Check size={14} strokeWidth={3.5} /> : (i + 1)}
+                      </span>
+                      <span className="text-sm" style={{
+                        fontWeight: step.current ? 800 : 500,
+                        color: step.done ? '#2A2438' : step.current ? '#0F5940' : '#756E85',
+                      }}>
+                        {step.label}
+                        {step.current && (
+                          <span className="mr-2" style={{ fontSize: '0.8125rem', color: '#756E85' }}>— قيد المراجعة</span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </div>
+              </ol>
+
+              {/* Expected time */}
+              <div className="onb-notice mb-6 text-right">
+                <Clock className="w-5 h-5 flex-none mt-0.5" style={{ color: '#B45309' }} aria-hidden />
+                <div>
+                  <p className="text-sm font-bold" style={{ color: '#2A2438' }}>الوقت المتوقع</p>
+                  <p className="text-sm" style={{ color: '#756E85' }}>
+                    ستصلك رسالة إشعار خلال <strong>24 ساعة</strong> عند اكتمال المراجعة.
+                  </p>
+                </div>
+              </div>
+
+              {user?.placementExamScore !== undefined && (
+                <div className="rounded-xl p-4 mb-6 flex items-center justify-between" style={{ background: '#E2EFE7' }}>
+                  <span className="text-sm font-medium" style={{ color: '#0F5940' }}>نتيجتك المبدئية</span>
+                  <span className="text-lg font-black" style={{ color: '#0F5940' }}>{user.placementExamScore}%</span>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex flex-col gap-3">
+                <button onClick={handleRefresh} className="onb-btn onb-btn-block">
+                  <RefreshCw className="w-4 h-4" aria-hidden />
+                  تحديث الحالة
+                </button>
+                <button onClick={handleLogout} className="onb-ghost w-full justify-center text-sm">
+                  <LogOut className="w-4 h-4" aria-hidden />
+                  تسجيل الخروج
+                </button>
+              </div>
             </div>
-          </div>
 
-          {user?.placementExamScore !== undefined && (
-            <div className="bg-primary-50 rounded-xl p-4 mb-6 flex items-center justify-between">
-              <span className="text-sm text-primary-700 font-medium">نتيجتك المبدئية</span>
-              <span className="text-lg font-black text-primary-600">{user.placementExamScore}%</span>
+            {/* Footer */}
+            <div className="text-center mt-6">
+              <div className="flex items-center justify-center gap-2" style={{ color: '#756E85' }}>
+                <BookOpen className="w-4 h-4" style={{ color: '#177B58' }} aria-hidden />
+                <span style={{ fontSize: '0.8125rem' }}>منصة الحلقة لتحفيظ القرآن الكريم</span>
+              </div>
             </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex flex-col gap-3">
-            <button onClick={handleRefresh} className="btn-primary w-full py-3">
-              <RefreshCw className="w-4 h-4" />
-              تحديث الحالة
-            </button>
-            <button onClick={handleLogout} className="btn-ghost w-full justify-center text-gray-400 text-sm">
-              <LogOut className="w-4 h-4" />
-              تسجيل الخروج
-            </button>
-          </div>
+          </motion.div>
         </div>
-
-        {/* Footer */}
-        <div className="text-center mt-6">
-          <div className="flex items-center justify-center gap-2 text-gray-400">
-            <BookOpen className="w-4 h-4 text-primary-300" />
-            <span className="text-xs">منصة تحفيظ القرآن الكريم</span>
-          </div>
-        </div>
-      </motion.div>
-    </div>
+      </div>
+    </MotionConfig>
   );
 }

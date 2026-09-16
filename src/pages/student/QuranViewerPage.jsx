@@ -282,7 +282,7 @@ export default function QuranViewerPage() {
                     <span aria-hidden style={{ width: 9, height: 9, borderRadius: 9999, background: HQ.MENTOR }} /> محفوظ
                   </span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <span aria-hidden style={{ width: 9, height: 9, borderRadius: 9999, background: '#D9A441' }} /> متشابهة
+                    <span aria-hidden style={{ width: 9, height: 9, borderRadius: 9999, background: '#B45309' }} /> متشابهة
                   </span>
                   <strong style={{ color: HQ.INK }}>{memorizedCount} / {totalVerses}</strong>
                 </div>
@@ -347,8 +347,8 @@ export default function QuranViewerPage() {
                             title="آية مشابهة — اضغط لمعرفة الفارق"
                             style={{
                               display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer',
-                              background: '#F8EDD3', color: HQ.INK, border: '1px solid #D9A441',
-                              fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 9999,
+                              background: HQ.SURFACE, color: '#B45309', border: '1px solid #B45309',
+                              fontSize: '0.8125rem', fontWeight: 800, padding: '3px 10px', borderRadius: 9999,
                               verticalAlign: 'middle', margin: '0 4px', minHeight: 30,
                             }}>
                             <Sparkles size={12} /> متشابهة
@@ -398,14 +398,14 @@ export default function QuranViewerPage() {
                   <p style={{ margin: '0 0 4px', fontWeight: 800, color: HQ.MENTOR }}>سورة {surah?.name || ''} — آية {selectedMutashabih.verseNumber}</p>
                   <p className="hq-quran" style={{ margin: 0, fontSize: 18, color: HQ.INK }}>«{selectedMutashabih.verseText}»</p>
                 </div>
-                <div style={{ background: '#F8EDD3', padding: 14, borderRadius: 12, border: '1px solid #D9A441', fontSize: 13 }}>
+                <div style={{ background: HQ.PAPER, padding: 14, borderRadius: 12, border: `1px solid ${HQ.LINE}`, fontSize: 13 }}>
                   <p style={{ margin: '0 0 4px', fontWeight: 800, color: HQ.INK }}>الموضع المشابه — سورة {selectedMutashabih.similarSurahName} — آية {selectedMutashabih.similarVerseNumber}</p>
                   <p className="hq-quran" style={{ margin: 0, fontSize: 18, color: HQ.INK }}>«{selectedMutashabih.similarVerseText}»</p>
                 </div>
               </div>
-              <div style={{ background: '#D9A441', padding: 14, borderRadius: 12, marginBottom: 16 }}>
+              <div style={{ background: HQ.PAPER, padding: 14, borderRadius: 12, border: '1px solid #B45309', marginBottom: 16 }}>
                 <p style={{ margin: '0 0 4px', fontWeight: 900, color: HQ.INK, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Info size={15} /> الفارق والضابط
+                  <Info size={15} color="#B45309" /> الفارق والضابط
                 </p>
                 <p style={{ margin: 0, fontWeight: 700, color: HQ.INK, fontSize: 14 }}>{selectedMutashabih.rule}</p>
                 {selectedMutashabih.difference && (

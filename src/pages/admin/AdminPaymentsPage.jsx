@@ -1,17 +1,27 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import {
   CreditCard, CheckCircle2, AlertCircle, Clock, Search, Filter,
   Eye, Check, X, Settings, RefreshCw, Smartphone, Building2,
-  DollarSign, Users, ShieldAlert, ArrowUpRight, Phone, MessageSquare
+  DollarSign, Users, ShieldAlert, ArrowUpRight, Phone, MessageSquare,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import Pagination from '../../components/shared/Pagination';
 import '../../components/halaqa/halaqa.css';
+import { HQ, HqBadge } from '../../components/halaqa/primitives';
 import api from '../../services/api';
 import { formatDateAr, getInitials, getAvatarColor } from '../../utils/helpers';
+
+/* Payments desk — requests, receipts and account settings.
+   Same tabs, filters, modals and payloads as before; visual only. */
+
+const field = {
+  width: '100%', minHeight: 48, background: HQ.SURFACE, color: HQ.INK,
+  border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '12px 16px',
+  fontSize: 14, fontFamily: 'inherit',
+};
 
 export default function AdminPaymentsPage() {
   const [activeTab, setActiveTab] = useState('requests'); // 'requests' | 'settings'
@@ -197,129 +207,177 @@ export default function AdminPaymentsPage() {
     return studentName.includes(q) || email.includes(q) || ref.includes(q) || phone.includes(q);
   });
 
-  return (
-    <PageLayout>
-      <div className="halaqa" style={{ maxWidth: 1040, margin: '0 auto' }}>
-      <div>
+  const panel = {
+    background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 20,
+  };
+  const lbl = { fontSize: 14, fontWeight: 700, color: HQ.INK, marginBottom: 6, display: 'block' };
+  const lblSm = { fontSize: '0.8125rem', fontWeight: 700, color: HQ.INK, marginBottom: 6, display: 'block' };
+  const primaryBtn = {
+    minHeight: 48, padding: '12px 20px', borderRadius: 12, border: 'none',
+    background: HQ.MENTOR, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  };
+  const iconBtn = {
+    minWidth: 44, minHeight: 44, borderRadius: 12, border: `1px solid ${HQ.LINE}`, background: HQ.SURFACE,
+    color: HQ.MUTED, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  };
 
+  const statusChip = (status) => {
+    if (status === 'approved') return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', fontWeight: 800,
+        background: '#E2EFE7', color: '#0F5940', borderRadius: 9999, padding: '4px 12px',
+      }}>
+        <CheckCircle2 size={14} aria-hidden />
+        معتمد ومفعل
+      </span>
+    );
+    if (status === 'rejected') return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', fontWeight: 800,
+        background: HQ.SURFACE, color: '#C2410C', border: '1px solid #C2410C', borderRadius: 9999, padding: '4px 12px',
+      }}>
+        <AlertCircle size={14} aria-hidden />
+        مرفوض
+      </span>
+    );
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', fontWeight: 800,
+        background: HQ.PAPER, color: '#B45309', border: '1px solid #B45309', borderRadius: 9999, padding: '4px 12px',
+      }}>
+        <Clock size={14} aria-hidden />
+        قيد المراجعة
+      </span>
+    );
+  };
+
+  return (
+    <MotionConfig reducedMotion="user">
+      <PageLayout>
+        <div className="halaqa" style={{ maxWidth: 1040, margin: '0 auto' }}>
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="badge-green text-xs">إدارة النظام والمالية</span>
-                <span className="badge-purple text-xs">فودافون كاش & انستاباي</span>
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <HqBadge tone="mentor">إدارة النظام والمالية</HqBadge>
+                <HqBadge tone="neutral">فودافون كاش وانستاباي</HqBadge>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-gray-900">
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: HQ.INK, margin: '0 0 4px' }}>
                 إدارة المدفوعات والاشتراكات
               </h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm" style={{ color: HQ.MUTED, margin: 0 }}>
                 مراجعة إيصالات التحويل، تفعيل باقات الطلاب، وضبط بيانات محافظ فودافون كاش وحسابات انستاباي
               </p>
             </div>
 
-            {/* Tab navigation buttons */}
-            <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-2xl self-start md:self-auto">
+            {/* Tab navigation */}
+            <div className="hq-tabs" role="tablist" aria-label="أقسام المدفوعات" style={{ alignSelf: 'flex-start' }}>
               <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'requests'}
                 onClick={() => setActiveTab('requests')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                  activeTab === 'requests'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}
               >
-                <CreditCard className="w-4 h-4 text-primary-500" />
+                <CreditCard size={15} aria-hidden />
                 طلبات التحويل ({stats.pendingCount > 0 ? `${stats.pendingCount} معلق` : payments.length})
               </button>
               <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'settings'}
                 onClick={() => setActiveTab('settings')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                  activeTab === 'settings'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}
               >
-                <Settings className="w-4 h-4 text-purple-600" />
+                <Settings size={15} aria-hidden />
                 إعدادات الحسابات والأسعار
               </button>
             </div>
           </div>
 
           {/* Stats Bar */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {/* Total Revenue */}
-            <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                <DollarSign className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-gray-900">
-                  {stats.totalRevenue.toLocaleString()} <span className="text-xs font-normal text-gray-500">ج.م</span>
-                </p>
-                <p className="text-xs text-gray-500 font-semibold">إجمالي المبيعات المعتمدة</p>
-              </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8" aria-label="ملخص المدفوعات">
+            <div className="flex items-center gap-4 p-5" style={panel}>
+              <span aria-hidden style={{
+                width: 48, height: 48, borderRadius: 14, background: '#E2EFE7', color: HQ.MENTOR,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+              }}>
+                <DollarSign size={23} />
+              </span>
+              <span>
+                <span className="block font-extrabold" style={{ fontSize: '1.5rem', color: HQ.INK, fontVariantNumeric: 'tabular-nums' }}>
+                  {stats.totalRevenue.toLocaleString()} <span className="font-normal" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>ج.م</span>
+                </span>
+                <span className="block text-xs font-bold" style={{ color: HQ.MUTED }}>إجمالي المبيعات المعتمدة</span>
+              </span>
             </div>
 
-            {/* Pending Requests */}
-            <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
+            <div className="flex items-center gap-4 p-5 relative" style={panel}>
               {stats.pendingCount > 0 && (
-                <span className="absolute top-3 left-3 w-2.5 h-2.5 rounded-full" style={{ background: '#B45309' }} />
+                <span aria-hidden style={{ position: 'absolute', top: 12, left: 12, width: 10, height: 10, borderRadius: 9999, background: '#B45309' }} />
               )}
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-                <Clock className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-amber-700">{stats.pendingCount}</p>
-                <p className="text-xs text-gray-500 font-semibold">طلبات بانتظار المراجعة</p>
-              </div>
+              <span aria-hidden style={{
+                width: 48, height: 48, borderRadius: 14, background: HQ.PAPER, color: '#B45309',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+              }}>
+                <Clock size={23} />
+              </span>
+              <span>
+                <span className="block font-extrabold" style={{ fontSize: '1.5rem', color: '#B45309', fontVariantNumeric: 'tabular-nums' }}>{stats.pendingCount}</span>
+                <span className="block text-xs font-bold" style={{ color: HQ.MUTED }}>طلبات بانتظار المراجعة</span>
+              </span>
             </div>
 
-            {/* Approved Subscriptions */}
-            <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-primary-50 text-primary-600 flex items-center justify-center font-bold">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-primary-800">{stats.approvedCount}</p>
-                <p className="text-xs text-gray-500 font-semibold">اشتراكات مفعلة</p>
-              </div>
+            <div className="flex items-center gap-4 p-5" style={panel}>
+              <span aria-hidden style={{
+                width: 48, height: 48, borderRadius: 14, background: '#E2EFE7', color: HQ.MENTOR,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+              }}>
+                <CheckCircle2 size={23} />
+              </span>
+              <span>
+                <span className="block font-extrabold" style={{ fontSize: '1.5rem', color: HQ.MENTOR, fontVariantNumeric: 'tabular-nums' }}>{stats.approvedCount}</span>
+                <span className="block text-xs font-bold" style={{ color: HQ.MUTED }}>اشتراكات مفعلة</span>
+              </span>
             </div>
 
-            {/* Rejected Requests */}
-            <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center font-bold">
-                <AlertCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-red-700">{stats.rejectedCount}</p>
-                <p className="text-xs text-gray-500 font-semibold">طلبات مرفوضة</p>
-              </div>
+            <div className="flex items-center gap-4 p-5" style={panel}>
+              <span aria-hidden style={{
+                width: 48, height: 48, borderRadius: 14, background: HQ.PAPER, color: '#C2410C',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+              }}>
+                <AlertCircle size={23} />
+              </span>
+              <span>
+                <span className="block font-extrabold" style={{ fontSize: '1.5rem', color: '#C2410C', fontVariantNumeric: 'tabular-nums' }}>{stats.rejectedCount}</span>
+                <span className="block text-xs font-bold" style={{ color: HQ.MUTED }}>طلبات مرفوضة</span>
+              </span>
             </div>
           </div>
 
-          {/* ═════════════════════════════════════════════════════════════════════
-              TAB 1: REQUESTS & TRANSACTIONS
-          ═════════════════════════════════════════════════════════════════════ */}
+          {/* TAB 1: REQUESTS & TRANSACTIONS */}
           {activeTab === 'requests' && (
             <div className="space-y-6">
 
               {/* Filters & Search */}
-              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
-                {/* Search */}
+              <div className="p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4" style={panel}>
                 <div className="relative w-full md:w-80">
-                  <Search className="w-4 h-4 text-gray-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                  <Search size={15} color={HQ.MUTED} aria-hidden className="absolute right-3.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="بحث في طلبات الدفع"
                     placeholder="بحث باسم الطالب، الإيميل، رقم المحفظة..."
-                    className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-gray-200 text-xs focus:ring-2 focus:ring-primary-400 focus:border-transparent outline-none"
+                    className="w-full text-sm pr-10 focus:border-[#177B58] focus:outline-none"
+                    style={field}
                   />
                 </div>
 
-                {/* Filter buttons */}
                 <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                  {/* Status filter */}
-                  <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold">
+                  <div className="flex items-center gap-1 p-1 text-xs font-bold" role="group" aria-label="تصفية حسب الحالة"
+                    style={{ background: HQ.PAPER, borderRadius: 12 }}>
                     {[
                       { id: 'all', label: 'الكل' },
                       { id: 'pending', label: `بانتظار المراجعة (${stats.pendingCount})` },
@@ -328,20 +386,23 @@ export default function AdminPaymentsPage() {
                     ].map((st) => (
                       <button
                         key={st.id}
+                        type="button"
                         onClick={() => setStatusFilter(st.id)}
-                        className={`px-3 py-1.5 rounded-lg transition-all ${
-                          statusFilter === st.id
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-500 hover:text-gray-800'
-                        }`}
+                        aria-pressed={statusFilter === st.id}
+                        className="px-3 rounded-lg"
+                        style={{
+                          minHeight: 40, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.8125rem',
+                          background: statusFilter === st.id ? HQ.MENTOR : 'transparent',
+                          color: statusFilter === st.id ? '#fff' : HQ.MUTED, fontVariantNumeric: 'tabular-nums',
+                        }}
                       >
                         {st.label}
                       </button>
                     ))}
                   </div>
 
-                  {/* Method filter */}
-                  <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold">
+                  <div className="flex items-center gap-1 p-1 text-xs font-bold" role="group" aria-label="تصفية حسب الطريقة"
+                    style={{ background: HQ.PAPER, borderRadius: 12 }}>
                     {[
                       { id: 'all', label: 'جميع الطرق' },
                       { id: 'vodafone_cash', label: 'فودافون كاش' },
@@ -349,12 +410,15 @@ export default function AdminPaymentsPage() {
                     ].map((m) => (
                       <button
                         key={m.id}
+                        type="button"
                         onClick={() => setMethodFilter(m.id)}
-                        className={`px-3 py-1.5 rounded-lg transition-all ${
-                          methodFilter === m.id
-                            ? 'bg-white text-gray-900 shadow-sm'
-                            : 'text-gray-500 hover:text-gray-800'
-                        }`}
+                        aria-pressed={methodFilter === m.id}
+                        className="px-3 rounded-lg"
+                        style={{
+                          minHeight: 40, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: '0.8125rem',
+                          background: methodFilter === m.id ? HQ.MENTOR : 'transparent',
+                          color: methodFilter === m.id ? '#fff' : HQ.MUTED,
+                        }}
                       >
                         {m.label}
                       </button>
@@ -362,29 +426,30 @@ export default function AdminPaymentsPage() {
                   </div>
 
                   <button
+                    type="button"
                     onClick={fetchPayments}
                     disabled={isLoading}
-                    className="p-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
-                    title="تحديث"
+                    aria-label="تحديث القائمة"
+                    style={iconBtn}
                   >
-                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    <RefreshCw size={16} aria-hidden className={isLoading ? 'animate-spin' : ''} />
                   </button>
                 </div>
               </div>
 
               {/* Table */}
-              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+              <div style={{ ...panel, padding: 0, overflow: 'hidden' }}>
                 {isLoading ? (
                   <div className="py-20 flex justify-center">
                     <LoadingSpinner size="lg" text="جارٍ جلب طلبات الدفع..." />
                   </div>
                 ) : filteredPayments.length === 0 ? (
-                  <div className="text-center py-16 text-gray-400">
-                    <CreditCard className="w-12 h-12 mx-auto mb-2 text-gray-300 stroke-1" />
-                    <p className="font-bold text-sm text-gray-600">لا توجد طلبات تطابق الفلتر المختار</p>
+                  <div className="text-center py-16" style={{ color: HQ.MUTED }}>
+                    <CreditCard size={46} color={HQ.LINE} style={{ margin: '0 auto 8px' }} aria-hidden />
+                    <p className="font-bold text-sm" style={{ color: HQ.INK, margin: 0 }}>لا توجد طلبات تطابق الفلتر المختار</p>
                   </div>
                 ) : (
-                  <div className="hq-table-wrap">
+                  <div className="hq-table-wrap" style={{ border: 'none', borderRadius: 0 }}>
                     <table className="hq-table">
                       <thead>
                         <tr>
@@ -398,138 +463,143 @@ export default function AdminPaymentsPage() {
                           <th style={{ textAlign: 'center' }}>الإجراءات</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100 text-gray-700">
+                      <tbody>
                         {filteredPayments.map((payment) => {
                           const isVodafone = payment.method === 'vodafone_cash';
                           const userName = `${payment.user?.firstName || ''} ${payment.user?.lastName || ''}`.trim() || 'طالب';
 
                           return (
-                            <tr key={payment._id} className="hover:bg-gray-50/50 transition-colors">
-                              {/* Student info */}
-                              <td className="py-4 pr-6">
+                            <tr key={payment._id}>
+                              <td>
                                 <div className="flex items-center gap-3">
-                                  <div
-                                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0"
-                                    style={{ backgroundColor: getAvatarColor(userName) }}
-                                  >
+                                  <span aria-hidden className="avatar-circle"
+                                    style={{
+                                      width: 40, height: 40, fontSize: 14, flex: 'none',
+                                      backgroundColor: getAvatarColor(userName),
+                                    }}>
                                     {getInitials(payment.user?.firstName, payment.user?.lastName)}
-                                  </div>
-                                  <div>
-                                    <p className="font-bold text-gray-900 text-sm">{userName}</p>
-                                    <p className="text-xs text-gray-400">{payment.user?.email || '—'}</p>
-                                  </div>
+                                  </span>
+                                  <span>
+                                    <span className="font-bold text-sm" style={{ color: HQ.INK, display: 'block' }}>{userName}</span>
+                                    <span className="text-xs" style={{ color: HQ.MUTED, display: 'block' }}>{payment.user?.email || '—'}</span>
+                                  </span>
                                 </div>
                               </td>
 
-                              {/* Plan & cycle */}
-                              <td className="py-4">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary-100 text-primary-800">
+                              <td>
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 9999,
+                                  fontSize: '0.8125rem', fontWeight: 800, background: HQ.PAPER, color: HQ.INK,
+                                  border: `1px solid ${HQ.LINE}`,
+                                }}>
                                   الاشتراك الموحد
                                 </span>
-                                <span className="text-xs text-gray-400 block mt-1">
+                                <span className="text-xs block mt-1" style={{ color: HQ.MUTED }}>
                                   {payment.billingCycle === 'annual' ? 'اشتراك سنوي (365 يوم)'
                                     : payment.billingCycle === 'quarterly' ? '3 شهور (90 يوم)'
                                     : 'شهري (30 يوم)'}
                                 </span>
                               </td>
 
-                              {/* Amount */}
-                              <td className="py-4 font-black text-gray-900">
+                              <td className="font-black" style={{ color: HQ.INK, fontVariantNumeric: 'tabular-nums' }}>
                                 {payment.amount} {payment.currency === 'EGP' ? 'ج.م' : 'ر.س'}
                               </td>
 
-                              {/* Method */}
-                              <td className="py-4">
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
-                                  isVodafone ? 'bg-red-50 text-red-700 border border-red-200/50' : 'bg-purple-50 text-purple-700 border border-purple-200/50'
-                                }`}>
-                                  {isVodafone ? 'فودافون كاش' : 'انستاباي'}
+                              <td>
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 9999,
+                                  fontSize: '0.8125rem', fontWeight: 800, background: HQ.PAPER, color: HQ.INK,
+                                  border: `1px solid ${HQ.LINE}`,
+                                }}>
+                                  {isVodafone
+                                    ? <><Smartphone size={13} aria-hidden /> فودافون كاش</>
+                                    : <><Building2 size={13} aria-hidden /> انستاباي</>}
                                 </span>
                               </td>
 
-                              {/* Sender details */}
-                              <td className="py-4 text-xs">
-                                <p className="font-mono font-bold text-gray-800">
+                              <td className="text-xs">
+                                <p className="font-bold" style={{ color: HQ.INK, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
                                   {payment.senderPhone || payment.senderName || '—'}
                                 </p>
                                 {payment.referenceNumber && (
-                                  <p className="text-[11px] text-gray-400 font-mono mt-0.5">
+                                  <p className="mt-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED, fontVariantNumeric: 'tabular-nums', margin: 0 }}>
                                     مرجع: {payment.referenceNumber}
                                   </p>
                                 )}
                               </td>
 
-                              {/* Receipt preview button */}
-                              <td className="py-4">
+                              <td>
                                 {payment.receiptUrl ? (
                                   <button
+                                    type="button"
                                     onClick={() => setPreviewReceiptUrl(payment.receiptUrl)}
-                                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary-50 hover:bg-primary-100 text-primary-700 text-xs font-bold transition-all shadow-sm"
+                                    className="font-bold"
+                                    style={{
+                                      display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 44,
+                                      padding: '8px 14px', borderRadius: 12, cursor: 'pointer',
+                                      background: HQ.SURFACE, color: HQ.MENTOR, border: `1.5px solid ${HQ.MENTOR}`,
+                                      fontSize: '0.8125rem',
+                                    }}
                                   >
-                                    <Eye className="w-3.5 h-3.5" />
+                                    <Eye size={14} aria-hidden />
                                     معاينة الإيصال
                                   </button>
                                 ) : (
-                                  <span className="text-xs text-gray-400">لا يوجد صورة</span>
+                                  <span className="text-xs" style={{ color: HQ.MUTED }}>لا يوجد صورة</span>
                                 )}
                               </td>
 
-                              {/* Status */}
-                              <td className="py-4">
-                                {payment.status === 'approved' ? (
-                                  <span className="badge-green text-xs">
-                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                    معتمد ومفعل
-                                  </span>
-                                ) : payment.status === 'rejected' ? (
-                                  <div>
-                                    <span className="badge-red text-xs">
-                                      <AlertCircle className="w-3.5 h-3.5" />
-                                      مرفوض
-                                    </span>
-                                    {payment.rejectionReason && (
-                                      <p className="text-[11px] text-red-600 mt-1 max-w-xs truncate" title={payment.rejectionReason}>
-                                        {payment.rejectionReason}
-                                      </p>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <span className="badge-gold text-xs animate-pulse">
-                                    <Clock className="w-3.5 h-3.5" />
-                                    قيد المراجعة
-                                  </span>
+                              <td>
+                                {statusChip(payment.status)}
+                                {payment.status === 'rejected' && payment.rejectionReason && (
+                                  <p className="mt-1 truncate" title={payment.rejectionReason}
+                                    style={{ fontSize: '0.8125rem', color: '#C2410C', maxWidth: 160, margin: 0 }}>
+                                    {payment.rejectionReason}
+                                  </p>
                                 )}
                               </td>
 
-                              {/* Actions */}
-                              <td className="py-4 pl-6 text-center">
+                              <td className="text-center">
                                 {payment.status === 'pending' ? (
                                   <div className="flex items-center justify-center gap-2">
                                     <button
+                                      type="button"
                                       onClick={() => {
                                         setApproveModalPayment(payment);
                                         setCustomDays(payment.activationDurationDays || 30);
                                       }}
-                                      className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1"
+                                      className="font-bold"
+                                      style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 44,
+                                        padding: '8px 14px', borderRadius: 12, cursor: 'pointer',
+                                        background: HQ.MENTOR, color: '#fff', border: 'none', fontSize: '0.8125rem',
+                                      }}
                                       title="اعتماد وتفعيل الاشتراك"
                                     >
-                                      <Check className="w-3.5 h-3.5" />
+                                      <Check size={14} aria-hidden />
                                       قبول
                                     </button>
                                     <button
+                                      type="button"
                                       onClick={() => {
                                         setRejectModalPayment(payment);
                                         setRejectReason('');
                                       }}
-                                      className="px-3 py-1.5 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold transition-all flex items-center gap-1"
+                                      className="font-bold"
+                                      style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 44,
+                                        padding: '8px 14px', borderRadius: 12, cursor: 'pointer',
+                                        background: HQ.SURFACE, color: '#C2410C', border: '1px solid #C2410C',
+                                        fontSize: '0.8125rem',
+                                      }}
                                       title="رفض الطلب"
                                     >
-                                      <X className="w-3.5 h-3.5" />
+                                      <X size={14} aria-hidden />
                                       رفض
                                     </button>
                                   </div>
                                 ) : (
-                                  <span className="text-xs text-gray-400">
+                                  <span className="text-xs" style={{ color: HQ.MUTED }}>
                                     تمت المراجعة بواسطة {payment.reviewedBy?.firstName || 'المسؤول'}
                                   </span>
                                 )}
@@ -554,57 +624,58 @@ export default function AdminPaymentsPage() {
                   showPageSize={true}
                   pageSizeOptions={[10, 15, 30, 50]}
                   itemName="طلب سداد"
-                  className="border-t border-gray-100 p-4"
+                  className="p-4"
                 />
               </div>
 
             </div>
           )}
 
-          {/* ═════════════════════════════════════════════════════════════════════
-              TAB 2: PAYMENT SETTINGS (VODAFONE & INSTAPAY ACCOUNTS)
-          ═════════════════════════════════════════════════════════════════════ */}
+          {/* TAB 2: PAYMENT SETTINGS */}
           {activeTab === 'settings' && (
             <form onSubmit={handleSaveSettings} className="space-y-8">
 
               {/* Vodafone Cash Configuration Card */}
-              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8">
-                <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-6">
-                  <div className="w-10 h-10 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-md">
-                    <Smartphone className="w-5 h-5" />
-                  </div>
+              <div style={panel}>
+                <div className="flex items-center gap-3 pb-4 mb-6" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
+                  <span aria-hidden style={{
+                    width: 40, height: 40, borderRadius: 14, background: '#E2EFE7', color: HQ.MENTOR,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+                  }}>
+                    <Smartphone size={19} />
+                  </span>
                   <div>
-                    <h2 className="text-lg font-black text-gray-900">إعدادات فودافون كاش (Vodafone Cash)</h2>
-                    <p className="text-xs text-gray-500 mt-0.5">تحديد أرقام المحافظ المعتمدة للتحويل والتعليمات المعروضة للطلاب</p>
+                    <h2 className="font-extrabold" style={{ fontSize: '1.25rem', color: HQ.INK, margin: 0 }}>إعدادات فودافون كاش (Vodafone Cash)</h2>
+                    <p className="text-xs mt-0.5" style={{ color: HQ.MUTED, margin: 0 }}>تحديد أرقام المحافظ المعتمدة للتحويل والتعليمات المعروضة للطلاب</p>
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                    <label htmlFor="pay-voda-nums" style={lblSm}>
                       أرقام فودافون كاش (مفصولة بفاصلة إن وجد أكثر من رقم) *
                     </label>
                     <input
+                      id="pay-voda-nums"
                       type="text"
                       required
                       value={Array.isArray(settings.vodafoneCashNumbers) ? settings.vodafoneCashNumbers.join(', ') : settings.vodafoneCashNumbers}
                       onChange={(e) => setSettings({ ...settings, vodafoneCashNumbers: e.target.value.split(',').map(s => s.trim()) })}
                       placeholder="01012345678, 01098765432"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 outline-none font-mono"
+                      className="focus:border-[#177B58] focus:outline-none"
+                      style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      حالة فودافون كاش
-                    </label>
+                    <label style={lblSm}>حالة فودافون كاش</label>
                     <div className="flex items-center gap-4 mt-3">
-                      <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold">
+                      <label className="flex items-center gap-2 cursor-pointer text-sm font-bold" style={{ color: HQ.INK, minHeight: 48 }}>
                         <input
                           type="checkbox"
                           checked={settings.vodafoneEnabled}
                           onChange={(e) => setSettings({ ...settings, vodafoneEnabled: e.target.checked })}
-                          className="w-4 h-4 rounded text-primary-600 focus:ring-primary-400"
+                          style={{ width: 20, height: 20, accentColor: HQ.MENTOR }}
                         />
                         تفعيل فودافون كاش كطريقة دفع نشطة
                       </label>
@@ -612,85 +683,84 @@ export default function AdminPaymentsPage() {
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      إرشادات التحويل للطلاب
-                    </label>
+                    <label htmlFor="pay-voda-inst" style={lblSm}>إرشادات التحويل للطلاب</label>
                     <textarea
+                      id="pay-voda-inst"
                       rows={3}
                       value={settings.vodafoneInstructions}
                       onChange={(e) => setSettings({ ...settings, vodafoneInstructions: e.target.value })}
                       placeholder="قم بالتحويل عبر كود *9*7*الرقم*المبلغ# أو تطبيق أنا فودافون..."
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 outline-none"
+                      className="focus:border-[#177B58] focus:outline-none" style={field}
                     />
                   </div>
                 </div>
               </div>
 
               {/* InstaPay Configuration Card */}
-              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8">
-                <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-6">
-                  <div className="w-10 h-10 rounded-2xl bg-purple-700 text-white flex items-center justify-center shadow-md">
-                    <Building2 className="w-5 h-5" />
-                  </div>
+              <div style={panel}>
+                <div className="flex items-center gap-3 pb-4 mb-6" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
+                  <span aria-hidden style={{
+                    width: 40, height: 40, borderRadius: 14, background: '#E2EFE7', color: HQ.MENTOR,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+                  }}>
+                    <Building2 size={19} />
+                  </span>
                   <div>
-                    <h2 className="text-lg font-black text-gray-900">إعدادات انستاباي (InstaPay Egypt)</h2>
-                    <p className="text-xs text-gray-500 mt-0.5">تحديد العنوان اللحظي (IPA) ورقم الهاتف واسم الحساب المستلم</p>
+                    <h2 className="font-extrabold" style={{ fontSize: '1.25rem', color: HQ.INK, margin: 0 }}>إعدادات انستاباي (InstaPay Egypt)</h2>
+                    <p className="text-xs mt-0.5" style={{ color: HQ.MUTED, margin: 0 }}>تحديد العنوان اللحظي (IPA) ورقم الهاتف واسم الحساب المستلم</p>
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      عنوان الدفع اللحظي للانستاباي (IPA Address) *
-                    </label>
+                    <label htmlFor="pay-ipa" style={lblSm}>عنوان الدفع اللحظي للانستاباي (IPA Address) *</label>
                     <input
+                      id="pay-ipa"
                       type="text"
                       required
                       value={settings.instaPayAddress}
                       onChange={(e) => setSettings({ ...settings, instaPayAddress: e.target.value })}
                       placeholder="academy@instapay"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 outline-none font-mono"
+                      className="focus:border-[#177B58] focus:outline-none"
+                      style={{ ...field, direction: 'ltr', textAlign: 'left' }} dir="ltr"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      اسم صاحب الحساب المستلم *
-                    </label>
+                    <label htmlFor="pay-ipa-name" style={lblSm}>اسم صاحب الحساب المستلم *</label>
                     <input
+                      id="pay-ipa-name"
                       type="text"
                       required
                       value={settings.instaPayAccountName}
                       onChange={(e) => setSettings({ ...settings, instaPayAccountName: e.target.value })}
                       placeholder="أكاديمية تحفيظ القرآن الكريم"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 outline-none"
+                      className="focus:border-[#177B58] focus:outline-none" style={field}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      رقم الهاتف المرتبط بانستاباي
-                    </label>
+                    <label htmlFor="pay-ipa-phone" style={lblSm}>رقم الهاتف المرتبط بانستاباي</label>
                     <input
+                      id="pay-ipa-phone"
                       type="text"
                       value={settings.instaPayPhone}
                       onChange={(e) => setSettings({ ...settings, instaPayPhone: e.target.value })}
                       placeholder="01012345678"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 outline-none font-mono"
+                      className="focus:border-[#177B58] focus:outline-none"
+                      style={{ ...field, direction: 'ltr', textAlign: 'left', fontVariantNumeric: 'tabular-nums' }} dir="ltr"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      حالة انستاباي
-                    </label>
+                    <label style={lblSm}>حالة انستاباي</label>
                     <div className="flex items-center gap-4 mt-3">
-                      <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold">
+                      <label className="flex items-center gap-2 cursor-pointer text-sm font-bold" style={{ color: HQ.INK, minHeight: 48 }}>
                         <input
                           type="checkbox"
                           checked={settings.instaPayEnabled}
                           onChange={(e) => setSettings({ ...settings, instaPayEnabled: e.target.checked })}
-                          className="w-4 h-4 rounded text-primary-600 focus:ring-primary-400"
+                          style={{ width: 20, height: 20, accentColor: HQ.MENTOR }}
                         />
                         تفعيل انستاباي كطريقة دفع نشطة
                       </label>
@@ -698,37 +768,40 @@ export default function AdminPaymentsPage() {
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      إرشادات التحويل عبر انستاباي للطلاب
-                    </label>
+                    <label htmlFor="pay-ipa-inst" style={lblSm}>إرشادات التحويل عبر انستاباي للطلاب</label>
                     <textarea
+                      id="pay-ipa-inst"
                       rows={3}
                       value={settings.instaPayInstructions}
                       onChange={(e) => setSettings({ ...settings, instaPayInstructions: e.target.value })}
                       placeholder="قم بالتحويل عبر تطبيق انستاباي إلى العنوان اللحظي أو رقم الهاتف الموضح..."
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-primary-400 outline-none"
+                      className="focus:border-[#177B58] focus:outline-none" style={field}
                     />
                   </div>
                 </div>
               </div>
 
               {/* Single Plan Pricing & Discounts */}
-              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8">
-                <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-6">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md">
-                    <DollarSign className="w-5 h-5" />
-                  </div>
+              <div style={panel}>
+                <div className="flex items-center gap-3 pb-4 mb-6" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
+                  <span aria-hidden style={{
+                    width: 40, height: 40, borderRadius: 14, background: '#E2EFE7', color: HQ.MENTOR,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+                  }}>
+                    <DollarSign size={19} />
+                  </span>
                   <div>
-                    <h2 className="text-lg font-black text-gray-900">إعدادات الخطة الموحدة والأسعار 💰</h2>
-                    <p className="text-xs text-gray-500 mt-0.5">تحديد رسوم الاشتراك الشهري الموحد ونسب الخصومات</p>
+                    <h2 className="font-extrabold" style={{ fontSize: '1.25rem', color: HQ.INK, margin: 0 }}>إعدادات الخطة الموحدة والأسعار</h2>
+                    <p className="text-xs mt-0.5" style={{ color: HQ.MUTED, margin: 0 }}>تحديد رسوم الاشتراك الشهري الموحد ونسب الخصومات</p>
                   </div>
                 </div>
 
                 <div className="space-y-6">
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">اسم الخطة / الباقة</label>
+                      <label htmlFor="pay-plan-name" style={lblSm}>اسم الخطة / الباقة</label>
                       <input
+                        id="pay-plan-name"
                         type="text"
                         value={settings.plan?.name || ''}
                         onChange={(e) => setSettings({
@@ -736,12 +809,13 @@ export default function AdminPaymentsPage() {
                           plan: { ...settings.plan, name: e.target.value }
                         })}
                         placeholder="الاشتراك الشهري في حلقات القرآن الكريم"
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-bold"
+                        className="font-bold focus:border-[#177B58] focus:outline-none" style={field}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">وصف الخطة</label>
+                      <label htmlFor="pay-plan-desc" style={lblSm}>وصف الخطة</label>
                       <input
+                        id="pay-plan-desc"
                         type="text"
                         value={settings.plan?.description || ''}
                         onChange={(e) => setSettings({
@@ -749,58 +823,66 @@ export default function AdminPaymentsPage() {
                           plan: { ...settings.plan, description: e.target.value }
                         })}
                         placeholder="اشتراك شهري شامل لكافة الحلقات والمتابعة"
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"
+                        className="focus:border-[#177B58] focus:outline-none" style={field}
                       />
                     </div>
                   </div>
 
-                  <div className="grid sm:grid-cols-4 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-200">
+                  <div className="grid sm:grid-cols-4 gap-4 p-4" style={{ background: HQ.PAPER, borderRadius: 12, border: `1px solid ${HQ.LINE}` }}>
                     <div>
-                      <label className="block text-xs font-bold text-gray-600 mb-1">السعر الشهري (EGP)</label>
+                      <label htmlFor="pay-egp" style={lblSm}>السعر الشهري (EGP)</label>
                       <input
+                        id="pay-egp"
                         type="number"
                         value={settings.plan?.priceEGP ?? 250}
                         onChange={(e) => setSettings({
                           ...settings,
                           plan: { ...settings.plan, priceEGP: Number(e.target.value) }
                         })}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white"
+                        className="font-bold focus:border-[#177B58] focus:outline-none"
+                        style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-600 mb-1">السعر الشهري (SAR)</label>
+                      <label htmlFor="pay-sar" style={lblSm}>السعر الشهري (SAR)</label>
                       <input
+                        id="pay-sar"
                         type="number"
                         value={settings.plan?.priceSAR ?? 49}
                         onChange={(e) => setSettings({
                           ...settings,
                           plan: { ...settings.plan, priceSAR: Number(e.target.value) }
                         })}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white"
+                        className="font-bold focus:border-[#177B58] focus:outline-none"
+                        style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-600 mb-1">خصم 3 شهور (%)</label>
+                      <label htmlFor="pay-q" style={lblSm}>خصم 3 شهور (%)</label>
                       <input
+                        id="pay-q"
                         type="number"
                         value={settings.plan?.quarterlyDiscountPercent ?? 10}
                         onChange={(e) => setSettings({
                           ...settings,
                           plan: { ...settings.plan, quarterlyDiscountPercent: Number(e.target.value) }
                         })}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white"
+                        className="font-bold focus:border-[#177B58] focus:outline-none"
+                        style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-600 mb-1">خصم السنوي (%)</label>
+                      <label htmlFor="pay-a" style={lblSm}>خصم السنوي (%)</label>
                       <input
+                        id="pay-a"
                         type="number"
                         value={settings.plan?.annualDiscountPercent ?? 20}
                         onChange={(e) => setSettings({
                           ...settings,
                           plan: { ...settings.plan, annualDiscountPercent: Number(e.target.value) }
                         })}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold bg-white"
+                        className="font-bold focus:border-[#177B58] focus:outline-none"
+                        style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
                       />
                     </div>
                   </div>
@@ -808,72 +890,82 @@ export default function AdminPaymentsPage() {
               </div>
 
               {/* Free Trial & Expiry Reminder Rules */}
-              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sm:p-8">
-                <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-6">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-md">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
+              <div style={panel}>
+                <div className="flex items-center gap-3 pb-4 mb-6" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
+                  <span aria-hidden style={{
+                    width: 40, height: 40, borderRadius: 14, background: '#E2EFE7', color: HQ.MENTOR,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+                  }}>
+                    <Clock size={19} />
+                  </span>
                   <div>
-                    <h2 className="text-lg font-black text-gray-900">قواعد المحاضرة التجريبية وتنبيهات نهاية الشهر ⏰</h2>
-                    <p className="text-xs text-gray-500 mt-0.5">تحديد عدد الجلسات المجانية المتاحة قبل طلب الاشتراك وأيام التنبيه قبل الانتهاء</p>
+                    <h2 className="font-extrabold" style={{ fontSize: '1.25rem', color: HQ.INK, margin: 0 }}>قواعد المحاضرة التجريبية وتنبيهات نهاية الشهر</h2>
+                    <p className="text-xs mt-0.5" style={{ color: HQ.MUTED, margin: 0 }}>تحديد عدد الجلسات المجانية المتاحة قبل طلب الاشتراك وأيام التنبيه قبل الانتهاء</p>
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-6">
-                  <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-200/60">
-                    <label className="block text-xs font-bold text-gray-900 mb-1.5">
-                      عدد المحاضرات التجريبية المجانية للطالب الجديد 🎁
+                  <div className="p-5" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
+                    <label htmlFor="pay-trial" className="block text-xs font-bold mb-1.5" style={{ color: HQ.INK }}>
+                      عدد المحاضرات التجريبية المجانية للطالب الجديد
                     </label>
                     <input
+                      id="pay-trial"
                       type="number"
                       min={1}
                       max={5}
                       value={settings.freeTrialSessionsCount ?? 1}
                       onChange={(e) => setSettings({ ...settings, freeTrialSessionsCount: Number(e.target.value) })}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-black bg-white"
+                      className="font-black focus:border-[#177B58] focus:outline-none"
+                      style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
                     />
-                    <p className="text-[11px] text-emerald-800 mt-2">
+                    <p className="mt-2" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>
                       الافتراضي (1 محاضرة): يسجل الطالب ويحضر أول جلسة مجاناً، ثم يُطلب منه الاشتراك لمتابعة الحضور.
                     </p>
                   </div>
 
-                  <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-200/60">
-                    <label className="block text-xs font-bold text-gray-900 mb-1.5">
+                  <div className="p-5" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
+                    <label htmlFor="pay-remind" className="block text-xs font-bold mb-1.5" style={{ color: HQ.INK }}>
                       بدء تنبيه السداد قبل انتهاء الاشتراك بـ (أيام)
                     </label>
                     <input
+                      id="pay-remind"
                       type="number"
                       min={1}
                       max={10}
                       value={settings.reminderDaysBeforeExpiry ?? 3}
                       onChange={(e) => setSettings({ ...settings, reminderDaysBeforeExpiry: Number(e.target.value) })}
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-black bg-white"
+                      className="font-black focus:border-[#177B58] focus:outline-none"
+                      style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
                     />
-                    <p className="text-[11px] text-amber-800 mt-2">
+                    <p className="mt-2" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>
                       الافتراضي (3 أيام): يظهر تنبيه للمستخدم بالسداد عند اقتراب نهاية الشهر. وإذا لم يدفع يُعلّق وصوله للحلقات مؤقتاً حتى السداد.
                     </p>
                   </div>
 
-                  {/* Support info */}
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">رقم واتساب المساعدة والدعم</label>
+                    <label htmlFor="pay-wa" style={lblSm}>رقم واتساب المساعدة والدعم</label>
                     <input
+                      id="pay-wa"
                       type="text"
                       value={settings.supportWhatsapp || ''}
                       onChange={(e) => setSettings({ ...settings, supportWhatsapp: e.target.value })}
                       placeholder="201012345678"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm font-mono"
+                      className="focus:border-[#177B58] focus:outline-none"
+                      style={{ ...field, direction: 'ltr', textAlign: 'left', fontVariantNumeric: 'tabular-nums' }} dir="ltr"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">هاتف خدمة العملاء</label>
+                    <label htmlFor="pay-support" style={lblSm}>هاتف خدمة العملاء</label>
                     <input
+                      id="pay-support"
                       type="text"
                       value={settings.supportPhone || ''}
                       onChange={(e) => setSettings({ ...settings, supportPhone: e.target.value })}
                       placeholder="01012345678"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm font-mono"
+                      className="focus:border-[#177B58] focus:outline-none"
+                      style={{ ...field, direction: 'ltr', textAlign: 'left', fontVariantNumeric: 'tabular-nums' }} dir="ltr"
                     />
                   </div>
                 </div>
@@ -884,9 +976,10 @@ export default function AdminPaymentsPage() {
                 <button
                   type="submit"
                   disabled={settingsLoading}
-                  className="px-8 py-3.5 rounded-2xl bg-gradient-quran text-white font-bold text-sm shadow-green hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
+                  className="hq-action"
+                  style={{ background: HQ.MENTOR, color: '#fff', fontSize: 14, padding: '0 32px', opacity: settingsLoading ? 0.6 : 1 }}
                 >
-                  {settingsLoading ? <LoadingSpinner size="sm" /> : <Check className="w-4 h-4" />}
+                  {settingsLoading ? <LoadingSpinner size="sm" color="white" /> : <Check size={15} aria-hidden />}
                   حفظ وتحديث الإعدادات
                 </button>
               </div>
@@ -896,9 +989,7 @@ export default function AdminPaymentsPage() {
 
         </div>
 
-      {/* ═════════════════════════════════════════════════════════════════════════
-          APPROVE PAYMENT MODAL
-      ═════════════════════════════════════════════════════════════════════════ */}
+      {/* APPROVE PAYMENT MODAL */}
       <AnimatePresence>
         {approveModalPayment && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -906,30 +997,33 @@ export default function AdminPaymentsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               onClick={() => !actionLoading && setApproveModalPayment(null)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0"
+              style={{ background: 'rgba(42,36,56,0.55)' }}
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full z-10 relative border border-gray-100 shadow-2xl"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.2 }}
+              role="dialog" aria-modal="true" aria-label="تأكيد اعتماد الدفعة"
+              className="max-w-md w-full z-10 relative"
+              style={{ ...panel, maxHeight: '90dvh', overflowY: 'auto' }}
             >
-              <h3 className="text-lg font-black text-gray-900 mb-2">
-                تأكيد اعتماد الدفعة وتفعيل الاشتراك 🎉
+              <h3 className="font-extrabold mb-2" style={{ fontSize: '1.25rem', color: HQ.INK, marginTop: 0 }}>
+                تأكيد اعتماد الدفعة وتفعيل الاشتراك
               </h3>
-              <p className="text-xs text-gray-500 leading-relaxed mb-6">
+              <p className="text-xs leading-relaxed mb-6" style={{ color: HQ.MUTED }}>
                 سيتم تفعيل باقة ({approveModalPayment.plan === 'premium' ? 'المميزة' : 'الأساسية'}) للطالب{' '}
-                <span className="font-bold text-gray-800">{approveModalPayment.user?.firstName} {approveModalPayment.user?.lastName}</span>{' '}
+                <span className="font-bold" style={{ color: HQ.INK }}>{approveModalPayment.user?.firstName} {approveModalPayment.user?.lastName}</span>{' '}
                 وإرسال إشعار لحظي له.
               </p>
 
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    مدة الاشتراك الممنوحة بالأيام:
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <span style={lblSm} id="pay-days-label">مدة الاشتراك الممنوحة بالأيام:</span>
+                  <div className="grid grid-cols-3 gap-2" role="group" aria-labelledby="pay-days-label">
                     {[
                       { days: 30, label: '30 يوماً' },
                       { days: 90, label: '90 يوماً' },
@@ -939,11 +1033,14 @@ export default function AdminPaymentsPage() {
                         key={d.days}
                         type="button"
                         onClick={() => setCustomDays(d.days)}
-                        className={`py-2 rounded-xl text-xs font-bold border transition-all ${
-                          customDays === d.days
-                            ? 'bg-primary-500 text-white border-primary-500 shadow-sm'
-                            : 'bg-gray-50 text-gray-700 border-gray-200'
-                        }`}
+                        aria-pressed={customDays === d.days}
+                        className="text-xs font-bold"
+                        style={{
+                          minHeight: 48, borderRadius: 12, cursor: 'pointer',
+                          border: `2px solid ${customDays === d.days ? HQ.MENTOR : HQ.LINE}`,
+                          background: customDays === d.days ? HQ.MENTOR : HQ.SURFACE,
+                          color: customDays === d.days ? '#fff' : HQ.MUTED, fontVariantNumeric: 'tabular-nums',
+                        }}
                       >
                         {d.label}
                       </button>
@@ -952,14 +1049,16 @@ export default function AdminPaymentsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">أو حدد عدد أيام مخصص:</label>
+                  <label htmlFor="pay-custom-days" style={lblSm}>أو حدد عدد أيام مخصص:</label>
                   <input
+                    id="pay-custom-days"
                     type="number"
                     value={customDays}
                     onChange={(e) => setCustomDays(Number(e.target.value))}
                     min={1}
                     max={1000}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm font-bold"
+                    className="font-bold focus:border-[#177B58] focus:outline-none"
+                    style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
                   />
                 </div>
               </div>
@@ -969,16 +1068,18 @@ export default function AdminPaymentsPage() {
                   type="button"
                   onClick={handleApprove}
                   disabled={actionLoading}
-                  className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+                  className="hq-action"
+                  style={{ flex: 1, background: HQ.MENTOR, color: '#fff', fontSize: 14, opacity: actionLoading ? 0.6 : 1 }}
                 >
-                  {actionLoading ? <LoadingSpinner size="sm" /> : <Check className="w-4 h-4" />}
+                  {actionLoading ? <LoadingSpinner size="sm" color="white" /> : <Check size={15} aria-hidden />}
                   تأكيد القبول والتفعيل
                 </button>
                 <button
                   type="button"
                   onClick={() => setApproveModalPayment(null)}
                   disabled={actionLoading}
-                  className="px-4 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-sm transition-all"
+                  className="hq-action"
+                  style={{ padding: '0 16px', background: HQ.PAPER, color: HQ.INK, fontSize: 14 }}
                 >
                   إلغاء
                 </button>
@@ -988,9 +1089,7 @@ export default function AdminPaymentsPage() {
         )}
       </AnimatePresence>
 
-      {/* ═════════════════════════════════════════════════════════════════════════
-          REJECT PAYMENT MODAL
-      ═════════════════════════════════════════════════════════════════════════ */}
+      {/* REJECT PAYMENT MODAL */}
       <AnimatePresence>
         {rejectModalPayment && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -998,23 +1097,27 @@ export default function AdminPaymentsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               onClick={() => !actionLoading && setRejectModalPayment(null)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0"
+              style={{ background: 'rgba(42,36,56,0.55)' }}
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full z-10 relative border border-gray-100 shadow-2xl"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.2 }}
+              role="dialog" aria-modal="true" aria-label="رفض طلب الدفع"
+              className="max-w-md w-full z-10 relative"
+              style={{ ...panel, maxHeight: '90dvh', overflowY: 'auto' }}
             >
-              <h3 className="text-lg font-black text-red-700 mb-2">
+              <h3 className="font-extrabold mb-2" style={{ fontSize: '1.25rem', color: '#C2410C', marginTop: 0 }}>
                 رفض طلب الدفع
               </h3>
-              <p className="text-xs text-gray-500 mb-4">
+              <p className="text-xs mb-4" style={{ color: HQ.MUTED }}>
                 يرجى كتابة سبب الرفض بوضوح ليتم إرساله للطالب في الإشعارات ليتمكن من معالجة المشكلة.
               </p>
 
-              {/* Quick reason options */}
               <div className="flex flex-wrap gap-1.5 mb-3">
                 {[
                   'صورة الإيصال غير واضحة',
@@ -1026,7 +1129,14 @@ export default function AdminPaymentsPage() {
                     key={reasonText}
                     type="button"
                     onClick={() => setRejectReason(reasonText)}
-                    className="text-[11px] bg-red-50 text-red-700 px-2.5 py-1 rounded-lg hover:bg-red-100 transition-colors font-medium"
+                    aria-pressed={rejectReason === reasonText}
+                    className="font-medium"
+                    style={{
+                      fontSize: '0.8125rem', padding: '8px 12px', borderRadius: 8, cursor: 'pointer', minHeight: 40,
+                      background: rejectReason === reasonText ? '#C2410C' : HQ.PAPER,
+                      color: rejectReason === reasonText ? '#fff' : HQ.INK,
+                      border: `1px solid ${rejectReason === reasonText ? '#C2410C' : HQ.LINE}`,
+                    }}
                   >
                     {reasonText}
                   </button>
@@ -1034,14 +1144,15 @@ export default function AdminPaymentsPage() {
               </div>
 
               <div className="mb-6">
-                <label className="block text-xs font-bold text-gray-700 mb-1">سبب الرفض *</label>
+                <label htmlFor="pay-reject-reason" style={lblSm}>سبب الرفض *</label>
                 <textarea
+                  id="pay-reject-reason"
                   rows={3}
                   required
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="اكتب سبب الرفض هنا..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-red-400 outline-none"
+                  className="focus:border-[#177B58] focus:outline-none" style={field}
                 />
               </div>
 
@@ -1050,16 +1161,18 @@ export default function AdminPaymentsPage() {
                   type="button"
                   onClick={handleReject}
                   disabled={actionLoading}
-                  className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2"
+                  className="hq-action"
+                  style={{ flex: 1, background: '#C2410C', color: '#fff', fontSize: 14, opacity: actionLoading ? 0.6 : 1 }}
                 >
-                  {actionLoading ? <LoadingSpinner size="sm" /> : <X className="w-4 h-4" />}
+                  {actionLoading ? <LoadingSpinner size="sm" color="white" /> : <X size={15} aria-hidden />}
                   تأكيد الرفض
                 </button>
                 <button
                   type="button"
                   onClick={() => setRejectModalPayment(null)}
                   disabled={actionLoading}
-                  className="px-4 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-sm transition-all"
+                  className="hq-action"
+                  style={{ padding: '0 16px', background: HQ.PAPER, color: HQ.INK, fontSize: 14 }}
                 >
                   إلغاء
                 </button>
@@ -1069,9 +1182,7 @@ export default function AdminPaymentsPage() {
         )}
       </AnimatePresence>
 
-      {/* ═════════════════════════════════════════════════════════════════════════
-          RECEIPT PREVIEW MODAL
-      ═════════════════════════════════════════════════════════════════════════ */}
+      {/* RECEIPT PREVIEW MODAL */}
       <AnimatePresence>
         {previewReceiptUrl && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1079,36 +1190,44 @@ export default function AdminPaymentsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               onClick={() => setPreviewReceiptUrl(null)}
-              className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+              className="fixed inset-0"
+              style={{ background: 'rgba(42,36,56,0.55)' }}
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl p-4 max-w-2xl w-full z-10 relative overflow-hidden"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.2 }}
+              role="dialog" aria-modal="true" aria-label="معاينة صورة إيصال التحويل"
+              className="max-w-2xl w-full z-10 relative overflow-hidden"
+              style={{ ...panel, padding: 16 }}
             >
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100">
-                <h4 className="font-bold text-gray-900 text-sm">معاينة صورة إيصال التحويل</h4>
+              <div className="flex items-center justify-between pb-3 mb-3" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
+                <h4 className="font-bold text-sm" style={{ color: HQ.INK, margin: 0 }}>معاينة صورة إيصال التحويل</h4>
                 <button
+                  type="button"
                   onClick={() => setPreviewReceiptUrl(null)}
-                  className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center text-xs"
+                  aria-label="إغلاق المعاينة"
+                  style={iconBtn}
                 >
-                  ✕
+                  <X size={16} aria-hidden />
                 </button>
               </div>
-              <div className="max-h-[75vh] overflow-y-auto flex justify-center bg-gray-900 rounded-2xl p-2">
+              <div className="overflow-y-auto flex justify-center rounded-2xl p-2" style={{ maxHeight: '75vh', background: HQ.PAPER }}>
                 <img
                   src={previewReceiptUrl}
-                  alt="Receipt Full"
-                  className="max-h-[70vh] object-contain rounded-lg"
+                  alt="صورة إيصال التحويل"
+                  className="rounded-lg"
+                  style={{ maxHeight: '70vh', objectFit: 'contain' }}
                 />
               </div>
             </motion.div>
-        </div>
-      )}
+          </div>
+        )}
       </AnimatePresence>
-      </div>
-  </PageLayout>
-);
+    </PageLayout>
+    </MotionConfig>
+  );
 }

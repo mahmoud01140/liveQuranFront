@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { ChevronRight, ChevronLeft, MoreHorizontal } from 'lucide-react';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
 
 export default function Pagination({
   currentPage = 1,
@@ -41,31 +43,43 @@ export default function Pagination({
   const startItem = totalItems ? Math.min((currentPage - 1) * (pageSize || 10) + 1, totalItems) : null;
   const endItem = totalItems ? Math.min(currentPage * (pageSize || 10), totalItems) : null;
 
+  const navBtn = {
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    padding: '8px 12px', borderRadius: 12, border: `1px solid ${HQ.LINE}`,
+    background: HQ.SURFACE, color: HQ.INK,
+    fontSize: '0.8125rem', fontWeight: 700, cursor: 'pointer', minHeight: 40,
+  };
+
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between gap-3 py-3 px-2 text-sm text-gray-600 select-none ${className}`}
-      dir="rtl"
+      className={`halaqa flex flex-col sm:flex-row items-center justify-between gap-3 py-3 px-2 text-sm select-none ${className}`}
+      dir="rtl" style={{ color: HQ.MUTED }}
     >
       {/* Range and count info */}
-      <div className="flex items-center gap-3 text-xs sm:text-sm text-gray-500 order-2 sm:order-1">
+      <div className="flex items-center gap-3 text-xs sm:text-sm order-2 sm:order-1" style={{ color: HQ.MUTED }}>
         {showRange && totalItems !== undefined && totalItems > 0 && (
-          <span>
-            عرض <strong className="text-gray-800 font-semibold">{startItem}</strong> -{' '}
-            <strong className="text-gray-800 font-semibold">{endItem}</strong> من أصل{' '}
-            <strong className="text-gray-800 font-semibold">{totalItems}</strong> {itemName}
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+            عرض <strong style={{ color: HQ.INK }}>{startItem}</strong> -{' '}
+            <strong style={{ color: HQ.INK }}>{endItem}</strong> من أصل{' '}
+            <strong style={{ color: HQ.INK }}>{totalItems}</strong> {itemName}
           </span>
         )}
 
         {showPageSize && onPageSizeChange && (
           <div className="flex items-center gap-1.5 mr-2">
-            <span className="text-xs text-gray-400">لكل صفحة:</span>
+            <span className="text-xs" style={{ color: HQ.MUTED }}>لكل صفحة:</span>
             <select
               value={pageSize}
               onChange={(e) => {
                 onPageSizeChange(Number(e.target.value));
                 onPageChange?.(1);
               }}
-              className="bg-white border border-gray-200 text-gray-700 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-primary-400 cursor-pointer"
+              aria-label="عدد العناصر في الصفحة"
+              className="text-xs"
+              style={{
+                background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, color: HQ.INK,
+                borderRadius: 8, padding: '6px 8px', minHeight: 40, cursor: 'pointer',
+              }}
             >
               {pageSizeOptions.map((opt) => (
                 <option key={opt} value={opt}>
@@ -85,10 +99,10 @@ export default function Pagination({
             type="button"
             onClick={() => onPageChange?.(currentPage - 1)}
             disabled={currentPage <= 1}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:pointer-events-none transition-colors text-xs sm:text-sm font-medium shadow-xs"
+            style={{ ...navBtn, opacity: currentPage <= 1 ? 0.4 : 1 }}
             aria-label="الصفحة السابقة"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight size={15} aria-hidden />
             <span className="hidden sm:inline">السابق</span>
           </button>
 
@@ -99,9 +113,11 @@ export default function Pagination({
                 return (
                   <span
                     key={`ellipsis-${idx}`}
-                    className="w-7 sm:w-8 h-7 sm:h-8 flex items-center justify-center text-gray-400"
+                    className="w-7 sm:w-8 h-7 sm:h-8 flex items-center justify-center"
+                    style={{ color: HQ.MUTED }}
+                    aria-hidden
                   >
-                    <MoreHorizontal className="w-4 h-4" />
+                    <MoreHorizontal size={15} />
                   </span>
                 );
               }
@@ -112,12 +128,16 @@ export default function Pagination({
                   key={`page-${p}`}
                   type="button"
                   onClick={() => onPageChange?.(p)}
-                  className={`w-7 sm:w-8 h-7 sm:h-8 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center transition-all ${
-                    isActive
-                      ? 'bg-primary-500 text-white shadow-sm scale-105'
-                      : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300'
-                  }`}
+                  className="w-8 h-8 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center"
+                  style={{
+                    minWidth: 32, minHeight: 32,
+                    background: isActive ? HQ.MENTOR : HQ.SURFACE,
+                    color: isActive ? '#fff' : HQ.INK,
+                    border: isActive ? 'none' : `1px solid ${HQ.LINE}`,
+                    cursor: 'pointer', fontVariantNumeric: 'tabular-nums',
+                  }}
                   aria-current={isActive ? 'page' : undefined}
+                  aria-label={`الصفحة ${p}`}
                 >
                   {p}
                 </button>
@@ -130,11 +150,11 @@ export default function Pagination({
             type="button"
             onClick={() => onPageChange?.(currentPage + 1)}
             disabled={currentPage >= totalPages}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:pointer-events-none transition-colors text-xs sm:text-sm font-medium shadow-xs"
+            style={{ ...navBtn, opacity: currentPage >= totalPages ? 0.4 : 1 }}
             aria-label="الصفحة التالية"
           >
             <span className="hidden sm:inline">التالي</span>
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft size={15} aria-hidden />
           </button>
         </div>
       )}

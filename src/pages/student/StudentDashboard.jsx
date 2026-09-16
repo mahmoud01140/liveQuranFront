@@ -156,7 +156,7 @@ export default function StudentDashboard() {
           </div>
         ) : loadFailed ? (
           <div style={{ textAlign: 'center', padding: '48px 16px' }} role="alert">
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: HQ.INK, margin: '0 0 8px' }}>تعذّر تحميل يومك</h1>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: HQ.INK, margin: '0 0 8px' }}>تعذّر تحميل يومك</h1>
             <p style={{ color: HQ.MUTED, fontSize: 15, margin: '0 0 20px' }}>تحقق من الاتصال ثم حاول مرة أخرى.</p>
             <button type="button" onClick={loadLocal} className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', padding: '0 24px', fontSize: 15 }}>
               <RotateCcw size={17} /> إعادة المحاولة
@@ -166,14 +166,14 @@ export default function StudentDashboard() {
           <>
             {/* A. Greeting — small, never a hero */}
             <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>{greeting}،</p>
-            <h1 style={{ margin: '2px 0 20px', fontSize: 26, fontWeight: 900, color: HQ.INK }}>
+            <h1 style={{ margin: '2px 0 20px', fontSize: 32, fontWeight: 800, color: HQ.INK }}>
               {user?.firstName || 'طالبنا'}، هذا يومك
             </h1>
 
             {/* Slim subscription alerts (functional, kept) */}
             {subscription?.isExpiringSoon && (
               <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
-                <span style={{ width: 34, height: 34, borderRadius: 10, background: '#F8EDD3', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                <span style={{ width: 34, height: 34, borderRadius: 10, background: HQ.PAPER, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
                   <AlertTriangle size={17} color="#B45309" />
                 </span>
                 <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>يتبقى <strong>{subscription.daysRemaining} أيام</strong> على اشتراكك.</span>
@@ -238,12 +238,18 @@ export default function StudentDashboard() {
                         <button type="button" onClick={() => handleTogglePortion(p.key)}
                           aria-pressed={donePortion} aria-label={`${p.label}: ${donePortion ? 'مكتمل، اضغط للإلغاء' : 'تحديد كمكتمل'}`}
                           style={{
-                            flex: 'none', width: 30, height: 30, borderRadius: 9999, cursor: 'pointer',
+                            flex: 'none', width: 44, height: 44, padding: 7, borderRadius: 9999, cursor: 'pointer',
+                            background: 'transparent', border: 'none',
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                          <span aria-hidden style={{
+                            width: 30, height: 30, borderRadius: 9999,
                             border: `2px solid ${donePortion ? HQ.MENTOR : HQ.LINE}`,
                             background: donePortion ? HQ.MENTOR : 'transparent', color: '#fff',
                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                           }}>
-                          {donePortion && <Check size={16} strokeWidth={3.5} />}
+                            {donePortion && <Check size={16} strokeWidth={3.5} />}
+                          </span>
                         </button>
                         <span style={{ flex: 1, minWidth: 0 }}>
                           <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: HQ.INK }}>{p.label}</span>

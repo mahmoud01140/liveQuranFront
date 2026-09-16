@@ -72,7 +72,7 @@ export default function App() {
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-white">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#FBF7EE' }}>
         <LoadingSpinner size="lg" text="جارٍ التحقق من الجلسة..." />
       </div>
     );

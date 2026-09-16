@@ -173,7 +173,7 @@ export default function ProgressPage() {
               <KhatmRing pct={juzPct} done={completedJuz.length} total={30} size={168} />
               <div style={{ flex: 1, minWidth: 220 }}>
                 <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>أين أنا في رحلتي؟</p>
-                <h1 style={{ margin: '4px 0 8px', fontSize: 32, fontWeight: 900, color: HQ.INK }}>
+                <h1 style={{ margin: '4px 0 8px', fontSize: 32, fontWeight: 800, color: HQ.INK }}>
                   أهلًا {user?.firstName || 'بك'}
                 </h1>
                 <HqBadge tone={user?.assignedLevel ? 'mentor' : 'neutral'}>

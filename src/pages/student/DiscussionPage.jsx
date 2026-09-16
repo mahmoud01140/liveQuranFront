@@ -211,7 +211,7 @@ export default function DiscussionPage() {
             </span>
             {activePinned.length > 0 && (
               <button type="button" onClick={() => setShowPinned(!showPinned)} aria-expanded={showPinned}
-                style={{ ...iconBtn, width: 'auto', padding: '0 14px', gap: 6, background: '#F8EDD3', fontSize: 12, fontWeight: 800, color: HQ.INK }}>
+                style={{ ...iconBtn, width: 'auto', padding: '0 14px', gap: 6, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, fontSize: 12, fontWeight: 800, color: HQ.INK }}>
                 <Pin size={14} /> {activePinned.length} مثبتة
               </button>
             )}
@@ -220,8 +220,8 @@ export default function DiscussionPage() {
 
         {/* Pinned panel */}
         {showPinned && activePinned.length > 0 && (
-          <div style={{ background: '#F8EDD3', border: '1px solid #D9A441', borderRadius: 14, marginBottom: 10, overflow: 'hidden', flex: 'none' }}>
-            <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #D9A441' }}>
+          <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 14, marginBottom: 10, overflow: 'hidden', flex: 'none' }}>
+            <div style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${HQ.LINE}` }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 800, color: HQ.INK }}>
                 <Pin size={15} /> المثبتة
               </span>
@@ -292,7 +292,7 @@ export default function DiscussionPage() {
                         color: msg.isDeleted ? HQ.MUTED : isMine ? '#fff' : HQ.INK,
                         border: !isMine && !msg.isDeleted ? `1px solid ${HQ.LINE}` : 'none',
                         fontStyle: msg.isDeleted ? 'italic' : 'normal',
-                        outline: msg.isPinned && !msg.isDeleted ? '2px solid #D9A441' : 'none',
+                        outline: msg.isPinned && !msg.isDeleted ? `2px solid ${HQ.INK}` : 'none',
                       }}>
                         {msg.isPinned && !msg.isDeleted && (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 800, color: '#B45309', marginBottom: 2 }}>

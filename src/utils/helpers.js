@@ -93,15 +93,16 @@ export const getErrorMessage = (error) => {
   return error?.response?.data?.message || error?.message || 'حدث خطأ غير متوقع';
 };
 
-// Generate color from level
+// Generate color from level (Al-Halaqa identity: mentor/guide/neutral.
+// Teacher operational voice is violet; gold is reserved for achievements.)
 export const getLevelColor = (level) => {
   const map = {
-    foundation:  { bg: '#E1F5EE', text: '#1D9E75', border: '#1D9E75' },
-    memorization: { bg: '#EDE9FF', text: '#534AB7', border: '#534AB7' },
-    teacher_prep: { bg: '#FEF3E2', text: '#BA7517', border: '#BA7517' },
-    senior:       { bg: '#FEFCE8', text: '#C9A227', border: '#C9A227' },
+    foundation:  { bg: '#E2EFE7', text: '#177B58', border: '#177B58' },
+    memorization: { bg: '#ECE9F4', text: '#4A3F6B', border: '#4A3F6B' },
+    teacher_prep: { bg: '#ECE9F4', text: '#4A3F6B', border: '#4A3F6B' },
+    senior:       { bg: '#FBF7EE', text: '#2A2438', border: '#E8E2D4' },
   };
-  return map[level] || { bg: '#F3F4F6', text: '#6B7280', border: '#D1D5DB' };
+  return map[level] || { bg: '#FBF7EE', text: '#756E85', border: '#E8E2D4' };
 };
 
 export const getLevelLabel = (level) => {

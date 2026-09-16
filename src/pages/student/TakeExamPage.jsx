@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import {
   ChevronRight, ChevronLeft, Send, Mic, MicOff, CheckCircle, Clock,
-  FileText, AlertCircle, BookOpen, Volume2, VolumeX, Play, Pause,
-  SkipForward, SkipBack, Repeat, Loader2
+  AlertCircle, BookOpen, VolumeX, Play, Pause,
+  SkipForward, SkipBack, Repeat, Loader2, Check, X, Lock, Info, Star,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Navbar from '../../components/shared/Navbar';
@@ -13,6 +13,13 @@ import useAuthStore from '../../store/authStore';
 import useQuranAudio, { RECITERS } from '../../hooks/useQuranAudio';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import api from '../../services/api';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
+
+/* Exam room — calm and focused. Same questions, answers, recording,
+   audio and submit logic as before; only the visual layer changed. */
+
+const TYPE_LABEL = { mcq: 'اختياري', true_false: 'صح / خطأ', written: 'كتابي', recitation: 'شفهي' };
 
 export default function TakeExamPage() {
   const { examId } = useParams();
@@ -177,8 +184,11 @@ export default function TakeExamPage() {
     }));
   };
 
+  const sheet = { background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18 };
+
   if (loading) return (
-    <div className="min-h-screen bg-gray-50"><Navbar />
+    <div className="halaqa" style={{ background: HQ.PAPER, minHeight: '100vh', color: HQ.INK }} dir="rtl">
+      <Navbar />
       <div className="pt-24 flex justify-center"><LoadingSpinner size="lg" /></div>
     </div>
   );
@@ -187,42 +197,44 @@ export default function TakeExamPage() {
     const hasRecitation = currentExam?.questions?.some(q => q.type === 'recitation');
     const score = result.totalPercentage ?? result.writtenPercentage ?? 0;
     const passed = result.isPassed;
+    const tone = hasRecitation
+      ? { bg: HQ.PAPER, fg: HQ.MUTED, Icon: Clock, title: 'تم تسليم تقييم الدرس' }
+      : passed
+      ? { bg: '#E2EFE7', fg: HQ.MENTOR, Icon: CheckCircle, title: 'أحسنت! إنجاز ممتاز' }
+      : { bg: HQ.SURFACE, fg: '#C2410C', Icon: AlertCircle, title: 'تم التسليم بنجاح' };
     return (
-      <div className="min-h-screen bg-gray-50"><Navbar />
+      <div className="halaqa" style={{ background: HQ.PAPER, minHeight: '100vh', color: HQ.INK }} dir="rtl">
+        <Navbar />
         <div className="pt-16 flex items-center justify-center min-h-screen p-4">
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-3xl p-10 max-w-md w-full text-center shadow-2xl">
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${hasRecitation ? 'bg-yellow-50' : passed ? 'bg-green-50' : 'bg-red-50'}`}>
-              {hasRecitation ? <Clock className="w-10 h-10 text-yellow-500" />
-                : passed ? <CheckCircle className="w-10 h-10 text-green-500" />
-                : <AlertCircle className="w-10 h-10 text-red-400" />}
-            </div>
-            <h2 className="text-2xl font-black text-gray-900 mb-2">
-              {hasRecitation ? 'تم تسليم تقييم الدرس' : passed ? 'أحسنت! إنجاز ممتاز 🎉' : 'تم التسليم بنجاح'}
-            </h2>
-            
-            {/* Gamification badge */}
-            <div className="my-4 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl flex items-center justify-around">
-              <div className="text-center">
-                <span className="text-xs text-emerald-600 font-semibold block">النقاط المكتسبة</span>
-                <span className="text-lg font-black text-emerald-700">+{result.xpEarned || 50} XP ⚡</span>
-              </div>
-              <div className="h-8 w-px bg-emerald-200" />
-              <div className="text-center">
-                <span className="text-xs text-orange-600 font-semibold block">السلسلة اليومية</span>
-                <span className="text-lg font-black text-orange-600">🔥 متواصل</span>
-              </div>
-            </div>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}
+            className="max-w-md w-full text-center" style={{ ...sheet, padding: 32 }}>
+            <span aria-hidden className="flex items-center justify-center mx-auto mb-6"
+              style={{ width: 80, height: 80, borderRadius: 20, background: tone.bg, border: `1px solid ${HQ.LINE}` }}>
+              <tone.Icon size={38} color={tone.fg} />
+            </span>
+            <h2 className="font-extrabold mb-2" style={{ fontSize: '1.5rem', color: HQ.INK }}>{tone.title}</h2>
 
-            {hasRecitation ? (
-              <p className="text-gray-500 mb-6 text-sm">سيتم مراجعة تسجيلاتك الصوتية وإبداء الملاحظات من قبل المعلم</p>
-            ) : (
-              <div className="mb-6">
-                <div className={`text-5xl font-black mb-2 ${passed ? 'text-green-600' : 'text-red-500'}`}>{score}%</div>
-                <p className="text-gray-500 text-sm">درجة التقييم: {currentExam?.passingScore || 60}%</p>
+            {/* Earned points — real result data only */}
+            {(result.xpEarned || 50) && (
+              <div className="my-4 p-3 flex items-center justify-center gap-2"
+                style={{ background: '#E2EFE7', borderRadius: 12 }}>
+                <Star size={17} color={HQ.MENTOR} aria-hidden />
+                <span className="text-sm font-bold" style={{ color: '#0F5940' }}>
+                  النقاط المكتسبة: +{result.xpEarned || 50} XP
+                </span>
               </div>
             )}
-            <button onClick={() => navigate('/student/exams')} className="btn-primary w-full">
+
+            {hasRecitation ? (
+              <p className="text-sm mb-6" style={{ color: HQ.MUTED }}>سيتم مراجعة تسجيلاتك الصوتية وإبداء الملاحظات من قبل المعلم</p>
+            ) : (
+              <div className="mb-6">
+                <div className="font-extrabold mb-2" style={{ fontSize: '2rem', color: passed ? HQ.MENTOR : '#C2410C' }}>{score}%</div>
+                <p className="text-sm" style={{ color: HQ.MUTED }}>درجة التقييم: {currentExam?.passingScore || 60}%</p>
+              </div>
+            )}
+            <button type="button" onClick={() => navigate('/student/exams')}
+              className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', padding: '0 24px', fontSize: 15, width: '100%' }}>
               العودة للاختبارات والتقييمات
             </button>
           </motion.div>
@@ -252,336 +264,386 @@ export default function TakeExamPage() {
 
   const surahName = q.surahNumber ? SURAH_NAMES[q.surahNumber - 1] || `سورة ${q.surahNumber}` : '';
 
+  const optBase = {
+    width: '100%', textAlign: 'right', minHeight: 56, padding: '12px 16px',
+    borderRadius: 12, border: `2px solid ${HQ.LINE}`, background: HQ.SURFACE,
+    color: HQ.INK, fontWeight: 500, fontSize: 16, cursor: 'pointer',
+    display: 'flex', alignItems: 'center',
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50"><Navbar />
-      <div className="pt-16 min-h-screen flex flex-col">
-        {/* Progress bar */}
-        <div className="bg-white border-b border-gray-100 px-4 sm:px-6 py-2.5 sm:py-3">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex justify-between items-center mb-1.5 sm:mb-2">
-              <span className="text-xs sm:text-sm font-bold text-gray-700 truncate max-w-[200px] sm:max-w-none">{currentExam.title}</span>
-              <div className="flex items-center gap-2 sm:gap-3">
-                <span className={`text-[11px] sm:text-xs font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full ${
-                  q.type === 'mcq' ? 'bg-blue-50 text-blue-600' :
-                  q.type === 'true_false' ? 'bg-amber-50 text-amber-600' :
-                  q.type === 'written' ? 'bg-purple-50 text-purple-600' :
-                  'bg-emerald-50 text-emerald-600'
-                }`}>
-                  {q.type === 'mcq' ? '🔵 اختياري' : q.type === 'true_false' ? '✅ صح / خطأ' : q.type === 'written' ? '✏️ كتابي' : '🎙️ شفهي'}
-                </span>
-                <span className="text-xs sm:text-sm text-gray-500 font-semibold">{currentQuestion + 1} / {total}</span>
+    <MotionConfig reducedMotion="user">
+      <div className="halaqa" style={{ background: HQ.PAPER, minHeight: '100vh', color: HQ.INK }} dir="rtl">
+        <Navbar />
+        <div className="pt-16 min-h-screen flex flex-col">
+          {/* Progress bar */}
+          <div style={{ background: HQ.SURFACE, borderBottom: `1px solid ${HQ.LINE}`, padding: '10px 16px' }}>
+            <div className="max-w-4xl mx-auto">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-bold truncate" style={{ color: HQ.INK, maxWidth: 200 }}>{currentExam.title}</span>
+                <div className="flex items-center gap-2">
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', fontSize: '0.8125rem', fontWeight: 700,
+                    padding: '4px 12px', borderRadius: 9999, background: '#E2EFE7', color: '#0F5940',
+                  }}>
+                    {TYPE_LABEL[q.type] || q.type}
+                  </span>
+                  <span className="text-sm font-semibold" style={{ color: HQ.MUTED, fontVariantNumeric: 'tabular-nums' }}>
+                    {currentQuestion + 1} / {total}
+                  </span>
+                </div>
+              </div>
+              <div style={{ height: 8, background: HQ.LINE, borderRadius: 9999, overflow: 'hidden' }}
+                role="progressbar" aria-valuenow={Math.round(((currentQuestion + 1) / total) * 100)}
+                aria-valuemin={0} aria-valuemax={100} aria-label="تقدم الامتحان">
+                <div style={{ height: '100%', background: HQ.MENTOR, borderRadius: 9999, width: `${((currentQuestion + 1) / total) * 100}%` }} />
               </div>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-2 bg-gradient-to-l from-primary-500 to-primary-400 rounded-full transition-all duration-300"
-                style={{ width: `${((currentQuestion + 1) / total) * 100}%` }} />
-            </div>
           </div>
-        </div>
 
-        {/* Question Content */}
-        <div className="flex-1 p-3 sm:p-4">
-          <div className="max-w-4xl mx-auto">
-            <AnimatePresence mode="wait">
-              <motion.div key={currentQuestion}
-                initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}>
+          {/* Question Content */}
+          <div className="flex-1 p-3 sm:p-4">
+            <div className="max-w-4xl mx-auto">
+              <AnimatePresence mode="wait">
+                <motion.div key={currentQuestion}
+                  initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }}
+                  transition={{ duration: 0.2 }}>
 
-                {/* Main Question Card */}
-                <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-sm border border-gray-100 mb-4">
-                  <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 leading-relaxed">{q.text || q.arabicText}</h2>
+                  {/* Main Question Card */}
+                  <div className="p-4 sm:p-8 mb-4" style={sheet}>
+                    <h2 className="font-bold mb-4 sm:mb-6" style={{ fontSize: '1.25rem', color: HQ.INK, lineHeight: 1.8 }}>
+                      {q.type === 'recitation' && q.arabicText
+                        ? <span className="hq-quran" style={{ fontSize: 22 }}>{q.arabicText}</span>
+                        : (q.text || q.arabicText)}
+                    </h2>
 
-                  {/* MCQ Options */}
-                  {q.type === 'mcq' && (
-                    <div className="space-y-2.5 sm:space-y-3">
-                      {(q.options || []).map((opt, i) => (
-                        <button key={i} onClick={() => setAnswer(currentQuestion, i)}
-                          className={`w-full text-right px-4 py-3.5 sm:px-5 sm:py-4 rounded-xl sm:rounded-2xl border-2 transition-all font-medium active:scale-[0.99] flex items-center ${
-                            answers[currentQuestion] === i
-                              ? 'border-primary-500 bg-primary-50 text-primary-800 font-bold shadow-sm'
-                              : 'border-gray-100 bg-gray-50 text-gray-700 hover:border-primary-200 hover:bg-primary-50/50'
-                          }`}>
-                          <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ml-3 flex-shrink-0 ${
-                            answers[currentQuestion] === i ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-600'
-                          }`}>
-                            {String.fromCharCode(65 + i)}
-                          </span>
-                          <span className="text-sm sm:text-base">{opt}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* True / False */}
-                  {q.type === 'true_false' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-2">
-                      <button
-                        type="button"
-                        onClick={() => setAnswer(currentQuestion, true)}
-                        className={`flex items-center justify-center gap-3 py-6 px-6 rounded-2xl border-2 transition-all font-bold text-lg active:scale-[0.98] ${
-                          answers[currentQuestion] === true
-                            ? 'border-emerald-500 bg-emerald-50 text-emerald-800 shadow-md shadow-emerald-100 ring-2 ring-emerald-500/20'
-                            : 'border-gray-100 bg-gray-50 text-gray-700 hover:border-emerald-200 hover:bg-emerald-50/40'
-                        }`}
-                      >
-                        <span className="text-2xl">✅</span>
-                        <span className="text-xl font-bold">صحيح (صح)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAnswer(currentQuestion, false)}
-                        className={`flex items-center justify-center gap-3 py-6 px-6 rounded-2xl border-2 transition-all font-bold text-lg active:scale-[0.98] ${
-                          answers[currentQuestion] === false
-                            ? 'border-rose-500 bg-rose-50 text-rose-800 shadow-md shadow-rose-100 ring-2 ring-rose-500/20'
-                            : 'border-gray-100 bg-gray-50 text-gray-700 hover:border-rose-200 hover:bg-rose-50/40'
-                        }`}
-                      >
-                        <span className="text-2xl">❌</span>
-                        <span className="text-xl font-bold">خطأ</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Written (fill-in) */}
-                  {q.type === 'written' && (
-                    <div>
-                      <label className="text-xs sm:text-sm font-semibold text-gray-600 mb-2 block">أكمل الإجابة:</label>
-                      <input
-                        value={writtenAnswers[currentQuestion] || ''}
-                        onChange={e => setWrittenAnswer(currentQuestion, e.target.value)}
-                        className="input-base text-base sm:text-lg"
-                        placeholder="اكتب إجابتك هنا..."
-                        dir="rtl"
-                      />
-                    </div>
-                  )}
-
-                  {/* Recitation - Recording Area */}
-                  {q.type === 'recitation' && (
-                    <div className="space-y-4 sm:space-y-5">
-                      {/* Mode Toggle */}
-                      <div className="flex items-center justify-center gap-1.5 sm:gap-2 bg-gray-100 p-1 sm:p-1.5 rounded-2xl max-w-md mx-auto">
-                        <button type="button" onClick={() => setQuranMode(p => ({ ...p, [currentQuestion]: 'practice' }))}
-                          className={`flex-1 py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all ${
-                            currentMode === 'practice'
-                              ? 'bg-white text-emerald-700 shadow-sm'
-                              : 'text-gray-500 hover:text-gray-800'
-                          }`}>
-                          📖 التدرب والاستماع
-                        </button>
-                        <button type="button" onClick={() => setQuranMode(p => ({ ...p, [currentQuestion]: 'quiz' }))}
-                          className={`flex-1 py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl text-xs font-bold transition-all ${
-                            currentMode === 'quiz'
-                              ? 'bg-amber-500 text-white shadow-sm'
-                              : 'text-gray-500 hover:text-gray-800'
-                          }`}>
-                          🎙️ وضع التسميع
-                        </button>
+                    {/* MCQ Options */}
+                    {q.type === 'mcq' && (
+                      <div className="space-y-3" role="group" aria-label="خيارات الإجابة">
+                        {(q.options || []).map((opt, i) => {
+                          const sel = answers[currentQuestion] === i;
+                          return (
+                            <button key={i} type="button" onClick={() => setAnswer(currentQuestion, i)}
+                              aria-pressed={sel}
+                              style={{
+                                ...optBase,
+                                borderColor: sel ? HQ.MENTOR : HQ.LINE,
+                                background: sel ? '#E2EFE7' : HQ.SURFACE,
+                                fontWeight: sel ? 700 : 500,
+                              }}>
+                              <span aria-hidden style={{
+                                width: 28, height: 28, borderRadius: 8, marginLeft: 12, flex: 'none',
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: '0.8125rem', fontWeight: 800,
+                                background: sel ? HQ.MENTOR : HQ.PAPER, color: sel ? '#fff' : HQ.MUTED,
+                              }}>
+                                {String.fromCharCode(65 + i)}
+                              </span>
+                              <span className="text-sm sm:text-base">{opt}</span>
+                            </button>
+                          );
+                        })}
                       </div>
+                    )}
 
-                      {q.instruction && (
-                        <div className="bg-amber-50 border border-amber-100 rounded-2xl p-3.5 sm:p-4 text-right">
-                          <p className="text-xs font-bold text-amber-800 mb-1">💡 التعليمات:</p>
-                          <p className="text-amber-700 text-xs sm:text-sm">{q.instruction}</p>
+                    {/* True / False */}
+                    {q.type === 'true_false' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-2" role="group" aria-label="اختر صحيح أو خطأ">
+                        {[
+                          { value: true, label: 'صحيح (صح)', Icon: Check },
+                          { value: false, label: 'خطأ', Icon: X },
+                        ].map((item) => {
+                          const sel = answers[currentQuestion] === item.value;
+                          return (
+                            <button
+                              key={String(item.value)}
+                              type="button"
+                              onClick={() => setAnswer(currentQuestion, item.value)}
+                              aria-pressed={sel}
+                              style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                                minHeight: 64, padding: 16, borderRadius: 12, cursor: 'pointer',
+                                fontWeight: 700, fontSize: '1.25rem',
+                                border: `2px solid ${sel ? HQ.MENTOR : HQ.LINE}`,
+                                background: sel ? '#E2EFE7' : HQ.SURFACE,
+                                color: sel ? '#0F5940' : HQ.INK,
+                              }}
+                            >
+                              <item.Icon size={24} strokeWidth={2.5} aria-hidden />
+                              <span>{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Written (fill-in) */}
+                    {q.type === 'written' && (
+                      <div>
+                        <label htmlFor={`take-written-${currentQuestion}`} className="text-sm font-bold mb-2 block" style={{ color: HQ.INK }}>أكمل الإجابة:</label>
+                        <input
+                          id={`take-written-${currentQuestion}`}
+                          value={writtenAnswers[currentQuestion] || ''}
+                          onChange={e => setWrittenAnswer(currentQuestion, e.target.value)}
+                          className="w-full text-base"
+                          style={{
+                            minHeight: 48, background: HQ.SURFACE, color: HQ.INK,
+                            border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '12px 16px',
+                          }}
+                          placeholder="اكتب إجابتك هنا..."
+                          dir="rtl"
+                        />
+                      </div>
+                    )}
+
+                    {/* Recitation - Recording Area */}
+                    {q.type === 'recitation' && (
+                      <div className="space-y-4 sm:space-y-5">
+                        {/* Mode Toggle */}
+                        <div className="flex items-center justify-center gap-1.5 p-1.5 rounded-2xl max-w-md mx-auto"
+                          role="group" aria-label="وضع السؤال"
+                          style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
+                          <button type="button" onClick={() => setQuranMode(p => ({ ...p, [currentQuestion]: 'practice' }))}
+                            aria-pressed={currentMode === 'practice'}
+                            className="flex-1 text-sm font-bold"
+                            style={{
+                              minHeight: 44, padding: '8px 12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                              background: currentMode === 'practice' ? HQ.MENTOR : 'transparent',
+                              color: currentMode === 'practice' ? '#fff' : HQ.MUTED,
+                            }}>
+                            التدرب والاستماع
+                          </button>
+                          <button type="button" onClick={() => setQuranMode(p => ({ ...p, [currentQuestion]: 'quiz' }))}
+                            aria-pressed={currentMode === 'quiz'}
+                            className="flex-1 text-sm font-bold"
+                            style={{
+                              minHeight: 44, padding: '8px 12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                              background: currentMode === 'quiz' ? HQ.INK : 'transparent',
+                              color: currentMode === 'quiz' ? '#fff' : HQ.MUTED,
+                            }}>
+                            وضع التسميع
+                          </button>
                         </div>
-                      )}
 
-                      {/* Recording Controls */}
-                      <div className="flex flex-col items-center gap-3 sm:gap-4 bg-gray-50/50 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-gray-100">
-                        {recordedQuestions[q._id] && (
-                          <div className="w-full max-w-md">
-                            <p className="text-xs font-semibold text-emerald-700 mb-2 text-center">✓ تم تسجيل صوتك بنجاح. استمع للتسجيل:</p>
-                            <audio controls src={recordedQuestions[q._id]} className="w-full rounded-xl shadow-sm" />
+                        {q.instruction && (
+                          <div className="p-3.5 sm:p-4 text-right" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
+                            <p className="text-sm font-bold mb-1 flex items-center gap-2" style={{ color: HQ.INK }}>
+                              <Info size={15} color={HQ.MUTED} aria-hidden /> التعليمات:
+                            </p>
+                            <p className="text-sm" style={{ color: HQ.MUTED }}>{q.instruction}</p>
                           </div>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => recording ? stopRecording() : startRecording(q._id)}
-                          className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center shadow-xl transition-all active:scale-95 ${
-                            recording
-                              ? 'bg-red-500 hover:bg-red-600 animate-pulse ring-8 ring-red-100'
-                              : recordedQuestions[q._id]
-                              ? 'bg-emerald-600 hover:bg-emerald-700 ring-4 ring-emerald-100'
-                              : 'bg-primary-600 hover:bg-primary-700 ring-4 ring-primary-100'
-                          }`}>
-                          {recording ? <MicOff className="w-8 h-8 sm:w-10 sm:h-10 text-white" /> : <Mic className="w-8 h-8 sm:w-10 sm:h-10 text-white" />}
-                        </button>
-                        <p className="text-xs sm:text-sm font-bold text-gray-700 text-center">
-                          {recording ? '● جارٍ التسجيل... انقر لإيقاف' : recordedQuestions[q._id] ? 'انقر لإعادة تسجيل صوتك' : 'انقر على الميكروفون لبدء التسجيل'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
 
-                {/* ═══ Integrated Quran Panel (for recitation questions in practice mode) ═══ */}
-                {q.type === 'recitation' && q.surahNumber && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 }}
-                    className={`rounded-2xl sm:rounded-3xl border-2 overflow-hidden transition-all ${
-                      currentMode === 'practice'
-                        ? 'border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-teal-50/50'
-                        : 'border-gray-200 bg-gray-50'
-                    }`}>
-
-                    {/* Quran Panel Header */}
-                    <div className={`px-4 py-3 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0 ${
-                      currentMode === 'practice' ? 'bg-emerald-100/60' : 'bg-gray-100'
-                    }`}>
-                      <div className="flex items-center gap-2.5 sm:gap-3">
-                        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                          currentMode === 'practice'
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-gray-300 text-gray-600'
-                        }`}>
-                          <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
-                        </div>
-                        <div>
-                          <h3 className={`font-bold text-xs sm:text-sm ${
-                            currentMode === 'practice' ? 'text-emerald-900' : 'text-gray-700'
-                          }`}>
-                            {currentMode === 'practice' ? '📖 المصحف التفاعلي' : '🔒 وضع التسميع'}
-                          </h3>
-                          <p className="text-[11px] sm:text-xs text-gray-500">
-                            سورة {surahName} — الآيات {q.fromVerse || 1} إلى {q.toVerse || '...'}
+                        {/* Recording Controls */}
+                        <div className="flex flex-col items-center gap-3 sm:gap-4 p-4 sm:p-6"
+                          style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 18 }}>
+                          {recordedQuestions[q._id] && (
+                            <div className="w-full max-w-md">
+                              <p className="text-sm font-bold mb-2 text-center flex items-center justify-center gap-2" style={{ color: HQ.MENTOR }}>
+                                <CheckCircle size={16} aria-hidden /> تم تسجيل صوتك بنجاح. استمع للتسجيل:
+                              </p>
+                              <audio controls src={recordedQuestions[q._id]} className="w-full rounded-xl" />
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => recording ? stopRecording() : startRecording(q._id)}
+                            aria-label={recording ? 'إيقاف التسجيل' : 'بدء التسجيل'}
+                            aria-pressed={recording}
+                            className={recording ? 'animate-pulse' : ''}
+                            style={{
+                              width: 88, height: 88, borderRadius: 9999, border: 'none', cursor: 'pointer',
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              background: recording ? '#C2410C' : HQ.MENTOR, color: '#fff',
+                            }}>
+                            {recording ? <MicOff size={36} aria-hidden /> : <Mic size={36} aria-hidden />}
+                          </button>
+                          <p className="text-sm font-bold text-center flex items-center gap-2" style={{ color: HQ.MUTED }}>
+                            {recording && <span aria-hidden style={{ width: 9, height: 9, borderRadius: 9999, background: '#C2410C' }} />}
+                            {recording ? 'جارٍ التسجيل... انقر للإيقاف' : recordedQuestions[q._id] ? 'انقر لإعادة تسجيل صوتك' : 'انقر على الميكروفون لبدء التسجيل'}
                           </p>
                         </div>
                       </div>
-
-                      {/* Reciter Selector (practice mode only) */}
-                      {currentMode === 'practice' && (
-                        <select value={reciter} onChange={e => changeReciter(e.target.value)}
-                          className="text-xs border border-emerald-200 bg-white rounded-lg px-2.5 py-1.5 text-gray-700 font-medium w-full sm:w-auto">
-                          {RECITERS.map(r => (
-                            <option key={r.id} value={r.id}>{r.name}</option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-
-                    {/* Practice Mode: Show verses + audio controls */}
-                    {currentMode === 'practice' ? (
-                      <div className="p-3 sm:p-5 space-y-3 sm:space-y-4">
-                        {/* Audio Player Controls */}
-                        <div className="bg-white/90 rounded-2xl p-3 sm:p-4 shadow-sm border border-emerald-100">
-                          <div className="flex items-center justify-center gap-3 mb-2.5 sm:mb-3">
-                            <button onClick={prevVerse} className="p-2 hover:bg-emerald-50 rounded-full transition-colors text-emerald-600" aria-label="السابق">
-                              <SkipForward className="w-5 h-5" />
-                            </button>
-                            <button onClick={togglePlayPause}
-                              className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shadow-lg transition-all active:scale-95 ${
-                                isPlaying
-                                  ? 'bg-emerald-600 hover:bg-emerald-700 ring-4 ring-emerald-200'
-                                  : 'bg-emerald-500 hover:bg-emerald-600 ring-4 ring-emerald-100'
-                              }`}>
-                              {isLoadingAudio ? (
-                                <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-spin" />
-                              ) : isPlaying ? (
-                                <Pause className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                              ) : (
-                                <Play className="w-5 h-5 sm:w-6 sm:h-6 text-white mr-[-2px]" />
-                              )}
-                            </button>
-                            <button onClick={nextVerse} className="p-2 hover:bg-emerald-50 rounded-full transition-colors text-emerald-600" aria-label="التالي">
-                              <SkipBack className="w-5 h-5" />
-                            </button>
-                          </div>
-                          {/* Progress bar */}
-                          <div className="h-1.5 bg-emerald-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full transition-all duration-200"
-                              style={{ width: `${audioProgress}%` }} />
-                          </div>
-                          <div className="flex justify-between mt-1.5">
-                            <span className="text-[10px] sm:text-xs text-emerald-600 font-medium">
-                              {currentVerseIndex >= 0 ? `آية ${currentVerseIndex + 1}` : 'اضغط ▶ للبدء'}
-                            </span>
-                            <button onClick={() => q.fromVerse ? playVerse(q.fromVerse) : playAll(1)}
-                              className="text-[10px] sm:text-xs text-emerald-500 hover:text-emerald-700 font-bold flex items-center gap-0.5">
-                              <Repeat className="w-3 h-3" /> تشغيل من البداية
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Quran Verses Display */}
-                        <div className="bg-white/75 rounded-2xl p-4 sm:p-5 border border-emerald-100 max-h-[260px] sm:max-h-[300px] overflow-y-auto">
-                          {loadingVerses ? (
-                            <div className="flex justify-center py-8">
-                              <Loader2 className="w-6 h-6 text-emerald-500 animate-spin" />
-                            </div>
-                          ) : quranVerses.length === 0 ? (
-                            <p className="text-center text-gray-400 text-xs sm:text-sm py-6">لا توجد آيات لعرضها</p>
-                          ) : (
-                            <div className="text-right leading-[2.2] sm:leading-[2.5] font-quran text-lg sm:text-xl space-y-0">
-                              {quranVerses.map((verse) => {
-                                const verseIdx = verse.numberInSurah - 1;
-                                const isActive = currentVerseIndex === verseIdx;
-                                return (
-                                  <span
-                                    key={verse.number}
-                                    data-verse-index={verseIdx}
-                                    onClick={() => playVerse(verse.numberInSurah)}
-                                    className={`cursor-pointer rounded-lg px-1 py-0.5 transition-all inline ${
-                                      isActive
-                                        ? 'bg-emerald-200/60 text-emerald-900 ring-2 ring-emerald-300'
-                                        : 'hover:bg-emerald-50 text-gray-800'
-                                    }`}>
-                                    {verse.text}
-                                    <span className={`text-xs sm:text-sm font-bold mx-1 ${
-                                      isActive ? 'text-emerald-600' : 'text-amber-500'
-                                    }`}>
-                                      ﴿{verse.numberInSurah}﴾
-                                    </span>
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-
-                        <p className="text-[11px] sm:text-xs text-emerald-700 text-center font-medium">
-                          💡 اضغط على أي آية للاستماع إليها — ثم سجّل تلاوتك بالضغط على الميكروفون
-                        </p>
-                      </div>
-                    ) : (
-                      /* Quiz Mode: Hidden text */
-                      <div className="p-6 sm:p-8 text-center">
-                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                          <VolumeX className="w-7 h-7 sm:w-8 sm:h-8 text-gray-400" />
-                        </div>
-                        <p className="text-xs sm:text-sm font-bold text-gray-700 mb-1">🔒 تم حجب النص القرآني وتعطيل التلاوة المرجعية</p>
-                        <p className="text-[11px] sm:text-xs text-gray-500 mb-3 sm:mb-4">قم بتسجيل التلاوة من حفظك عن ظهر قلب</p>
-                        <p className="text-[11px] sm:text-xs text-gray-400">
-                          سورة {surahName} — الآيات {q.fromVerse || 1} إلى {q.toVerse || '...'}
-                        </p>
-                      </div>
                     )}
-                  </motion.div>
+                  </div>
+
+                  {/* ═══ Integrated Quran Panel (for recitation questions) ═══ */}
+                  {q.type === 'recitation' && q.surahNumber && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                      style={{ ...sheet, padding: 0 }}>
+                      {/* Quran Panel Header */}
+                      <div className="px-4 py-3 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                        style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
+                        <div className="flex items-center gap-3">
+                          <span aria-hidden className="flex items-center justify-center flex-none"
+                            style={{
+                              width: 40, height: 40, borderRadius: 12,
+                              background: currentMode === 'practice' ? HQ.MENTOR : HQ.PAPER, color: currentMode === 'practice' ? '#fff' : HQ.MUTED,
+                            }}>
+                            {currentMode === 'practice' ? <BookOpen size={19} /> : <Lock size={19} />}
+                          </span>
+                          <div>
+                            <h3 className="font-bold text-sm" style={{ color: HQ.INK }}>
+                              {currentMode === 'practice' ? 'المصحف التفاعلي' : 'وضع التسميع'}
+                            </h3>
+                            <p style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>
+                              سورة {surahName} — الآيات {q.fromVerse || 1} إلى {q.toVerse || '...'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Reciter Selector (practice mode only) */}
+                        {currentMode === 'practice' && (
+                          <select value={reciter} onChange={e => changeReciter(e.target.value)}
+                            aria-label="اختيار القارئ"
+                            className="text-sm font-medium w-full sm:w-auto"
+                            style={{ minHeight: 44, border: `1px solid ${HQ.LINE}`, background: HQ.SURFACE, color: HQ.INK, borderRadius: 12, padding: '8px 12px' }}>
+                            {RECITERS.map(r => (
+                              <option key={r.id} value={r.id}>{r.name}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+
+                      {/* Practice Mode: Show verses + audio controls */}
+                      {currentMode === 'practice' ? (
+                        <div className="p-3 sm:p-5 space-y-4">
+                          {/* Audio Player Controls */}
+                          <div className="p-3 sm:p-4" style={{ background: HQ.PAPER, borderRadius: 12 }}>
+                            <div className="flex items-center justify-center gap-3 mb-3">
+                              <button type="button" onClick={prevVerse}
+                                className="hq-action" style={{ background: 'transparent', color: HQ.MENTOR, minWidth: 48 }}
+                                aria-label="الآية السابقة">
+                                <SkipForward size={20} aria-hidden />
+                              </button>
+                              <button type="button" onClick={togglePlayPause}
+                                aria-label={isPlaying ? 'إيقاف مؤقت' : 'تشغيل'}
+                                style={{
+                                  width: 56, height: 56, borderRadius: 9999, border: 'none', cursor: 'pointer',
+                                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                  background: HQ.MENTOR, color: '#fff',
+                                }}>
+                                {isLoadingAudio ? (
+                                  <Loader2 size={22} className="animate-spin" aria-hidden />
+                                ) : isPlaying ? (
+                                  <Pause size={22} aria-hidden />
+                                ) : (
+                                  <Play size={22} aria-hidden />
+                                )}
+                              </button>
+                              <button type="button" onClick={nextVerse}
+                                className="hq-action" style={{ background: 'transparent', color: HQ.MENTOR, minWidth: 48 }}
+                                aria-label="الآية التالية">
+                                <SkipBack size={20} aria-hidden />
+                              </button>
+                            </div>
+                            {/* Progress bar */}
+                            <div style={{ height: 6, background: HQ.LINE, borderRadius: 9999, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', background: HQ.MENTOR, borderRadius: 9999, width: `${audioProgress}%` }} />
+                            </div>
+                            <div className="flex justify-between mt-2">
+                              <span style={{ fontSize: '0.8125rem', color: HQ.MUTED, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                                {currentVerseIndex >= 0 ? `آية ${currentVerseIndex + 1}` : 'اضغط تشغيل للبدء'}
+                              </span>
+                              <button type="button" onClick={() => q.fromVerse ? playVerse(q.fromVerse) : playAll(1)}
+                                className="font-bold flex items-center gap-1"
+                                style={{ fontSize: '0.8125rem', color: HQ.MENTOR, background: 'none', border: 'none', cursor: 'pointer', minHeight: 44 }}>
+                                <Repeat size={13} aria-hidden /> تشغيل من البداية
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Quran Verses Display */}
+                          <div className="p-4 sm:p-5"
+                            style={{ background: HQ.PAPER, borderRadius: 12, maxHeight: 300, overflowY: 'auto' }}>
+                            {loadingVerses ? (
+                              <div className="flex justify-center py-8">
+                                <Loader2 size={24} color={HQ.MENTOR} className="animate-spin" aria-hidden />
+                              </div>
+                            ) : quranVerses.length === 0 ? (
+                              <p className="text-center text-sm py-6" style={{ color: HQ.MUTED }}>لا توجد آيات لعرضها</p>
+                            ) : (
+                              <div className="hq-quran text-right" dir="rtl" style={{ fontSize: 20, lineHeight: 2.5 }}>
+                                {quranVerses.map((verse) => {
+                                  const verseIdx = verse.numberInSurah - 1;
+                                  const isActive = currentVerseIndex === verseIdx;
+                                  return (
+                                    <span
+                                      key={verse.number}
+                                      data-verse-index={verseIdx}
+                                      onClick={() => playVerse(verse.numberInSurah)}
+                                      style={{
+                                        cursor: 'pointer', borderRadius: 8, padding: '2px 4px', display: 'inline',
+                                        background: isActive ? '#E2EFE7' : 'transparent',
+                                        outline: isActive ? `2px solid ${HQ.MENTOR}` : 'none',
+                                        color: isActive ? '#0F5940' : HQ.INK,
+                                        fontWeight: isActive ? 700 : 400,
+                                      }}>
+                                      {verse.text}
+                                      <span style={{
+                                        fontSize: '0.8125rem', fontWeight: 800, margin: '0 4px',
+                                        fontFamily: 'Tajawal, sans-serif',
+                                        color: isActive ? HQ.MENTOR : HQ.MUTED,
+                                      }}>
+                                        ﴿{verse.numberInSurah}﴾
+                                      </span>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+
+                          <p className="text-center font-medium" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>
+                            اضغط على أي آية للاستماع إليها — ثم سجّل تلاوتك بالضغط على الميكروفون
+                          </p>
+                        </div>
+                      ) : (
+                        /* Quiz Mode: Hidden text */
+                        <div className="p-6 sm:p-8 text-center">
+                          <span aria-hidden className="flex items-center justify-center mx-auto mb-4"
+                            style={{ width: 64, height: 64, borderRadius: 9999, background: HQ.PAPER }}>
+                            <VolumeX size={28} color={HQ.MUTED} />
+                          </span>
+                          <p className="text-sm font-bold mb-1" style={{ color: HQ.INK }}>تم حجب النص القرآني وتعطيل التلاوة المرجعية</p>
+                          <p className="mb-3" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>قم بتسجيل التلاوة من حفظك عن ظهر قلب</p>
+                          <p style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>
+                            سورة {surahName} — الآيات {q.fromVerse || 1} إلى {q.toVerse || '...'}
+                          </p>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Navigation Buttons */}
+              <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6 pb-6">
+                <button type="button" onClick={() => { stopAudio(); prevQuestion(); }} disabled={currentQuestion === 0}
+                  className="hq-action flex-1 text-sm" style={{ background: 'transparent', color: HQ.MUTED }}>
+                  <ChevronRight size={16} aria-hidden /> السابق
+                </button>
+                {isLast ? (
+                  <button type="button" onClick={handleSubmit} disabled={isSubmitting}
+                    className="hq-action flex-1 text-sm" style={{ background: HQ.MENTOR, color: '#fff', opacity: isSubmitting ? 0.6 : 1 }}>
+                    {isSubmitting ? <LoadingSpinner size="sm" color="white" /> : <><Send size={15} aria-hidden /> تسليم الامتحان</>}
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => { stopAudio(); nextQuestion(); }}
+                    className="hq-action flex-1 text-sm" style={{ background: HQ.MENTOR, color: '#fff' }}>
+                    التالي <ChevronLeft size={16} aria-hidden />
+                  </button>
                 )}
-
-              </motion.div>
-            </AnimatePresence>
-
-            {/* Navigation Buttons */}
-            <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6 pb-6">
-              <button onClick={() => { stopAudio(); prevQuestion(); }} disabled={currentQuestion === 0}
-                className="btn-ghost flex-1 py-3 text-sm disabled:opacity-30">
-                <ChevronRight className="w-4 h-4" /> السابق
-              </button>
-              {isLast ? (
-                <button onClick={handleSubmit} disabled={isSubmitting}
-                  className="btn-primary flex-1 py-3 text-sm">
-                  {isSubmitting ? <LoadingSpinner size="sm" color="white" /> : <><Send className="w-4 h-4" /> تسليم الامتحان</>}
-                </button>
-              ) : (
-                <button onClick={() => { stopAudio(); nextQuestion(); }} className="btn-primary flex-1 py-3 text-sm">
-                  التالي <ChevronLeft className="w-4 h-4" />
-                </button>
-              )}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </MotionConfig>
   );
 }

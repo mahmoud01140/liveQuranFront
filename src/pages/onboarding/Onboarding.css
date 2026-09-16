@@ -1,0 +1,395 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Amiri:wght@400;700&display=swap');
+
+/* ═══════════════════════════════════════════════
+   Onboarding — local visual layer (Al-Halaqa).
+   Scoped under `.onb`; no other screen is touched.
+   Quiet steps, honest progress, calm decisions.
+   No gradients, no glass, no celebration effects.
+   Type ramp only: 2 / 1.5 / 1.25 / 1rem, 0.8125,
+   Quran 1.375rem.
+   ═══════════════════════════════════════════════ */
+
+.onb {
+  --onb-paper: #FBF7EE;
+  --onb-surface: #FFFFFF;
+  --onb-ink: #2A2438;
+  --onb-muted: #756E85;
+  --onb-line: #E8E2D4;
+  --onb-mentor: #177B58;
+  --onb-mentor-deep: #0F5940;
+  --onb-mentor-wash: #E2EFE7;
+  --onb-guide: #4A3F6B;
+  --onb-guide-wash: #ECE9F4;
+  --onb-error: #C2410C;
+  --onb-warning: #B45309;
+  font-family: 'Tajawal', sans-serif;
+  background: var(--onb-paper);
+  color: var(--onb-ink);
+  direction: rtl;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.onb :focus-visible {
+  outline: 2px solid var(--onb-mentor);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.onb-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.onb-card {
+  background: var(--onb-surface);
+  border: 1px solid var(--onb-line);
+  border-radius: 18px;
+  padding: clamp(20px, 4vw, 32px);
+}
+
+.onb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 12px 32px;
+  border: none;
+  border-radius: 12px;
+  background: var(--onb-mentor);
+  color: #FFFFFF;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.6;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.onb-btn:hover {
+  background: var(--onb-mentor-deep);
+}
+
+.onb-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.onb-btn-block {
+  width: 100%;
+}
+
+.onb-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: var(--onb-surface);
+  color: var(--onb-mentor);
+  border: 1.5px solid var(--onb-mentor);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.onb-btn-outline:hover {
+  background: var(--onb-mentor-wash);
+}
+
+.onb-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  border-radius: 12px;
+  color: var(--onb-muted);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.onb-ghost:hover {
+  color: var(--onb-mentor);
+}
+
+.onb-ghost:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.onb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--onb-mentor-wash);
+  color: var(--onb-mentor-deep);
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.onb-num {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--onb-mentor);
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 1.25rem;
+}
+
+.onb-progress {
+  height: 8px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: var(--onb-line);
+}
+
+.onb-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--onb-mentor);
+}
+
+/* Choice / answer option: list row, never a card pile */
+.onb-opt {
+  display: block;
+  width: 100%;
+  text-align: right;
+  min-height: 56px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 2px solid var(--onb-line);
+  background: var(--onb-surface);
+  color: var(--onb-ink);
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 1rem;
+  line-height: 1.8;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.onb-opt:hover {
+  border-color: var(--onb-mentor);
+}
+
+.onb-opt[aria-pressed="true"] {
+  border-color: var(--onb-mentor);
+  background: var(--onb-mentor-wash);
+  font-weight: 700;
+}
+
+.onb-opt:disabled {
+  cursor: default;
+}
+
+.onb-radio {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  border: 2px solid var(--onb-muted);
+  background: var(--onb-surface);
+  position: relative;
+}
+
+.onb-radio.on {
+  border-color: var(--onb-mentor);
+  background: var(--onb-mentor);
+}
+
+.onb-radio.on::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 9999px;
+  background: #FFFFFF;
+}
+
+/* Question navigator dots */
+.onb-dot {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 6px;
+  border-radius: 8px;
+  border: 1px solid var(--onb-line);
+  background: var(--onb-paper);
+  color: var(--onb-muted);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.onb-dot.ans {
+  background: var(--onb-mentor-wash);
+  border-color: var(--onb-mentor-wash);
+  color: var(--onb-mentor-deep);
+}
+
+.onb-dot.now {
+  background: var(--onb-mentor);
+  border-color: var(--onb-mentor);
+  color: #FFFFFF;
+}
+
+/* Task tabs (oral exam) */
+.onb-tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--onb-line);
+  background: var(--onb-surface);
+  color: var(--onb-muted);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.onb-tab.on {
+  background: var(--onb-mentor);
+  border-color: var(--onb-mentor);
+  color: #FFFFFF;
+}
+
+.onb-tab.done {
+  background: var(--onb-mentor-wash);
+  border-color: var(--onb-mentor-wash);
+  color: var(--onb-mentor-deep);
+}
+
+/* Timer pill: digits + icon + label, never color alone */
+.onb-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: var(--onb-mentor-wash);
+  color: var(--onb-mentor-deep);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.onb-timer.urgent {
+  background: var(--onb-surface);
+  border: 1.5px solid var(--onb-error);
+  color: var(--onb-error);
+}
+
+/* Quranic text — Amiri only */
+.onb-quran {
+  font-family: 'Amiri', serif;
+  font-size: 1.375rem;
+  line-height: 2.4;
+  color: var(--onb-ink);
+  text-align: center;
+  margin: 0;
+}
+
+.onb-wash {
+  background: var(--onb-mentor-wash);
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.onb-notice {
+  background: var(--onb-surface);
+  border: 1px solid var(--onb-line);
+  border-radius: 18px;
+  padding: 20px;
+  display: flex;
+  gap: 12px;
+}
+
+/* Big record button: idle mentor, recording clay. Pulse ring
+   appears only while recording (functional live signal). */
+.onb-record {
+  width: 96px;
+  height: 96px;
+  border-radius: 9999px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--onb-mentor);
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.onb-record:hover {
+  background: var(--onb-mentor-deep);
+}
+
+.onb-record.rec {
+  background: var(--onb-error);
+}
+
+.onb-stepdot {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  background: var(--onb-paper);
+  border: 1px solid var(--onb-line);
+  color: var(--onb-muted);
+}
+
+.onb-stepdot.done {
+  background: var(--onb-mentor);
+  border-color: var(--onb-mentor);
+  color: #FFFFFF;
+}
+
+.onb-stepdot.now {
+  background: var(--onb-surface);
+  border: 2px solid var(--onb-mentor);
+  color: var(--onb-mentor-deep);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onb *,
+  .onb *::before,
+  .onb *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

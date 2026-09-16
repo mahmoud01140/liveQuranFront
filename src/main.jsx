@@ -20,21 +20,21 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         toastOptions={{
           duration: 4000,
           style: {
-            fontFamily: 'Cairo, sans-serif',
+            fontFamily: 'Tajawal, sans-serif',
             direction: 'rtl',
             textAlign: 'right',
             borderRadius: '12px',
             padding: '14px 18px',
-            fontSize: '14px',
+            fontSize: '0.8125rem',
             boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
           },
           success: {
-            iconTheme: { primary: '#1D9E75', secondary: '#fff' },
-            style: { background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0' },
+            iconTheme: { primary: '#177B58', secondary: '#fff' },
+            style: { background: '#E2EFE7', color: '#0F5940', border: '1px solid #177B58' },
           },
           error: {
-            iconTheme: { primary: '#EF4444', secondary: '#fff' },
-            style: { background: '#FEF2F2', color: '#991B1B', border: '1px solid #FECACA' },
+            iconTheme: { primary: '#C2410C', secondary: '#fff' },
+            style: { background: '#FFFFFF', color: '#C2410C', border: '1px solid #C2410C' },
           },
         }}
       />

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, MotionConfig } from 'framer-motion';
 import {
   BookOpen, Check, Clock, AlertCircle, Star, Users, Filter,
   ChevronLeft, MessageSquare, RefreshCw, X, Mic, Square, Play, Pause, Volume2, Trash2,
-  Edit3, Save, Sparkles, Award
+  Edit3, Save, Award,
 } from 'lucide-react';
 import PageLayout from '../../components/shared/PageLayout';
 import Pagination from '../../components/shared/Pagination';
@@ -11,23 +11,47 @@ import usePagination from '../../hooks/usePagination';
 import useAuthStore from '../../store/authStore';
 import useGroupStore from '../../store/groupStore';
 import useDailyRecordStore from '../../store/dailyRecordStore';
-import { timeAgoAr, getInitials, getAvatarColor, getLevelLabel, getLevelColor } from '../../utils/helpers';
+import { timeAgoAr, getInitials, getAvatarColor, getLevelLabel } from '../../utils/helpers';
 import QURAN_SURAHS from '../../utils/quranData';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
 
-const STATUS_MAP = {
-  pending: { label: 'قيد المراجعة', color: 'bg-amber-50 text-amber-600', dot: 'bg-amber-400' },
-  approved: { label: 'تمت الموافقة', color: 'bg-green-50 text-green-600', dot: 'bg-green-400' },
-  needs_review: { label: 'يحتاج مراجعة', color: 'bg-red-50 text-red-600', dot: 'bg-red-400' },
+/* Daily review desk — approvals, recitations and individual wird.
+   Same fetches, forms, audio and payloads as before; visual only. */
+
+const STATUS_TONE = {
+  pending: { label: 'قيد المراجعة', bg: '#FBF7EE', fg: '#B45309', border: '#B45309', dot: '#B45309' },
+  approved: { label: 'تمت الموافقة', bg: '#E2EFE7', fg: '#0F5940', border: '#E2EFE7', dot: '#177B58' },
+  needs_review: { label: 'يحتاج مراجعة', bg: '#FFFFFF', fg: '#C2410C', border: '#C2410C', dot: '#C2410C' },
 };
 
-const RECITATION_STATUS_MAP = {
-  pending: { label: 'تلاوات معلقة', color: 'bg-amber-50 text-amber-600', dot: 'bg-amber-400' },
-  reviewed: { label: 'تم تقييمها', color: 'bg-green-50 text-green-600', dot: 'bg-green-400' },
+const RECITATION_TONE = {
+  pending: { label: 'تلاوات معلقة', bg: '#FBF7EE', fg: '#B45309', border: '#B45309', dot: '#B45309' },
+  reviewed: { label: 'تم تقييمها', bg: '#E2EFE7', fg: '#0F5940', border: '#E2EFE7', dot: '#177B58' },
+};
+
+const TASK_TONE = {
+  reviewed: { label: 'تم التقييم', bg: '#E2EFE7', fg: '#0F5940', border: '#E2EFE7' },
+  completed: { label: 'أنجزه الطالب', bg: '#E2EFE7', fg: '#0F5940', border: '#E2EFE7' },
+  pending: { label: 'قيد الحفظ', bg: '#FBF7EE', fg: '#B45309', border: '#B45309' },
+};
+
+const LEVEL_TONE = {
+  foundation: { wash: '#E2EFE7', fg: '#0F5940' },
+  memorization: { wash: '#ECE9F4', fg: '#4A3F6B' },
+  teacher_prep: { wash: '#ECE9F4', fg: '#4A3F6B' },
+  senior: { wash: '#FBF7EE', fg: '#2A2438' },
 };
 
 const ACTIVITY_LABELS = { memorization: 'حفظ', review: 'مراجعة', tajweed: 'تجويد' };
+
+const field = {
+  width: '100%', minHeight: 48, background: HQ.SURFACE, color: HQ.INK,
+  border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '12px 16px',
+  fontSize: 14, fontFamily: 'inherit',
+};
 
 export default function TeacherDailyReviewPage() {
   const { user } = useAuthStore();
@@ -35,7 +59,7 @@ export default function TeacherDailyReviewPage() {
   const { groupRecords, pendingCount, isLoading, fetchGroupRecords, reviewRecord } = useDailyRecordStore();
 
   const [selectedGroup, setSelectedGroup] = useState(null);
-  
+
   // Daily record state
   const [statusFilter, setStatusFilter] = useState('pending');
   const [reviewingId, setReviewingId] = useState(null);
@@ -117,7 +141,7 @@ export default function TeacherDailyReviewPage() {
   const handleReview = async (recordId) => {
     try {
       await reviewRecord(recordId, reviewForm);
-      toast.success(reviewForm.status === 'approved' ? 'تمت الموافقة ✅' : 'تم طلب المراجعة');
+      toast.success(reviewForm.status === 'approved' ? 'تمت الموافقة' : 'تم طلب المراجعة');
       setReviewingId(null);
       setReviewForm({ status: 'approved', teacherNotes: '', rating: 5 });
     } catch {
@@ -172,7 +196,7 @@ export default function TeacherDailyReviewPage() {
             cumulativeJuz: 30,
           }
         });
-        toast.success('تم اعتماد خطة الورد الأسبوعية (7 أيام) بنجاح 📅✨');
+        toast.success('تم اعتماد خطة الورد الأسبوعية (7 أيام) بنجاح');
       } else {
         await api.put(`/daily-tasks/student/${editingStudentTask.student._id}/assign`, {
           newHifz: {
@@ -192,7 +216,7 @@ export default function TeacherDailyReviewPage() {
             : undefined,
           teacherNotes: assignForm.teacherNotes || undefined,
         });
-        toast.success('تم حفظ وتخصيص الورد اليومي للطالب بنجاح ✨');
+        toast.success('تم حفظ وتخصيص الورد اليومي للطالب بنجاح');
       }
 
       setEditingStudentTask(null);
@@ -231,7 +255,7 @@ export default function TeacherDailyReviewPage() {
       await api.put(`/student-recitations/${recitationId}/review`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      toast.success('تم إرسال التقييم بنجاح وإشعار الطالب! ✅');
+      toast.success('تم إرسال التقييم بنجاح وإشعار الطالب!');
       setReviewingRecitationId(null);
       setRecitationForm({ rating: 5, teacherNotes: '' });
       setRecordedFeedbackUrl(null);
@@ -359,821 +383,936 @@ export default function TeacherDailyReviewPage() {
     }
   };
 
+  const panel = {
+    background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 20,
+  };
+  const emptyBox = {
+    background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18,
+    padding: 48, textAlign: 'center',
+  };
+  const primaryBtn = {
+    minHeight: 48, padding: '12px 20px', borderRadius: 12, border: 'none',
+    background: HQ.MENTOR, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  };
+  const ghostBtn = {
+    minHeight: 48, padding: '12px 20px', borderRadius: 12, border: 'none', background: 'transparent',
+    color: HQ.MUTED, fontWeight: 800, fontSize: 14, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  };
+  const outlineBtn = {
+    minHeight: 48, padding: '12px 20px', borderRadius: 12, background: HQ.SURFACE,
+    color: HQ.MENTOR, border: `1.5px solid ${HQ.MENTOR}`, fontWeight: 800, fontSize: 14, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  };
+  const iconBtn = {
+    minWidth: 44, minHeight: 44, borderRadius: 12, border: 'none', background: 'transparent',
+    color: HQ.MUTED, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  };
+
+  const renderStars = (value, onPick) => (
+    <div className="flex items-center gap-1" role="radiogroup" aria-label="التقييم من 5">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <button key={s} type="button"
+          role="radio" aria-checked={s === value} aria-label={`${s} من 5`}
+          onClick={() => onPick && onPick(s)}
+          style={{ minWidth: 40, minHeight: 40, border: 'none', background: 'none', cursor: onPick ? 'pointer' : 'default', padding: 8 }}>
+          <Star size={19} aria-hidden color={s <= value ? '#D9A441' : HQ.LINE}
+            fill={s <= value ? '#D9A441' : 'none'} />
+        </button>
+      ))}
+    </div>
+  );
+
+  const statusChip = (tone) => ({
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    fontSize: '0.8125rem', fontWeight: 700, padding: '4px 12px', borderRadius: 9999,
+    background: tone.bg, color: tone.fg, border: `1px solid ${tone.border}`,
+  });
 
   // Group selection
   if (!selectedGroup) {
     return (
       <PageLayout>
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <h1 className="section-title flex items-center gap-2">
-            <BookOpen className="w-6 h-6 text-primary-400" /> مراجعة سجلات الحفظ
-          </h1>
-          <p className="section-subtitle">اختر مجموعة لمراجعة سجلات الحفظ اليومية</p>
-        </motion.div>
-        {myGroups.length === 0 ? (
-          <div className="empty-state"><Users className="empty-state-icon" /><p>لا توجد مجموعات</p></div>
-        ) : (
-          <div>
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 stagger-children">
-              {groupsPagination.paginatedItems.map(group => {
-                const lc = getLevelColor(group.level);
-                return (
-                  <motion.button key={group._id} whileHover={{ y: -3 }} onClick={() => setSelectedGroup(group)}
-                    className="card-base p-6 text-right hover:shadow-md transition-all w-full">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-lg" style={{ backgroundColor: lc.bg, color: lc.text }}>
-                        {getLevelLabel(group.level)}
-                      </span>
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5" /> {group.students?.length || 0}
-                      </span>
-                    </div>
-                    <h3 className="font-black text-gray-900 mb-2">{group.name}</h3>
-                    <div className="flex items-center gap-2 text-primary-400 text-sm font-semibold mt-2">
-                      <BookOpen className="w-4 h-4" /> مراجعة السجلات
-                      <ChevronLeft className="w-4 h-4 mr-auto" />
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </div>
-            <Pagination
-              currentPage={groupsPagination.currentPage}
-              totalPages={groupsPagination.totalPages}
-              totalItems={groupsPagination.totalItems}
-              pageSize={groupsPagination.pageSize}
-              onPageChange={groupsPagination.setCurrentPage}
-              onPageSizeChange={groupsPagination.setPageSize}
-              showPageSize={true}
-              pageSizeOptions={[6, 12, 24]}
-              itemName="مجموعة"
-              className="mt-6"
-            />
+        <MotionConfig reducedMotion="user">
+          <div className="halaqa" style={{ maxWidth: 960, margin: '0 auto' }}>
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="mb-6">
+              <h1 className="flex items-center gap-2" style={{ fontSize: '1.5rem', fontWeight: 800, color: HQ.INK, margin: '0 0 4px' }}>
+                <BookOpen size={22} color={HQ.MENTOR} aria-hidden /> مراجعة سجلات الحفظ
+              </h1>
+              <p className="text-sm" style={{ color: HQ.MUTED, margin: 0 }}>اختر مجموعة لمراجعة سجلات الحفظ اليومية</p>
+            </motion.div>
+            {myGroups.length === 0 ? (
+              <div style={emptyBox}>
+                <Users size={52} color={HQ.LINE} style={{ margin: '0 auto 12px' }} aria-hidden />
+                <p className="font-bold" style={{ color: HQ.MUTED, margin: 0 }}>لا توجد مجموعات</p>
+              </div>
+            ) : (
+              <div>
+                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {groupsPagination.paginatedItems.map(group => {
+                    const tone = LEVEL_TONE[group.level] || { wash: HQ.PAPER, fg: HQ.MUTED };
+                    return (
+                      <button key={group._id} type="button" onClick={() => setSelectedGroup(group)}
+                        className="p-6 text-right w-full"
+                        style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, cursor: 'pointer' }}>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs font-bold px-2.5 py-1" style={{ backgroundColor: tone.wash, color: tone.fg, borderRadius: 8 }}>
+                            {getLevelLabel(group.level)}
+                          </span>
+                          <span className="text-xs flex items-center gap-1" style={{ color: HQ.MUTED, fontVariantNumeric: 'tabular-nums' }}>
+                            <Users size={13} aria-hidden /> {group.students?.length || 0}
+                          </span>
+                        </div>
+                        <h3 className="font-extrabold" style={{ color: HQ.INK, margin: '0 0 8px' }}>{group.name}</h3>
+                        <div className="flex items-center gap-2 text-sm font-bold" style={{ color: HQ.MENTOR }}>
+                          <BookOpen size={15} aria-hidden /> مراجعة السجلات
+                          <ChevronLeft size={15} aria-hidden style={{ marginRight: 'auto' }} />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <Pagination
+                  currentPage={groupsPagination.currentPage}
+                  totalPages={groupsPagination.totalPages}
+                  totalItems={groupsPagination.totalItems}
+                  pageSize={groupsPagination.pageSize}
+                  onPageChange={groupsPagination.setCurrentPage}
+                  onPageSizeChange={groupsPagination.setPageSize}
+                  showPageSize={true}
+                  pageSizeOptions={[6, 12, 24]}
+                  itemName="مجموعة"
+                  className="mt-6"
+                />
+              </div>
+            )}
           </div>
-        )}
+        </MotionConfig>
       </PageLayout>
     );
   }
 
   return (
     <PageLayout>
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <button onClick={() => setSelectedGroup(null)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-            <ChevronLeft className="w-5 h-5 text-gray-400" style={{ transform: 'scaleX(-1)' }} />
-          </button>
-          <div>
-            <h1 className="section-title">سجلات {selectedGroup.name}</h1>
-            <p className="section-subtitle">
-              {activeReviewType === 'daily_records'
-                ? (pendingCount > 0 ? `${pendingCount} سجل بانتظار المراجعة` : 'لا توجد سجلات معلقة')
-                : activeReviewType === 'recitations'
-                ? 'مراجعة وتقييم التسجيلات الصوتية المرسلة من الطلاب'
-                : 'تخصيص ومتابعة الورد اليومي الفردي لكل طالب وفق مستواه وسرعته'}
-            </p>
-          </div>
-        </div>
-
-        {/* Toggle between Daily Records, Individual Tasks, and Recitations */}
-        <div className="flex gap-4 border-b border-gray-200 pb-2.5 mb-5 flex-shrink-0 flex-wrap">
-          <button
-            onClick={() => setActiveReviewType('daily_records')}
-            className={`pb-1 text-sm font-black transition-all ${
-              activeReviewType === 'daily_records'
-                ? 'text-primary-500 border-b-2 border-primary-500'
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            📋 نشاطات الحفظ اليومية
-          </button>
-          <button
-            onClick={() => setActiveReviewType('individual_tasks')}
-            className={`pb-1 text-sm font-black transition-all flex items-center gap-1.5 ${
-              activeReviewType === 'individual_tasks'
-                ? 'text-primary-500 border-b-2 border-primary-500'
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>📖 أوراد الطلاب الفردية (ورد اليوم)</span>
-          </button>
-          <button
-            onClick={() => setActiveReviewType('recitations')}
-            className={`pb-1 text-sm font-black transition-all ${
-              activeReviewType === 'recitations'
-                ? 'text-primary-500 border-b-2 border-primary-500'
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            🎙️ تسجيلات التلاوة الذاتية
-          </button>
-        </div>
-
-        {/* Status filter tabs (Daily Records vs Recitations vs Individual Tasks) */}
-        {activeReviewType === 'daily_records' ? (
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { key: 'pending', label: 'معلقة', icon: Clock, count: pendingCount },
-              { key: 'approved', label: 'موافق عليها', icon: Check },
-              { key: 'needs_review', label: 'تحتاج مراجعة', icon: AlertCircle },
-              { key: 'all', label: 'الكل', icon: Filter },
-            ].map(tab => (
-              <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  statusFilter === tab.key
-                    ? 'bg-primary-400 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
-                }`}>
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                    statusFilter === tab.key ? 'bg-white text-primary-500' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {tab.count}
-                  </span>
-                )}
+      <MotionConfig reducedMotion="user">
+        <div className="halaqa" style={{ maxWidth: 960, margin: '0 auto' }}>
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <button type="button" onClick={() => setSelectedGroup(null)} aria-label="العودة لاختيار المجموعة" style={iconBtn}>
+                <ChevronLeft size={19} color={HQ.MUTED} aria-hidden style={{ transform: 'scaleX(-1)' }} />
               </button>
-            ))}
-          </div>
-        ) : activeReviewType === 'recitations' ? (
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { key: 'pending', label: 'بانتظار التقييم', icon: Clock },
-              { key: 'reviewed', label: 'تم تقييمها', icon: Check },
-              { key: 'all', label: 'الكل', icon: Filter },
-            ].map(tab => (
-              <button key={tab.key} onClick={() => setRecitationStatusFilter(tab.key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  recitationStatusFilter === tab.key
-                    ? 'bg-primary-400 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
-                }`}>
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-3 flex-wrap bg-primary-50/50 p-3 rounded-2xl border border-primary-100">
-            <div className="flex items-center gap-2 text-xs text-primary-800">
-              <Sparkles className="w-4 h-4 text-primary-600" />
-              <span>هنا يمكنك تحديد وتخصيص الورد اليومي الفردي لكل طالب دون التقيد بورد موحد للمجموعة</span>
+              <div>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: HQ.INK, margin: '0 0 4px' }}>سجلات {selectedGroup.name}</h1>
+                <p className="text-sm" style={{ color: HQ.MUTED, margin: 0 }}>
+                  {activeReviewType === 'daily_records'
+                    ? (pendingCount > 0 ? `${pendingCount} سجل بانتظار المراجعة` : 'لا توجد سجلات معلقة')
+                    : activeReviewType === 'recitations'
+                    ? 'مراجعة وتقييم التسجيلات الصوتية المرسلة من الطلاب'
+                    : 'تخصيص ومتابعة الورد اليومي الفردي لكل طالب وفق مستواه وسرعته'}
+                </p>
+              </div>
             </div>
-            <button
-              onClick={() => fetchGroupDailyTasks(selectedGroup._id)}
-              className="flex items-center gap-1 text-xs font-bold text-primary-600 hover:text-primary-700 bg-white px-3 py-1.5 rounded-xl border border-primary-200 shadow-sm"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loadingDailyTasks ? 'animate-spin' : ''}`} />
-              <span>تحديث الأوراد</span>
-            </button>
-          </div>
-        )}
-      </motion.div>
 
-      {/* Content Rendering */}
-      {activeReviewType === 'daily_records' ? (
-        isLoading ? (
-          <div className="card-base p-12 text-center">
-            <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin text-primary-300" />
-          </div>
-        ) : groupRecords.length === 0 ? (
-          <div className="card-base p-12 text-center text-gray-400">
-            <BookOpen className="w-14 h-14 mx-auto mb-3 text-gray-200" />
-            <p className="font-semibold">لا توجد سجلات {statusFilter !== 'all' ? STATUS_MAP[statusFilter]?.label || '' : ''}</p>
-          </div>
-        ) : (
-          <div>
-            <div className="space-y-3 stagger-children">
-              {recordsPagination.paginatedItems.map((record) => {
-                const si = STATUS_MAP[record.status];
-                const isReviewing = reviewingId === record._id;
+            {/* Toggle between Daily Records, Individual Tasks, and Recitations */}
+            <div className="hq-tabs" role="tablist" aria-label="نوع المراجعة"
+              style={{ display: 'flex', width: '100%', marginBottom: 20, overflowX: 'auto' }}>
+              {[
+                { key: 'daily_records', label: 'نشاطات الحفظ اليومية' },
+                { key: 'individual_tasks', label: 'أوراد الطلاب الفردية' },
+                { key: 'recitations', label: 'تسجيلات التلاوة الذاتية' },
+              ].map(t => (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeReviewType === t.key}
+                  onClick={() => setActiveReviewType(t.key)}
+                  style={{ flex: '1 0 auto', whiteSpace: 'nowrap' }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-                return (
-                  <motion.div key={record._id} whileHover={{ y: -1 }} className="card-base p-5">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                        style={{ backgroundColor: getAvatarColor(`${record.student?.firstName}${record.student?.lastName}`) }}>
-                        {getInitials(record.student?.firstName, record.student?.lastName)}
-                      </div>
+            {/* Status filter tabs */}
+            {activeReviewType === 'daily_records' ? (
+              <div className="flex gap-2 flex-wrap" role="group" aria-label="تصفية حسب الحالة">
+                {[
+                  { key: 'pending', label: 'معلقة', Icon: Clock, count: pendingCount },
+                  { key: 'approved', label: 'موافق عليها', Icon: Check },
+                  { key: 'needs_review', label: 'تحتاج مراجعة', Icon: AlertCircle },
+                  { key: 'all', label: 'الكل', Icon: Filter },
+                ].map(tab => (
+                  <button key={tab.key} type="button" onClick={() => setStatusFilter(tab.key)}
+                    aria-pressed={statusFilter === tab.key}
+                    className="flex items-center gap-1.5 px-4 text-sm font-bold"
+                    style={{
+                      minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                      border: `1px solid ${statusFilter === tab.key ? HQ.MENTOR : HQ.LINE}`,
+                      background: statusFilter === tab.key ? HQ.MENTOR : HQ.SURFACE,
+                      color: statusFilter === tab.key ? '#fff' : HQ.MUTED,
+                    }}>
+                    <tab.Icon size={15} aria-hidden />
+                    {tab.label}
+                    {tab.count !== undefined && tab.count > 0 && (
+                      <span style={{
+                        fontSize: '0.8125rem', padding: '2px 10px', borderRadius: 9999, fontWeight: 800,
+                        fontVariantNumeric: 'tabular-nums',
+                        background: statusFilter === tab.key ? '#fff' : '#E2EFE7', color: '#0F5940',
+                      }}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : activeReviewType === 'recitations' ? (
+              <div className="flex gap-2 flex-wrap" role="group" aria-label="تصفية التسجيلات">
+                {[
+                  { key: 'pending', label: 'بانتظار التقييم', Icon: Clock },
+                  { key: 'reviewed', label: 'تم تقييمها', Icon: Check },
+                  { key: 'all', label: 'الكل', Icon: Filter },
+                ].map(tab => (
+                  <button key={tab.key} type="button" onClick={() => setRecitationStatusFilter(tab.key)}
+                    aria-pressed={recitationStatusFilter === tab.key}
+                    className="flex items-center gap-1.5 px-4 text-sm font-bold"
+                    style={{
+                      minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                      border: `1px solid ${recitationStatusFilter === tab.key ? HQ.MENTOR : HQ.LINE}`,
+                      background: recitationStatusFilter === tab.key ? HQ.MENTOR : HQ.SURFACE,
+                      color: recitationStatusFilter === tab.key ? '#fff' : HQ.MUTED,
+                    }}>
+                    <tab.Icon size={15} aria-hidden />
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 flex-wrap p-3"
+                style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
+                <p className="text-sm" style={{ color: HQ.INK, margin: 0 }}>
+                  هنا يمكنك تحديد وتخصيص الورد اليومي الفردي لكل طالب دون التقيد بورد موحد للمجموعة
+                </p>
+                <button
+                  type="button"
+                  onClick={() => fetchGroupDailyTasks(selectedGroup._id)}
+                  className="flex items-center gap-1 text-xs font-bold"
+                  style={{
+                    minHeight: 44, padding: '8px 14px', borderRadius: 12, cursor: 'pointer',
+                    background: HQ.SURFACE, color: HQ.MENTOR, border: `1px solid ${HQ.LINE}`,
+                  }}
+                >
+                  <RefreshCw size={14} aria-hidden className={loadingDailyTasks ? 'animate-spin' : ''} />
+                  <span>تحديث الأوراد</span>
+                </button>
+              </div>
+            )}
+          </motion.div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="font-bold text-gray-900">{record.student?.firstName} {record.student?.lastName}</span>
-                          <span className="text-gray-300">—</span>
-                          <span className="font-semibold text-gray-700">سورة {record.surahName}</span>
-                          <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
-                            آية {record.fromVerse}-{record.toVerse} ({record.versesCount} آية)
+          {/* Content Rendering */}
+          {activeReviewType === 'daily_records' ? (
+            isLoading ? (
+              <div style={emptyBox} aria-label="جارٍ تحميل السجلات">
+                <RefreshCw size={30} color={HQ.MENTOR} className="animate-spin" style={{ margin: '0 auto' }} aria-hidden />
+              </div>
+            ) : groupRecords.length === 0 ? (
+              <div style={emptyBox}>
+                <BookOpen size={52} color={HQ.LINE} style={{ margin: '0 auto 12px' }} aria-hidden />
+                <p className="font-bold" style={{ color: HQ.MUTED, margin: 0 }}>لا توجد سجلات {statusFilter !== 'all' ? STATUS_TONE[statusFilter]?.label || '' : ''}</p>
+              </div>
+            ) : (
+              <div>
+                <div className="space-y-3">
+                  {recordsPagination.paginatedItems.map((record) => {
+                    const tone = STATUS_TONE[record.status] || STATUS_TONE.pending;
+                    const isReviewing = reviewingId === record._id;
+
+                    return (
+                      <div key={record._id} style={panel}>
+                        <div className="flex items-start gap-3">
+                          <span aria-hidden className="avatar-circle"
+                            style={{
+                              width: 40, height: 40, fontSize: 14, flex: 'none',
+                              backgroundColor: getAvatarColor(`${record.student?.firstName}${record.student?.lastName}`),
+                            }}>
+                            {getInitials(record.student?.firstName, record.student?.lastName)}
                           </span>
-                        </div>
 
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${si.color}`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${si.dot}`} />
-                            {si.label}
-                          </span>
-                          <span className="text-xs text-gray-400">{timeAgoAr(record.date)}</span>
-                          <span className="text-xs bg-gray-50 text-gray-500 px-2 py-0.5 rounded-lg">
-                            {ACTIVITY_LABELS[record.activityType] || 'حفظ'}
-                          </span>
-                        </div>
-
-                        {record.studentNotes && (
-                          <p className="text-xs text-gray-500 mt-2 bg-gray-50 rounded-lg px-3 py-1.5">📝 {record.studentNotes}</p>
-                        )}
-
-                        {record.teacherNotes && (
-                          <p className="text-xs text-primary-700 mt-1.5 bg-primary-50 rounded-lg px-3 py-1.5">👨‍🏫 {record.teacherNotes}</p>
-                        )}
-
-                        {record.rating && (
-                          <div className="flex items-center gap-0.5 mt-1.5">
-                            {[1,2,3,4,5].map(s => <Star key={s} className={`w-3.5 h-3.5 ${s <= record.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />)}
-                          </div>
-                        )}
-
-                        {/* Inline review form */}
-                        {isReviewing && (
-                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                            className="mt-4 pt-4 border-t border-gray-100">
-                            <div className="flex gap-2 mb-3">
-                              <button onClick={() => setReviewForm({ ...reviewForm, status: 'approved' })}
-                                className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all ${
-                                  reviewForm.status === 'approved' ? 'bg-green-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                <Check className="w-3.5 h-3.5" /> موافقة
-                              </button>
-                              <button onClick={() => setReviewForm({ ...reviewForm, status: 'needs_review' })}
-                                className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all ${
-                                  reviewForm.status === 'needs_review' ? 'bg-red-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                <AlertCircle className="w-3.5 h-3.5" /> يحتاج مراجعة
-                              </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <span className="font-bold" style={{ color: HQ.INK }}>{record.student?.firstName} {record.student?.lastName}</span>
+                              <span style={{ color: HQ.LINE }} aria-hidden>—</span>
+                              <span className="font-bold" style={{ color: HQ.INK }}>سورة {record.surahName}</span>
+                              <span className="text-xs px-2 py-0.5" style={{ background: HQ.PAPER, color: HQ.MUTED, borderRadius: 8, fontVariantNumeric: 'tabular-nums' }}>
+                                آية {record.fromVerse}-{record.toVerse} ({record.versesCount} آية)
+                              </span>
                             </div>
 
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className="text-xs font-semibold text-gray-600">التقييم:</span>
-                              <div className="flex gap-0.5">
-                                {[1,2,3,4,5].map(s => (
-                                  <button key={s} type="button" onClick={() => setReviewForm({ ...reviewForm, rating: s })}>
-                                    <Star className={`w-5 h-5 transition-colors ${s <= reviewForm.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200 hover:text-amber-200'}`} />
-                                  </button>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span style={statusChip(tone)}>
+                                <span aria-hidden style={{ width: 7, height: 7, borderRadius: 9999, background: tone.dot }} />
+                                {tone.label}
+                              </span>
+                              <span className="text-xs" style={{ color: HQ.MUTED }}>{timeAgoAr(record.date)}</span>
+                              <span className="text-xs px-2 py-0.5" style={{ background: HQ.PAPER, color: HQ.MUTED, borderRadius: 8 }}>
+                                {ACTIVITY_LABELS[record.activityType] || 'حفظ'}
+                              </span>
+                            </div>
+
+                            {record.studentNotes && (
+                              <p className="text-xs mt-2 rounded-lg px-3 py-1.5" style={{ color: HQ.MUTED, background: HQ.PAPER, marginBottom: 0 }}>
+                                ملاحظة الطالب: {record.studentNotes}
+                              </p>
+                            )}
+
+                            {record.teacherNotes && (
+                              <p className="text-xs mt-1.5 rounded-lg px-3 py-1.5" style={{ color: '#0F5940', background: '#E2EFE7', marginBottom: 0 }}>
+                                ملاحظتي: {record.teacherNotes}
+                              </p>
+                            )}
+
+                            {record.rating && (
+                              <div className="flex items-center gap-0.5 mt-1.5" role="img" aria-label={`تقييم الطالب ${record.rating} من 5`}>
+                                {[1, 2, 3, 4, 5].map(s => (
+                                  <Star key={s} size={14} aria-hidden color={s <= record.rating ? '#D9A441' : HQ.LINE}
+                                    fill={s <= record.rating ? '#D9A441' : 'none'} />
                                 ))}
                               </div>
-                            </div>
-
-                            <textarea value={reviewForm.teacherNotes}
-                              onChange={(e) => setReviewForm({ ...reviewForm, teacherNotes: e.target.value })}
-                              className="input-base text-sm mb-3" rows={2} maxLength={500}
-                              placeholder="ملاحظات للطالب (اختياري)..." />
-
-                            <div className="flex gap-2">
-                              <button onClick={() => handleReview(record._id)} className="btn-primary text-sm py-2 flex-1">
-                                <Check className="w-4 h-4" /> تأكيد المراجعة
-                              </button>
-                              <button onClick={() => setReviewingId(null)} className="btn-ghost text-sm py-2">
-                                <X className="w-4 h-4" /> إلغاء
-                              </button>
-                            </div>
-                          </motion.div>
-                        )}
-                      </div>
-
-                      {record.status === 'pending' && !isReviewing && (
-                        <button onClick={() => { setReviewingId(record._id); setReviewForm({ status: 'approved', teacherNotes: '', rating: 5 }); }}
-                          className="btn-outline text-xs py-2 px-3 flex-shrink-0">
-                          <MessageSquare className="w-3.5 h-3.5" /> مراجعة
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            <Pagination
-              currentPage={recordsPagination.currentPage}
-              totalPages={recordsPagination.totalPages}
-              totalItems={recordsPagination.totalItems}
-              pageSize={recordsPagination.pageSize}
-              onPageChange={recordsPagination.setCurrentPage}
-              onPageSizeChange={recordsPagination.setPageSize}
-              showPageSize={true}
-              pageSizeOptions={[5, 10, 20, 50]}
-              itemName="سجل"
-              className="mt-6"
-            />
-          </div>
-        )
-      ) : activeReviewType === 'recitations' ? (
-        /* Student Self-Recordings Review rendering */
-        loadingRecitations ? (
-          <div className="card-base p-12 text-center">
-            <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin text-primary-300" />
-          </div>
-        ) : recitations.length === 0 ? (
-          <div className="card-base p-12 text-center text-gray-400">
-            <Mic className="w-14 h-14 mx-auto mb-3 text-gray-200" />
-            <p className="font-semibold">لا توجد تسجيلات تلاوة {recitationStatusFilter !== 'all' ? RECITATION_STATUS_MAP[recitationStatusFilter]?.label || '' : ''}</p>
-          </div>
-        ) : (
-          <div>
-            <div className="space-y-3 stagger-children">
-              {recitationsPagination.paginatedItems.map((rec) => {
-                const rsi = RECITATION_STATUS_MAP[rec.status] || { label: rec.status, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' };
-                const isReviewing = reviewingRecitationId === rec._id;
-
-                return (
-                  <motion.div key={rec._id} whileHover={{ y: -1 }} className="card-base p-5">
-                    <div className="flex flex-col md:flex-row md:items-start gap-4">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mx-auto md:mx-0"
-                        style={{ backgroundColor: getAvatarColor(`${rec.student?.firstName}${rec.student?.lastName}`) }}>
-                        {getInitials(rec.student?.firstName, rec.student?.lastName)}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1 justify-center md:justify-start">
-                          <span className="font-bold text-gray-900">{rec.student?.firstName} {rec.student?.lastName}</span>
-                          <span className="text-gray-300">—</span>
-                          <span className="font-semibold text-gray-700">سورة {rec.surahName}</span>
-                          <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
-                            آية {rec.fromVerse}-{rec.toVerse} ({rec.toVerse - rec.fromVerse + 1} آية)
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap mb-3 justify-center md:justify-start">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${rsi.color}`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${rsi.dot}`} />
-                            {rsi.label}
-                          </span>
-                          <span className="text-xs text-gray-400">{timeAgoAr(rec.createdAt)}</span>
-                        </div>
-
-                        <div className="flex items-center gap-3 bg-primary-50 border border-primary-100 rounded-2xl p-3 mb-3">
-                          <Volume2 className="w-4 h-4 text-primary-400 flex-shrink-0" />
-                          <audio src={rec.audioUrl} controls className="flex-1 h-7" />
-                        </div>
-
-                        {rec.status === 'reviewed' && (
-                          <div className="bg-slate-50 rounded-2xl p-3 border border-gray-100 space-y-1.5">
-                            {rec.rating && (
-                              <div className="flex items-center gap-0.5">
-                                <span className="text-xs text-gray-400 ml-1">التقييم:</span>
-                                {[1,2,3,4,5].map(s => <Star key={s} className={`w-3.5 h-3.5 ${s <= rec.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />)}
-                              </div>
                             )}
-                            {rec.teacherNotes && (
-                              <p className="text-xs text-primary-700 leading-relaxed">👨‍🏫 <strong>ملاحظاتي:</strong> {rec.teacherNotes}</p>
-                            )}
-                            {rec.teacherAudioUrl && (
-                              <div className="flex items-center gap-2 pt-1 border-t border-slate-200/50 mt-1">
-                                <span className="text-[10px] text-gray-400 flex-shrink-0">🎙️ ردي الصوتي:</span>
-                                <audio src={rec.teacherAudioUrl} controls className="flex-1 h-6" />
-                              </div>
+
+                            {/* Inline review form */}
+                            {isReviewing && (
+                              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.2 }}
+                                className="mt-4 pt-4" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
+                                <div className="flex gap-2 mb-3" role="group" aria-label="قرار المراجعة">
+                                  <button type="button" onClick={() => setReviewForm({ ...reviewForm, status: 'approved' })}
+                                    aria-pressed={reviewForm.status === 'approved'}
+                                    className="text-xs font-bold px-3 flex items-center gap-1"
+                                    style={{
+                                      minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                                      border: `2px solid ${reviewForm.status === 'approved' ? HQ.MENTOR : HQ.LINE}`,
+                                      background: reviewForm.status === 'approved' ? HQ.MENTOR : HQ.SURFACE,
+                                      color: reviewForm.status === 'approved' ? '#fff' : HQ.MUTED,
+                                    }}>
+                                    <Check size={14} aria-hidden /> موافقة
+                                  </button>
+                                  <button type="button" onClick={() => setReviewForm({ ...reviewForm, status: 'needs_review' })}
+                                    aria-pressed={reviewForm.status === 'needs_review'}
+                                    className="text-xs font-bold px-3 flex items-center gap-1"
+                                    style={{
+                                      minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                                      border: `2px solid ${reviewForm.status === 'needs_review' ? '#C2410C' : HQ.LINE}`,
+                                      background: reviewForm.status === 'needs_review' ? '#C2410C' : HQ.SURFACE,
+                                      color: reviewForm.status === 'needs_review' ? '#fff' : HQ.MUTED,
+                                    }}>
+                                    <AlertCircle size={14} aria-hidden /> يحتاج مراجعة
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center gap-2 mb-3">
+                                  <span className="text-xs font-bold" style={{ color: HQ.MUTED }}>التقييم:</span>
+                                  {renderStars(reviewForm.rating, (s) => setReviewForm({ ...reviewForm, rating: s }))}
+                                </div>
+
+                                <textarea value={reviewForm.teacherNotes}
+                                  onChange={(e) => setReviewForm({ ...reviewForm, teacherNotes: e.target.value })}
+                                  aria-label="ملاحظات للطالب"
+                                  className="text-sm mb-3 focus:border-[#177B58] focus:outline-none" rows={2} maxLength={500}
+                                  style={field}
+                                  placeholder="ملاحظات للطالب (اختياري)..." />
+
+                                <div className="flex gap-2">
+                                  <button type="button" onClick={() => handleReview(record._id)} style={{ ...primaryBtn, flex: 1 }}>
+                                    <Check size={15} aria-hidden /> تأكيد المراجعة
+                                  </button>
+                                  <button type="button" onClick={() => setReviewingId(null)} style={ghostBtn}>
+                                    <X size={15} aria-hidden /> إلغاء
+                                  </button>
+                                </div>
+                              </motion.div>
                             )}
                           </div>
-                        )}
 
-                        {isReviewing && (
-                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                            className="mt-4 bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-4">
+                          {record.status === 'pending' && !isReviewing && (
+                            <button type="button" onClick={() => { setReviewingId(record._id); setReviewForm({ status: 'approved', teacherNotes: '', rating: 5 }); }}
+                              style={{ ...outlineBtn, minHeight: 44, fontSize: '0.8125rem', flex: 'none' }}>
+                              <MessageSquare size={14} aria-hidden /> مراجعة
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-                            <div className="bg-white p-3 rounded-xl border border-gray-100 flex items-center justify-between flex-wrap gap-2">
-                              <div>
-                                <span className="text-xs font-bold text-gray-700 block">🎧 المقارنة بالتلاوة المرجعية</span>
-                                <span className="text-[10px] text-gray-400 block mt-0.5">استمع لتلاوة الشيخ العفاسي للآيات المحددة</span>
-                              </div>
-                              <button type="button"
-                                onClick={() => playReferenceVerses(rec.surahNumber, rec.fromVerse, rec.toVerse, rec._id)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-                                  playingRefId === rec._id ? 'bg-slate-800 text-white border-slate-700' : 'bg-primary-50 text-primary-600 border-primary-100 hover:bg-primary-100'
-                                }`}>
-                                {refLoadingId === rec._id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                  : playingRefId === rec._id ? <><Pause className="w-3.5 h-3.5" /><span>إيقاف (آية {rec.fromVerse + refCurrentIdx})</span></>
-                                  : <><Play className="w-3.5 h-3.5 mr-0.5" /><span>تشغيل المرجع</span></>}
-                              </button>
+                <Pagination
+                  currentPage={recordsPagination.currentPage}
+                  totalPages={recordsPagination.totalPages}
+                  totalItems={recordsPagination.totalItems}
+                  pageSize={recordsPagination.pageSize}
+                  onPageChange={recordsPagination.setCurrentPage}
+                  onPageSizeChange={recordsPagination.setPageSize}
+                  showPageSize={true}
+                  pageSizeOptions={[5, 10, 20, 50]}
+                  itemName="سجل"
+                  className="mt-6"
+                />
+              </div>
+            )
+          ) : activeReviewType === 'recitations' ? (
+            /* Student Self-Recordings Review rendering */
+            loadingRecitations ? (
+              <div style={emptyBox} aria-label="جارٍ تحميل التسجيلات">
+                <RefreshCw size={30} color={HQ.MENTOR} className="animate-spin" style={{ margin: '0 auto' }} aria-hidden />
+              </div>
+            ) : recitations.length === 0 ? (
+              <div style={emptyBox}>
+                <Mic size={52} color={HQ.LINE} style={{ margin: '0 auto 12px' }} aria-hidden />
+                <p className="font-bold" style={{ color: HQ.MUTED, margin: 0 }}>لا توجد تسجيلات تلاوة {recitationStatusFilter !== 'all' ? RECITATION_TONE[recitationStatusFilter]?.label || '' : ''}</p>
+              </div>
+            ) : (
+              <div>
+                <div className="space-y-3">
+                  {recitationsPagination.paginatedItems.map((rec) => {
+                    const tone = RECITATION_TONE[rec.status] || RECITATION_TONE.pending;
+                    const isReviewing = reviewingRecitationId === rec._id;
+
+                    return (
+                      <div key={rec._id} style={panel}>
+                        <div className="flex flex-col md:flex-row md:items-start gap-4">
+                          <span aria-hidden className="avatar-circle"
+                            style={{
+                              width: 40, height: 40, fontSize: 14, flex: 'none', margin: '0 auto',
+                              backgroundColor: getAvatarColor(`${rec.student?.firstName}${rec.student?.lastName}`),
+                            }}>
+                            {getInitials(rec.student?.firstName, rec.student?.lastName)}
+                          </span>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1 justify-center md:justify-start">
+                              <span className="font-bold" style={{ color: HQ.INK }}>{rec.student?.firstName} {rec.student?.lastName}</span>
+                              <span style={{ color: HQ.LINE }} aria-hidden>—</span>
+                              <span className="font-bold" style={{ color: HQ.INK }}>سورة {rec.surahName}</span>
+                              <span className="text-xs px-2 py-0.5" style={{ background: HQ.PAPER, color: HQ.MUTED, borderRadius: 8, fontVariantNumeric: 'tabular-nums' }}>
+                                آية {rec.fromVerse}-{rec.toVerse} ({rec.toVerse - rec.fromVerse + 1} آية)
+                              </span>
                             </div>
 
-                            <div className="bg-white p-3 rounded-xl border border-gray-100">
-                              <span className="text-xs font-bold text-gray-700 block mb-2">🎙️ تسجيل رد صوتي أو توجيه</span>
-                              {!recordedFeedbackUrl && !isRecordingFeedback ? (
-                                <button type="button" onClick={startFeedbackRecording}
-                                  className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-rose-100 shadow-sm">
-                                  <Mic className="w-3.5 h-3.5" /> تسجيل ملاحظة شفهية
-                                </button>
-                              ) : isRecordingFeedback ? (
-                                <div className="flex items-center gap-3">
-                                  <span className="text-xs font-mono font-bold text-red-500 animate-pulse">جاري التسجيل... ({feedbackDuration} ث)</span>
-                                  <button type="button" onClick={stopFeedbackRecording}
-                                    className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold flex items-center gap-1">
-                                    <Square className="w-3.5 h-3.5" /> إيقاف
+                            <div className="flex items-center gap-2 flex-wrap mb-3 justify-center md:justify-start">
+                              <span style={statusChip(tone)}>
+                                <span aria-hidden style={{ width: 7, height: 7, borderRadius: 9999, background: tone.dot }} />
+                                {tone.label}
+                              </span>
+                              <span className="text-xs" style={{ color: HQ.MUTED }}>{timeAgoAr(rec.createdAt)}</span>
+                            </div>
+
+                            <div className="flex items-center gap-3 rounded-2xl p-3 mb-3" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
+                              <Volume2 size={15} color={HQ.MENTOR} aria-hidden className="flex-none" />
+                              <audio src={rec.audioUrl} controls className="flex-1" style={{ height: 28 }} />
+                            </div>
+
+                            {rec.status === 'reviewed' && (
+                              <div className="rounded-2xl p-3 space-y-1.5" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
+                                {rec.rating && (
+                                  <div className="flex items-center gap-0.5" role="img" aria-label={`تقييم الطالب ${rec.rating} من 5`}>
+                                    <span className="text-xs ml-1" style={{ color: HQ.MUTED }}>التقييم:</span>
+                                    {[1, 2, 3, 4, 5].map(s => (
+                                      <Star key={s} size={14} aria-hidden color={s <= rec.rating ? '#D9A441' : HQ.LINE}
+                                        fill={s <= rec.rating ? '#D9A441' : 'none'} />
+                                    ))}
+                                  </div>
+                                )}
+                                {rec.teacherNotes && (
+                                  <p className="text-xs" style={{ color: HQ.INK, margin: 0 }}>
+                                    <strong>ملاحظاتي:</strong> {rec.teacherNotes}
+                                  </p>
+                                )}
+                                {rec.teacherAudioUrl && (
+                                  <div className="flex items-center gap-2 pt-1" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
+                                    <span style={{ fontSize: '0.8125rem', color: HQ.MUTED, flex: 'none' }}>ردي الصوتي:</span>
+                                    <audio src={rec.teacherAudioUrl} controls className="flex-1" style={{ height: 24 }} />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {isReviewing && (
+                              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.2 }}
+                                className="mt-4 rounded-2xl p-4 space-y-4" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
+
+                                <div className="p-3 rounded-xl flex items-center justify-between flex-wrap gap-2"
+                                  style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+                                  <div>
+                                    <span className="text-xs font-bold block" style={{ color: HQ.INK }}>المقارنة بالتلاوة المرجعية</span>
+                                    <span className="block mt-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>استمع لتلاوة الشيخ العفاسي للآيات المحددة</span>
+                                  </div>
+                                  <button type="button"
+                                    onClick={() => playReferenceRecitation(rec)}
+                                    className="px-3 text-xs font-bold flex items-center gap-1.5"
+                                    style={{
+                                      minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                                      border: `1px solid ${playingRefId === rec._id ? HQ.MENTOR : HQ.LINE}`,
+                                      background: playingRefId === rec._id ? HQ.MENTOR : HQ.SURFACE,
+                                      color: playingRefId === rec._id ? '#fff' : HQ.MENTOR,
+                                    }}>
+                                    {refLoadingId === rec._id ? <RefreshCw size={14} className="animate-spin" aria-hidden />
+                                      : playingRefId === rec._id
+                                      ? <><Pause size={14} aria-hidden /><span>إيقاف (آية {rec.fromVerse + refCurrentIdx})</span></>
+                                      : <><Play size={14} aria-hidden /><span>تشغيل المرجع</span></>}
                                   </button>
+                                </div>
+
+                                <div className="p-3 rounded-xl" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+                                  <span className="text-xs font-bold block mb-2" style={{ color: HQ.INK }}>تسجيل رد صوتي أو توجيه</span>
+                                  {!recordedFeedbackUrl && !isRecordingFeedback ? (
+                                    <button type="button" onClick={startFeedbackRecording}
+                                      className="px-4 text-xs font-bold flex items-center gap-1.5"
+                                      style={{
+                                        minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                                        background: HQ.SURFACE, color: '#C2410C', border: '1px solid #C2410C',
+                                      }}>
+                                      <Mic size={14} aria-hidden /> تسجيل ملاحظة شفهية
+                                    </button>
+                                  ) : isRecordingFeedback ? (
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-bold animate-pulse" style={{ color: '#C2410C', fontVariantNumeric: 'tabular-nums' }}>
+                                        جاري التسجيل... ({feedbackDuration} ث)
+                                      </span>
+                                      <button type="button" onClick={stopFeedbackRecording}
+                                        className="px-3 text-xs font-bold flex items-center gap-1"
+                                        style={{ minHeight: 44, borderRadius: 12, cursor: 'pointer', background: HQ.INK, color: '#fff', border: 'none' }}>
+                                        <Square size={13} aria-hidden /> إيقاف
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between gap-3 p-2 rounded-lg" style={{ background: HQ.PAPER }}>
+                                      <button type="button" onClick={togglePlayFeedback} aria-label={isPlayingFeedback ? 'إيقاف الاستماع' : 'استماع للتعليق'}
+                                        style={{ ...iconBtn, background: '#E2EFE7', color: HQ.MENTOR }}>
+                                        {isPlayingFeedback ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden />}
+                                      </button>
+                                      <span style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>تم تسجيل التعليق الصوتي — جاهز للإرسال</span>
+                                      <button type="button" onClick={() => { setRecordedFeedbackUrl(null); setRecordedFeedbackBlob(null); }}
+                                        aria-label="إعادة التسجيل"
+                                        style={{ ...iconBtn, background: HQ.SURFACE, color: '#C2410C', border: '1px solid #C2410C' }}>
+                                        <Trash2 size={15} aria-hidden />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold" style={{ color: HQ.MUTED }}>تقييم الأداء:</span>
+                                  {renderStars(recitationForm.rating, (s) => setRecitationForm({ ...recitationForm, rating: s }))}
+                                </div>
+
+                                <textarea value={recitationForm.teacherNotes}
+                                  onChange={(e) => setRecitationForm({ ...recitationForm, teacherNotes: e.target.value })}
+                                  aria-label="ملاحظات التجويد أو التوجيهات"
+                                  className="text-sm focus:border-[#177B58] focus:outline-none" rows={2} maxLength={1000}
+                                  style={field}
+                                  placeholder="اكتب ملاحظات التجويد أو التوجيهات هنا..." />
+
+                                <div className="flex gap-2">
+                                  <button type="button" onClick={() => handleReviewRecitation(rec._id)} style={{ ...primaryBtn, flex: 1 }}>
+                                    <Check size={15} aria-hidden /> حفظ وإرسال التقييم
+                                  </button>
+                                  <button type="button" onClick={() => { setReviewingRecitationId(null); setRecordedFeedbackUrl(null); setRecordedFeedbackBlob(null); }} style={ghostBtn}>
+                                    <X size={15} aria-hidden /> إلغاء
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )}
+                          </div>
+
+                          {rec.status === 'pending' && !isReviewing && (
+                            <button type="button" onClick={() => { setReviewingRecitationId(rec._id); setRecitationForm({ rating: 5, teacherNotes: '' }); setRecordedFeedbackUrl(null); setRecordedFeedbackBlob(null); }}
+                              style={{ ...outlineBtn, minHeight: 44, fontSize: '0.8125rem', flex: 'none', alignSelf: 'center' }}>
+                              <MessageSquare size={14} aria-hidden /> تقييم
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <Pagination
+                  currentPage={recitationsPagination.currentPage}
+                  totalPages={recitationsPagination.totalPages}
+                  totalItems={recitationsPagination.totalItems}
+                  pageSize={recitationsPagination.pageSize}
+                  onPageChange={recitationsPagination.setCurrentPage}
+                  onPageSizeChange={recitationsPagination.setPageSize}
+                  showPageSize={true}
+                  pageSizeOptions={[5, 10, 20, 50]}
+                  itemName="تلاوة"
+                  className="mt-6"
+                />
+              </div>
+            )
+          ) : (
+            /* Individual Student Tasks Tab */
+            loadingDailyTasks ? (
+              <div style={emptyBox} aria-label="جارٍ تحميل الأوراد">
+                <RefreshCw size={30} color={HQ.MENTOR} className="animate-spin" style={{ margin: '0 auto 8px' }} aria-hidden />
+                <p className="text-sm" style={{ color: HQ.MUTED, margin: 0 }}>جارٍ تحميل أوراد الطلاب الفردية...</p>
+              </div>
+            ) : groupDailyTasks.length === 0 ? (
+              <div style={emptyBox}>
+                <BookOpen size={52} color={HQ.LINE} style={{ margin: '0 auto 12px' }} aria-hidden />
+                <p className="font-bold" style={{ color: HQ.MUTED, margin: '0 0 16px' }}>لا توجد أوراد مسجلة اليوم لطلاب هذه المجموعة</p>
+                <button
+                  type="button"
+                  onClick={() => fetchGroupDailyTasks(selectedGroup._id)}
+                  className="mt-4 px-4 text-xs font-bold inline-flex items-center gap-1.5"
+                  style={{ minHeight: 44, borderRadius: 12, cursor: 'pointer', background: '#E2EFE7', color: '#0F5940', border: 'none' }}
+                >
+                  <RefreshCw size={14} aria-hidden />
+                  <span>تحديث القائمة</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {groupDailyTasks.map((task) => {
+                    const student = task.student;
+                    if (!student) return null;
+                    const taskTone = task.overallStatus === 'reviewed' ? TASK_TONE.reviewed
+                      : task.overallStatus === 'completed' ? TASK_TONE.completed
+                      : TASK_TONE.pending;
+
+                    return (
+                      <div
+                        key={task._id || student._id}
+                        className="flex flex-col justify-between gap-3"
+                        style={{ ...panel }}
+                      >
+                        <div>
+                          {/* Student info header */}
+                          <div className="flex items-center justify-between gap-3 pb-3" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span aria-hidden className="avatar-circle"
+                                style={{
+                                  width: 40, height: 40, fontSize: 14, flex: 'none',
+                                  backgroundColor: getAvatarColor(`${student.firstName}${student.lastName}`),
+                                }}>
+                                {getInitials(student.firstName, student.lastName)}
+                              </span>
+                              <div className="min-w-0">
+                                <h3 className="font-bold text-sm" style={{ color: HQ.INK, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {student.firstName} {student.lastName}
+                                </h3>
+                                <p className="text-xs truncate" style={{ color: HQ.MUTED, margin: 0 }}>{student.email}</p>
+                              </div>
+                            </div>
+
+                            <span style={statusChip(taskTone)}>
+                              {task.overallStatus === 'reviewed'
+                                ? 'تم التقييم'
+                                : task.overallStatus === 'completed'
+                                ? 'أنجزه الطالب'
+                                : 'قيد الحفظ'}
+                            </span>
+                          </div>
+
+                          {/* 3 Pillars Summary */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs pt-3">
+                            <div className="p-2.5" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
+                              <span className="font-bold block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.INK }}>
+                                الحفظ الجديد:
+                              </span>
+                              {task.newHifz?.surahName ? (
+                                <div className="font-bold text-xs" style={{ color: HQ.INK }}>
+                                  سورة {task.newHifz.surahName}
+                                  <p className="font-normal" style={{ fontSize: '0.8125rem', color: HQ.MUTED, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+                                    الآيات ({task.newHifz.fromVerse}-{task.newHifz.toVerse})
+                                  </p>
                                 </div>
                               ) : (
-                                <div className="flex items-center justify-between gap-3 bg-gray-50 p-2 rounded-lg">
-                                  <button type="button" onClick={togglePlayFeedback}
-                                    className="p-1.5 bg-primary-50 text-primary-600 rounded-lg hover:bg-primary-100 transition-colors">
-                                    {isPlayingFeedback ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 mr-0.5" />}
-                                  </button>
-                                  <span className="text-[10px] text-gray-500">تم تسجيل التعليق الصوتي جاهز للإرسال 🎙️</span>
-                                  <button type="button" onClick={() => { setRecordedFeedbackUrl(null); setRecordedFeedbackBlob(null); }}
-                                    className="p-1.5 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 transition-colors" title="إعادة التسجيل">
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
+                                <span style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>غير محدد</span>
                               )}
                             </div>
 
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold text-gray-600">تقييم الأداء:</span>
-                              <div className="flex gap-0.5">
-                                {[1,2,3,4,5].map(s => (
-                                  <button key={s} type="button" onClick={() => setRecitationForm({ ...recitationForm, rating: s })}>
-                                    <Star className={`w-5 h-5 transition-colors ${s <= recitationForm.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200 hover:text-amber-200'}`} />
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            <textarea value={recitationForm.teacherNotes}
-                              onChange={(e) => setRecitationForm({ ...recitationForm, teacherNotes: e.target.value })}
-                              className="input-base text-sm" rows={2} maxLength={1000}
-                              placeholder="اكتب ملاحظات التجويد أو التوجيهات هنا..." />
-
-                            <div className="flex gap-2">
-                              <button onClick={() => handleReviewRecitation(rec._id)} className="btn-primary text-sm py-2 flex-1 shadow-sm">
-                                <Check className="w-4 h-4" /> حفظ وإرسال التقييم
-                              </button>
-                              <button onClick={() => { setReviewingRecitationId(null); setRecordedFeedbackUrl(null); setRecordedFeedbackBlob(null); }} className="btn-ghost text-sm py-2">
-                                <X className="w-4 h-4" /> إلغاء
-                              </button>
-                            </div>
-                          </motion.div>
-                        )}
-                      </div>
-
-                      {rec.status === 'pending' && !isReviewing && (
-                        <button onClick={() => { setReviewingRecitationId(rec._id); setRecitationForm({ rating: 5, teacherNotes: '' }); setRecordedFeedbackUrl(null); setRecordedFeedbackBlob(null); }}
-                          className="btn-outline text-xs py-2 px-3 flex-shrink-0 self-center md:self-start">
-                          <MessageSquare className="w-3.5 h-3.5" /> تقييم
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            <Pagination
-              currentPage={recitationsPagination.currentPage}
-              totalPages={recitationsPagination.totalPages}
-              totalItems={recitationsPagination.totalItems}
-              pageSize={recitationsPagination.pageSize}
-              onPageChange={recitationsPagination.setCurrentPage}
-              onPageSizeChange={recitationsPagination.setPageSize}
-              showPageSize={true}
-              pageSizeOptions={[5, 10, 20, 50]}
-              itemName="تلاوة"
-              className="mt-6"
-            />
-          </div>
-        )) : (
-          /* Individual Student Tasks Tab */
-          loadingDailyTasks ? (
-            <div className="card-base p-12 text-center">
-              <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin text-primary-300" />
-              <p className="text-sm text-gray-500">جارٍ تحميل أوراد الطلاب الفردية...</p>
-            </div>
-          ) : groupDailyTasks.length === 0 ? (
-            <div className="card-base p-12 text-center text-gray-400">
-              <BookOpen className="w-14 h-14 mx-auto mb-3 text-gray-200" />
-              <p className="font-semibold">لا توجد أوراد مسجلة اليوم لطلاب هذه المجموعة</p>
-              <button
-                onClick={() => fetchGroupDailyTasks(selectedGroup._id)}
-                className="mt-4 px-4 py-2 rounded-xl bg-primary-50 text-primary-600 text-xs font-bold hover:bg-primary-100 transition-colors inline-flex items-center gap-1.5"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>تحديث القائمة</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {groupDailyTasks.map((task) => {
-                  const student = task.student;
-                  if (!student) return null;
-
-                  return (
-                    <motion.div
-                      key={task._id || student._id}
-                      whileHover={{ y: -2 }}
-                      className="card-base p-5 border border-gray-100 shadow-sm flex flex-col justify-between gap-3"
-                    >
-                      <div>
-                        {/* Student info header */}
-                        <div className="flex items-center justify-between gap-3 pb-3 border-b border-gray-100">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                              style={{ backgroundColor: getAvatarColor(`${student.firstName}${student.lastName}`) }}
-                            >
-                              {getInitials(student.firstName, student.lastName)}
-                            </div>
-                            <div>
-                              <h3 className="font-bold text-gray-900 text-sm">
-                                {student.firstName} {student.lastName}
-                              </h3>
-                              <p className="text-xs text-gray-400">{student.email}</p>
-                            </div>
-                          </div>
-
-                          <span
-                            className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                              task.overallStatus === 'reviewed'
-                                ? 'bg-green-50 text-green-700 border border-green-200'
-                                : task.overallStatus === 'completed'
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                : 'bg-amber-50 text-amber-700 border border-amber-200'
-                            }`}
-                          >
-                            {task.overallStatus === 'reviewed'
-                              ? 'تم التقييم ⭐'
-                              : task.overallStatus === 'completed'
-                              ? 'أنجزه الطالب ✅'
-                              : 'قيد الحفظ ⏳'}
-                          </span>
-                        </div>
-
-                        {/* 3 Pillars Summary */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs pt-3">
-                          {/* New Hifz */}
-                          <div className="bg-emerald-50/70 p-2.5 rounded-xl border border-emerald-100">
-                            <span className="text-[10px] font-bold text-emerald-800 block mb-0.5">
-                              📖 الحفظ الجديد:
-                            </span>
-                            {task.newHifz?.surahName ? (
-                              <div className="font-bold text-gray-900 text-xs">
-                                سورة {task.newHifz.surahName}
-                                <p className="text-[11px] text-gray-500 font-normal">
-                                  الآيات ({task.newHifz.fromVerse}-{task.newHifz.toVerse})
-                                </p>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400 text-[11px]">غير محدد</span>
-                            )}
-                          </div>
-
-                          {/* Near Revision */}
-                          <div className="bg-blue-50/70 p-2.5 rounded-xl border border-blue-100">
-                            <span className="text-[10px] font-bold text-blue-800 block mb-0.5">
-                              🔄 الماضي القريب:
-                            </span>
-                            {task.nearRevision?.surahName ? (
-                              <div className="font-bold text-gray-900 text-xs">
-                                سورة {task.nearRevision.surahName}
-                                <p className="text-[11px] text-gray-500 font-normal">
-                                  الآيات ({task.nearRevision.fromVerse}-{task.nearRevision.toVerse})
-                                </p>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400 text-[11px]">مراجعة سابقة</span>
-                            )}
-                          </div>
-
-                          {/* Cumulative Revision */}
-                          <div className="bg-purple-50/70 p-2.5 rounded-xl border border-purple-100">
-                            <span className="text-[10px] font-bold text-purple-800 block mb-0.5">
-                              🏛️ الماضي البعيد:
-                            </span>
-                            <div className="font-bold text-gray-900 text-xs">
-                              {task.cumulativeRevision?.surahName || 'الورد الدوري'}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Additional exercise */}
-                        {task.additionalExercise?.details && (
-                          <div className="mt-2 text-xs bg-amber-50 text-amber-900 p-2 rounded-xl border border-amber-200/60">
-                            🎯 <span className="font-bold">تدريب:</span> {task.additionalExercise.details}
-                          </div>
-                        )}
-
-                        {/* Evaluation info if reviewed */}
-                        {task.overallStatus === 'reviewed' && (
-                          <div className="mt-2 text-xs bg-gray-50 p-2 rounded-xl border border-gray-200 flex items-center justify-between">
-                            <span className="text-gray-600">
-                              درجة التسميع: <strong className="text-emerald-600 font-bold">{task.newHifz?.score ?? 100}%</strong>
-                            </span>
-                            {task.teacherNotes && (
-                              <span className="text-gray-500 truncate max-w-[200px]" title={task.teacherNotes}>
-                                "{task.teacherNotes}"
+                            <div className="p-2.5" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
+                              <span className="font-bold block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.INK }}>
+                                الماضي القريب:
                               </span>
-                            )}
+                              {task.nearRevision?.surahName ? (
+                                <div className="font-bold text-xs" style={{ color: HQ.INK }}>
+                                  سورة {task.nearRevision.surahName}
+                                  <p className="font-normal" style={{ fontSize: '0.8125rem', color: HQ.MUTED, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+                                    الآيات ({task.nearRevision.fromVerse}-{task.nearRevision.toVerse})
+                                  </p>
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>مراجعة سابقة</span>
+                              )}
+                            </div>
+
+                            <div className="p-2.5" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
+                              <span className="font-bold block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.INK }}>
+                                الماضي البعيد:
+                              </span>
+                              <div className="font-bold text-xs" style={{ color: HQ.INK }}>
+                                {task.cumulativeRevision?.surahName || 'الورد الدوري'}
+                              </div>
+                            </div>
                           </div>
-                        )}
-                      </div>
 
-                      {/* Action button */}
-                      <div className="pt-2 flex justify-end">
-                        <button
-                          onClick={() => handleOpenAssignModal(student, task)}
-                          className="px-3 py-1.5 rounded-xl bg-primary-50 hover:bg-primary-100 text-primary-700 text-xs font-bold transition-all flex items-center gap-1.5 border border-primary-200/60"
+                          {/* Additional exercise */}
+                          {task.additionalExercise?.details && (
+                            <div className="mt-2 text-xs p-2" style={{ background: HQ.PAPER, color: HQ.INK, borderRadius: 12, border: `1px solid ${HQ.LINE}` }}>
+                              <span className="font-bold">تدريب:</span> {task.additionalExercise.details}
+                            </div>
+                          )}
+
+                          {/* Evaluation info if reviewed */}
+                          {task.overallStatus === 'reviewed' && (
+                            <div className="mt-2 text-xs p-2 rounded-xl flex items-center justify-between"
+                              style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
+                              <span style={{ color: HQ.MUTED }}>
+                                درجة التسميع: <strong style={{ color: HQ.MENTOR, fontVariantNumeric: 'tabular-nums' }}>{task.newHifz?.score ?? 100}%</strong>
+                              </span>
+                              {task.teacherNotes && (
+                                <span className="truncate" style={{ color: HQ.MUTED, maxWidth: 200 }} title={task.teacherNotes}>
+                                  &quot;{task.teacherNotes}&quot;
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action button */}
+                        <div className="pt-2 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAssignModal(student, task)}
+                            className="px-3 text-xs font-bold flex items-center gap-1.5"
+                            style={{
+                              minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                              background: '#E2EFE7', color: '#0F5940', border: 'none',
+                            }}
+                          >
+                            <Edit3 size={14} aria-hidden />
+                            <span>تخصيص / تعديل الورد لهذا الطالب</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )
+          )}
+
+          {/* Assign / Edit Student Wird Modal */}
+          {editingStudentTask && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(42,36,56,0.55)' }}>
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="w-full"
+                role="dialog" aria-modal="true" aria-label={`تخصيص الورد اليومي للطالب ${editingStudentTask.student.firstName} ${editingStudentTask.student.lastName}`}
+                dir="rtl"
+                style={{ ...panel, maxWidth: 560, maxHeight: '90dvh', overflowY: 'auto' }}
+              >
+                <div className="flex items-center justify-between pb-3 mb-4" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span aria-hidden style={{
+                      width: 36, height: 36, borderRadius: 12, background: '#E2EFE7', color: HQ.MENTOR,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+                    }}>
+                      <Edit3 size={19} />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-bold" style={{ color: HQ.INK, margin: 0 }}>
+                        تخصيص الورد اليومي للطالب: {editingStudentTask.student.firstName} {editingStudentTask.student.lastName}
+                      </h3>
+                      <p className="text-xs" style={{ color: HQ.MUTED, margin: 0 }}>حدد مقدار الحفظ الجديد والمراجعة والتدريب لهذا الطالب</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingStudentTask(null)}
+                    aria-label="إغلاق"
+                    style={{ ...iconBtn, background: HQ.PAPER }}
+                  >
+                    <X size={15} aria-hidden />
+                  </button>
+                </div>
+
+                <div className="space-y-4 text-xs">
+                  {/* Pillar 1: New Hifz */}
+                  <div className="p-3 space-y-2" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
+                    <span className="font-bold block text-xs" style={{ color: HQ.INK }}>
+                      1. الحفظ الجديد (السبق)
+                    </span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label htmlFor="as-surah" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>السورة</label>
+                        <select
+                          id="as-surah"
+                          value={assignForm.surahNumber}
+                          onChange={e => setAssignForm({ ...assignForm, surahNumber: e.target.value })}
+                          className="text-sm focus:border-[#177B58] focus:outline-none" style={field}
                         >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          <span>تخصيص / تعديل الورد لهذا الطالب</span>
-                        </button>
+                          {QURAN_SURAHS.map(s => (
+                            <option key={s.number} value={s.number}>
+                              {s.number}. {s.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-          )
-        )}
+                      <div>
+                        <label htmlFor="as-from" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>من آية</label>
+                        <input
+                          id="as-from"
+                          type="number"
+                          value={assignForm.fromVerse}
+                          onChange={e => setAssignForm({ ...assignForm, fromVerse: e.target.value })}
+                          min="1"
+                          className="text-sm text-center focus:border-[#177B58] focus:outline-none"
+                          style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="as-to" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>إلى آية</label>
+                        <input
+                          id="as-to"
+                          type="number"
+                          value={assignForm.toVerse}
+                          onChange={e => setAssignForm({ ...assignForm, toVerse: e.target.value })}
+                          min="1"
+                          className="text-sm text-center focus:border-[#177B58] focus:outline-none"
+                          style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-      {/* Assign / Edit Student Wird Modal */}
-      {editingStudentTask && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-3xl p-6 sm:p-7 w-full max-w-lg shadow-2xl border border-gray-100 text-right"
-            dir="rtl"
-          >
-            <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
-                  <Edit3 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">
-                    تخصيص الورد اليومي للطالب: {editingStudentTask.student.firstName} {editingStudentTask.student.lastName}
-                  </h3>
-                  <p className="text-xs text-gray-400">حدد مقدار الحفظ الجديد والمراجعة والتدريب لهذا الطالب</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setEditingStudentTask(null)}
-                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              {/* Pillar 1: New Hifz */}
-              <div className="p-3 bg-emerald-50/60 rounded-2xl border border-emerald-200/80 space-y-2">
-                <span className="font-bold text-emerald-900 block text-xs">
-                  📖 1. الحفظ الجديد (السبق)
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-0.5">السورة</label>
-                    <select
-                      value={assignForm.surahNumber}
-                      onChange={e => setAssignForm({ ...assignForm, surahNumber: e.target.value })}
-                      className="input-base text-xs py-1.5"
-                    >
-                      {QURAN_SURAHS.map(s => (
-                        <option key={s.number} value={s.number}>
-                          {s.number}. {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-0.5">من آية</label>
-                    <input
-                      type="number"
-                      value={assignForm.fromVerse}
-                      onChange={e => setAssignForm({ ...assignForm, fromVerse: e.target.value })}
-                      min="1"
-                      className="input-base text-xs py-1.5 text-center"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-0.5">إلى آية</label>
-                    <input
-                      type="number"
-                      value={assignForm.toVerse}
-                      onChange={e => setAssignForm({ ...assignForm, toVerse: e.target.value })}
-                      min="1"
-                      className="input-base text-xs py-1.5 text-center"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Pillar 2: Near Revision */}
-              <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-200/80 space-y-2">
-                <span className="font-bold text-blue-900 block text-xs">
-                  🔄 2. الماضي القريب (الربط والسبقي)
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-0.5">السورة</label>
-                    <select
-                      value={assignForm.nearSurahNumber}
-                      onChange={e => setAssignForm({ ...assignForm, nearSurahNumber: e.target.value })}
-                      className="input-base text-xs py-1.5"
-                    >
-                      {QURAN_SURAHS.map(s => (
-                        <option key={s.number} value={s.number}>
-                          {s.number}. {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-0.5">من آية</label>
-                    <input
-                      type="number"
-                      value={assignForm.nearFromVerse}
-                      onChange={e => setAssignForm({ ...assignForm, nearFromVerse: e.target.value })}
-                      min="1"
-                      className="input-base text-xs py-1.5 text-center"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] text-gray-500 block mb-0.5">إلى آية</label>
-                    <input
-                      type="number"
-                      value={assignForm.nearToVerse}
-                      onChange={e => setAssignForm({ ...assignForm, nearToVerse: e.target.value })}
-                      min="1"
-                      className="input-base text-xs py-1.5 text-center"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Additional Exercise */}
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">
-                  🎯 تدريب إضافي (تجويد أو استماع)
-                </label>
-                <input
-                  type="text"
-                  value={assignForm.additionalExercise}
-                  onChange={e => setAssignForm({ ...assignForm, additionalExercise: e.target.value })}
-                  placeholder="مثال: الاستماع لسورة مريم بصوت الشيخ الحصري"
-                  className="input-base text-xs py-2"
-                />
-              </div>
-
-              {/* Weekly Plan Checkbox */}
-              <div className="p-3 bg-purple-50/80 border border-purple-200/80 rounded-2xl">
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={assignForm.applyWeeklyPlan || false}
-                    onChange={e => setAssignForm({ ...assignForm, applyWeeklyPlan: e.target.checked })}
-                    className="w-4 h-4 rounded accent-purple-600"
-                  />
-                  <div>
-                    <span className="text-xs font-bold text-purple-900 block">
-                      📅 تعميم كخطة أسبوعية متتابعة (لـ 7 أيام قادمة)
+                  {/* Pillar 2: Near Revision */}
+                  <div className="p-3 space-y-2" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
+                    <span className="font-bold block text-xs" style={{ color: HQ.INK }}>
+                      2. الماضي القريب (الربط والسبقي)
                     </span>
-                    <span className="text-[10px] text-purple-700 block">
-                      توزيع حفظ السورة تلقائياً بمعدل {Math.max(1, Number(assignForm.toVerse) - Number(assignForm.fromVerse) + 1)} آيات يومياً للأيام المقبلة
-                    </span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label htmlFor="as-near-surah" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>السورة</label>
+                        <select
+                          id="as-near-surah"
+                          value={assignForm.nearSurahNumber}
+                          onChange={e => setAssignForm({ ...assignForm, nearSurahNumber: e.target.value })}
+                          className="text-sm focus:border-[#177B58] focus:outline-none" style={field}
+                        >
+                          {QURAN_SURAHS.map(s => (
+                            <option key={s.number} value={s.number}>
+                              {s.number}. {s.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="as-near-from" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>من آية</label>
+                        <input
+                          id="as-near-from"
+                          type="number"
+                          value={assignForm.nearFromVerse}
+                          onChange={e => setAssignForm({ ...assignForm, nearFromVerse: e.target.value })}
+                          min="1"
+                          className="text-sm text-center focus:border-[#177B58] focus:outline-none"
+                          style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="as-near-to" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>إلى آية</label>
+                        <input
+                          id="as-near-to"
+                          type="number"
+                          value={assignForm.nearToVerse}
+                          onChange={e => setAssignForm({ ...assignForm, nearToVerse: e.target.value })}
+                          min="1"
+                          className="text-sm text-center focus:border-[#177B58] focus:outline-none"
+                          style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </label>
-              </div>
 
-              {/* Teacher Notes */}
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">
-                  توجيهات وملاحظات خاصة للطالب
-                </label>
-                <textarea
-                  value={assignForm.teacherNotes}
-                  onChange={e => setAssignForm({ ...assignForm, teacherNotes: e.target.value })}
-                  placeholder="ملاحظات لتشجيع الطالب أو توجيهه..."
-                  className="input-base text-xs py-2 resize-none h-16"
-                />
-              </div>
-            </div>
+                  {/* Additional Exercise */}
+                  <div>
+                    <label htmlFor="as-extra" className="text-xs font-bold block mb-1" style={{ color: HQ.INK }}>
+                      تدريب إضافي (تجويد أو استماع)
+                    </label>
+                    <input
+                      id="as-extra"
+                      type="text"
+                      value={assignForm.additionalExercise}
+                      onChange={e => setAssignForm({ ...assignForm, additionalExercise: e.target.value })}
+                      placeholder="مثال: الاستماع لسورة مريم بصوت الشيخ الحصري"
+                      className="text-sm focus:border-[#177B58] focus:outline-none" style={field}
+                    />
+                  </div>
 
-            <div className="flex gap-2 mt-5">
-              <button
-                onClick={() => setEditingStudentTask(null)}
-                className="btn-ghost flex-1 py-2.5 text-xs"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={handleSaveAssignedTask}
-                disabled={savingAssign}
-                className="btn-primary flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50"
-              >
-                <Save className="w-4 h-4" />
-                <span>{savingAssign ? 'جارٍ الحفظ...' : 'حفظ الورد الفردي'}</span>
-              </button>
+                  {/* Weekly Plan Checkbox */}
+                  <div className="p-3" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={assignForm.applyWeeklyPlan || false}
+                        onChange={e => setAssignForm({ ...assignForm, applyWeeklyPlan: e.target.checked })}
+                        style={{ width: 20, height: 20, accentColor: HQ.MENTOR, flex: 'none' }}
+                      />
+                      <span>
+                        <span className="text-xs font-bold block" style={{ color: HQ.INK }}>
+                          تعميم كخطة أسبوعية متتابعة (لـ 7 أيام قادمة)
+                        </span>
+                        <span className="block" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>
+                          توزيع حفظ السورة تلقائياً بمعدل {Math.max(1, Number(assignForm.toVerse) - Number(assignForm.fromVerse) + 1)} آيات يومياً للأيام المقبلة
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Teacher Notes */}
+                  <div>
+                    <label htmlFor="as-notes" className="text-xs font-bold block mb-1" style={{ color: HQ.INK }}>
+                      توجيهات وملاحظات خاصة للطالب
+                    </label>
+                    <textarea
+                      id="as-notes"
+                      value={assignForm.teacherNotes}
+                      onChange={e => setAssignForm({ ...assignForm, teacherNotes: e.target.value })}
+                      placeholder="ملاحظات لتشجيع الطالب أو توجيهه..."
+                      className="text-sm resize-none focus:border-[#177B58] focus:outline-none" style={{ ...field, minHeight: 64 }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-5">
+                  <button
+                    type="button"
+                    onClick={() => setEditingStudentTask(null)}
+                    style={{ ...ghostBtn, flex: 1 }}
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveAssignedTask}
+                    disabled={savingAssign}
+                    style={{ ...primaryBtn, flex: 1, opacity: savingAssign ? 0.6 : 1 }}
+                  >
+                    <Save size={15} aria-hidden />
+                    <span>{savingAssign ? 'جارٍ الحفظ...' : 'حفظ الورد الفردي'}</span>
+                  </button>
+                </div>
+              </motion.div>
             </div>
-          </motion.div>
+          )}
         </div>
-      )}
+      </MotionConfig>
     </PageLayout>
   );
 }
-

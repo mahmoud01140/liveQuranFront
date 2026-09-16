@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Users, Calendar, Clock, AlertTriangle, Lock, CreditCard, Gift, Sparkles } from 'lucide-react';
+import { Users, Calendar, Clock, AlertTriangle, Lock, CreditCard, Gift } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
@@ -12,6 +11,12 @@ import { DAYS_AR, SESSION_TYPES } from '../../utils/constants';
 import { getInitials, getAvatarColor, formatTime } from '../../utils/helpers';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import api from '../../services/api';
+import '../../components/halaqa/halaqa.css';
+import { HQ, HqBadge } from '../../components/halaqa/primitives';
+import { HqActionLink } from '../../components/halaqa/JourneyNode';
+
+/* My group — people and rhythm. Same data, socket updates and links
+   as before; only the visual layer changed. */
 
 export default function MyGroupPage() {
   const { user } = useAuthStore();
@@ -25,7 +30,7 @@ export default function MyGroupPage() {
     'group-updated': ({ type }) => {
       if (groupId) fetchMyGroup(groupId);
       const label = type === 'days' ? 'أيام الدراسة' : 'الجدول الأسبوعي';
-      toast(`📅 تم تحديث ${label} من قِبَل الإدارة`, { duration: 4000 });
+      toast(`تم تحديث ${label} من قِبَل الإدارة`, { duration: 4000 });
     },
     'subscription-updated': () => {
       fetchSubscriptionStatus();
@@ -50,19 +55,36 @@ export default function MyGroupPage() {
     fetchSubscriptionStatus();
   }, [user?.group]);
 
+  const sheet = {
+    background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 18,
+    padding: 'clamp(16px, 3vw, 28px)',
+  };
+  const h2 = { margin: '0 0 12px', fontSize: 18, fontWeight: 800, color: HQ.INK };
+  const panel = {
+    background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18,
+    padding: 'clamp(16px, 3vw, 24px)',
+  };
+
   if (isLoading) return (
     <PageLayout>
-      <div className="flex justify-center py-20"><LoadingSpinner size="lg" /></div>
+      <div className="halaqa" style={{ ...sheet, maxWidth: 820, margin: '0 auto' }}>
+        <div aria-label="جارٍ تحميل مجموعتك">
+          <div className="hq-skeleton" style={{ height: 24, width: '40%', marginBottom: 16 }} />
+          <div className="hq-skeleton" style={{ height: 52, width: '100%', marginBottom: 8 }} />
+          <div className="hq-skeleton" style={{ height: 52, width: '100%', marginBottom: 8 }} />
+          <div className="hq-skeleton" style={{ height: 52, width: '100%' }} />
+        </div>
+      </div>
     </PageLayout>
   );
 
   if (!group) return (
     <PageLayout>
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="card-base p-8 sm:p-12 text-center max-w-md mx-4">
-          <Users className="w-14 h-14 sm:w-16 sm:h-16 text-gray-200 mx-auto mb-4" />
-          <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-2">لم تُعيَّن في مجموعة بعد</h2>
-          <p className="text-gray-500 text-xs sm:text-sm">سيتم تعيينك في مجموعة من قِبَل الإدارة قريباً</p>
+      <div className="halaqa" style={{ ...sheet, maxWidth: 820, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+          <Users size={44} color={HQ.LINE} style={{ margin: '0 auto 12px' }} aria-hidden />
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: HQ.INK, margin: '0 0 8px' }}>لم تُعيَّن في مجموعة بعد</h1>
+          <p style={{ color: HQ.MUTED, fontSize: 14, margin: 0 }}>سيتم تعيينك في مجموعة من قِبَل الإدارة قريباً</p>
         </div>
       </div>
     </PageLayout>
@@ -73,181 +95,185 @@ export default function MyGroupPage() {
   const isTrial = subscription?.isTrial;
   const trialUsed = (subscription?.trialSessionsAttended || 0) >= (subscription?.trialSessionsAllowed || 1);
 
+  const alertRow = {
+    display: 'flex', alignItems: 'center', gap: 12,
+    background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 12,
+    padding: '10px 14px', marginBottom: 12,
+  };
+  const chip = {
+    width: 34, height: 34, borderRadius: 10, display: 'inline-flex',
+    alignItems: 'center', justifyContent: 'center', flex: 'none',
+  };
+
   return (
     <PageLayout>
-      <div className="mb-4 sm:mb-6">
-        <h1 className="section-title">مجموعتي الدراسية</h1>
-        <p className="section-subtitle">{group.name}</p>
-      </div>
+      <div className="halaqa" style={{ ...sheet, maxWidth: 820, margin: '0 auto' }}>
+        <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>حلقتك ومعلمك وزملاؤك</p>
+        <h1 style={{ margin: '2px 0 4px', fontSize: 32, fontWeight: 800, color: HQ.INK }}>مجموعتي الدراسية</h1>
+        <p style={{ margin: '0 0 20px', fontSize: 15, color: HQ.MUTED }}>{group.name}</p>
 
-      {/* ─── Subscription Status Alerts ─────────────────────────────── */}
-      {isExpiringSoon && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="w-5 h-5 animate-bounce" />
-            </div>
-            <div>
-              <p className="font-bold text-amber-950 text-sm">تنبيه باقتراب موعد سداد الاشتراك الشهري ⚠️</p>
-              <p className="text-xs text-amber-800">
-                يتبقى <span className="font-black underline">{subscription?.daysRemaining} أيام</span> على انتهاء اشتراكك في المجموعة. سارع بالتجديد لضمان عدم تعليق الحضور.
-              </p>
-            </div>
+        {/* ─── Subscription Status Alerts ─────────────────────────────── */}
+        {isExpiringSoon && (
+          <div role="status" style={alertRow}>
+            <span style={{ ...chip, background: HQ.PAPER }}>
+              <AlertTriangle size={17} color="#B45309" aria-hidden />
+            </span>
+            <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>
+              يتبقى <strong>{subscription?.daysRemaining} أيام</strong> على انتهاء اشتراكك — جدّد لضمان عدم تعليق الحضور.
+            </span>
+            <Link to="/student/subscription" style={{ fontSize: 14, fontWeight: 800, color: '#B45309', whiteSpace: 'nowrap' }}>التجديد</Link>
           </div>
-          <Link
-            to="/student/subscription"
-            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 flex-shrink-0"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            تجديد الاشتراك الآن
-          </Link>
-        </motion.div>
-      )}
+        )}
 
-      {isExpired && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 bg-red-50 border-2 border-red-300 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center flex-shrink-0">
-              <Lock className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="font-bold text-red-950 text-sm">تم تعليق الصلاحيات مؤقتاً لانتهاء الاشتراك 🔒</p>
-              <p className="text-xs text-red-800">
-                انتهت فترة اشتراكك الشهري. يرجى سداد الاشتراك لاستئناف حضور الحلقات المباشرة والتفاعل مع زملائك.
-              </p>
-            </div>
+        {isExpired && (
+          <div role="alert" style={alertRow}>
+            <span style={{ ...chip, background: HQ.PAPER }}>
+              <Lock size={17} color="#C2410C" aria-hidden />
+            </span>
+            <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>توقّف حضور الجلسات لانتهاء الاشتراك.</span>
+            <Link to="/student/subscription" style={{ fontSize: 14, fontWeight: 800, color: '#C2410C', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <CreditCard size={15} aria-hidden /> السداد
+            </Link>
           </div>
-          <Link
-            to="/student/subscription"
-            className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-sm transition-all flex items-center gap-1.5 flex-shrink-0"
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            سداد الاشتراك واستعادة الوصول
-          </Link>
-        </motion.div>
-      )}
+        )}
 
-      {isTrial && !trialUsed && (
-        <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500 text-white flex items-center justify-center flex-shrink-0">
-              <Gift className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="font-bold text-emerald-950 text-xs sm:text-sm">أهلاً بك! متاح لك حضور أول محاضرة مباشرة مجاناً 🎁</p>
-              <p className="text-[11px] sm:text-xs text-emerald-700">جرب الجلسة التفاعلية الأولى مع المعلم، وبعدها يمكنك تفعيل الاشتراك الشهري.</p>
-            </div>
+        {isTrial && !trialUsed && (
+          <div role="status" style={alertRow}>
+            <span style={{ ...chip, background: '#E2EFE7' }}>
+              <Gift size={17} color={HQ.MENTOR} aria-hidden />
+            </span>
+            <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>متاح لك حضور أول محاضرة مباشرة مجاناً — جرّب الجلسة الأولى مع المعلم.</span>
+            <HqActionLink to="/student/live">الانتقال للبث</HqActionLink>
           </div>
-          <Link
-            to="/student/live"
-            className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex-shrink-0"
-          >
-            الانتقال للبث
-          </Link>
-        </div>
-      )}
+        )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Group info */}
-        <div className="card-base p-4 sm:p-6">
-          <h2 className="font-bold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">معلومات المجموعة</h2>
-          <div className="space-y-3 text-xs sm:text-sm">
-            <div className="flex items-start gap-3">
-              <Users className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
-              <div>
-                <p className="text-gray-500">عدد الطلاب</p>
-                <p className="font-bold text-gray-900">{group.students?.length || 0} / {group.maxStudents}</p>
-              </div>
-            </div>
+        {/* ─── Group & teacher ────────────────────────────────────────── */}
+        <section aria-label="معلومات المجموعة" style={{ ...panel, marginBottom: 16 }}>
+          <h2 style={h2}>معلومات المجموعة</h2>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            <li style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0' }}>
+              <span aria-hidden style={{ ...chip, background: HQ.PAPER }}>
+                <Users size={17} color={HQ.MUTED} />
+              </span>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: 'block', fontSize: '0.8125rem', color: HQ.MUTED }}>عدد الطلاب</span>
+                <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: HQ.INK, fontVariantNumeric: 'tabular-nums' }}>
+                  {group.students?.length || 0} / {group.maxStudents}
+                </span>
+              </span>
+            </li>
             {group.teacher && (
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0"
-                  style={{ backgroundColor: getAvatarColor(`${group.teacher.firstName}${group.teacher.lastName}`) }}>
+              <li style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: `1px solid ${HQ.LINE}` }}>
+                <span aria-hidden
+                  className="avatar-circle"
+                  style={{
+                    width: 40, height: 40, fontSize: 13, flex: 'none',
+                    backgroundColor: getAvatarColor(`${group.teacher.firstName}${group.teacher.lastName}`),
+                  }}>
                   {getInitials(group.teacher.firstName, group.teacher.lastName)}
-                </div>
-                <div>
-                  <p className="text-gray-500">المعلم</p>
-                  <p className="font-bold text-gray-900">أ. {group.teacher.firstName} {group.teacher.lastName}</p>
-                </div>
-              </div>
+                </span>
+                <span style={{ flex: 1 }}>
+                  <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: HQ.INK }}>
+                    أ. {group.teacher.firstName} {group.teacher.lastName}
+                  </span>
+                  <span style={{ display: 'block', fontSize: '0.8125rem', color: HQ.MUTED }}>معلم الحلقة</span>
+                </span>
+                <HqBadge tone="guide">المعلم</HqBadge>
+              </li>
             )}
-            {group.description && (
-              <p className="text-gray-600 bg-gray-50 rounded-xl p-3 leading-relaxed text-xs">{group.description}</p>
-            )}
-          </div>
-        </div>
+          </ul>
+          {group.description && (
+            <p style={{ background: HQ.PAPER, borderRadius: 12, padding: 12, fontSize: 14, color: HQ.INK, lineHeight: 1.8, margin: '12px 0 0' }}>
+              {group.description}
+            </p>
+          )}
+        </section>
 
-        {/* Days of study */}
-        <div className="card-base p-4 sm:p-6">
-          <h2 className="font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
-            <Calendar className="w-4 h-4 text-primary-400" />
+        {/* ─── Days of study ──────────────────────────────────────────── */}
+        <section aria-label="أيام الدراسة" style={{ ...panel, marginBottom: 16 }}>
+          <h2 style={{ ...h2, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Calendar size={18} color={HQ.MENTOR} aria-hidden />
             أيام الدراسة
           </h2>
           {group.days?.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {group.days.map((day, i) => (
-                <span key={i} className="badge-green text-xs font-semibold px-3 py-1 rounded-xl">
+                <span key={i} style={{
+                  display: 'inline-flex', alignItems: 'center', padding: '6px 14px', borderRadius: 9999,
+                  background: '#E2EFE7', color: '#0F5940', fontSize: '0.8125rem', fontWeight: 700,
+                }}>
                   {DAYS_AR[day] || day}
                 </span>
               ))}
             </div>
           ) : (
-            <p className="text-gray-400 text-xs">لم تُحدد أيام الدراسة بعد</p>
+            <p style={{ color: HQ.MUTED, fontSize: 14, margin: 0 }}>لم تُحدد أيام الدراسة بعد</p>
           )}
-        </div>
+        </section>
 
-        {/* Schedule */}
-        <div className="card-base p-4 sm:p-6">
-          <h2 className="font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2 text-sm sm:text-base">
-            <Clock className="w-4 h-4 text-primary-400" />
+        {/* ─── Weekly schedule ────────────────────────────────────────── */}
+        <section aria-label="الجدول الأسبوعي" style={{ ...panel, marginBottom: 16 }}>
+          <h2 style={{ ...h2, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Clock size={18} color={HQ.MENTOR} aria-hidden />
             الجدول الأسبوعي
           </h2>
           {group.schedule?.length > 0 ? (
-            <div className="space-y-2">
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
               {group.schedule.map((s, i) => (
-                <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-xl p-2.5">
-                  <span className="font-bold text-gray-700">{DAYS_AR[s.dayOfWeek]}</span>
-                  <span className="text-gray-500 font-mono">{formatTime(s.startTime)} — {formatTime(s.endTime)}</span>
-                  <span className="badge-green text-[10px]">{SESSION_TYPES[s.sessionType] || s.sessionType}</span>
-                </div>
+                <li key={i} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                  padding: '10px 0', borderTop: i === 0 ? 'none' : `1px solid ${HQ.LINE}`, fontSize: 14,
+                }}>
+                  <span style={{ fontWeight: 800, color: HQ.INK }}>{DAYS_AR[s.dayOfWeek]}</span>
+                  <span style={{ color: HQ.MUTED, fontVariantNumeric: 'tabular-nums' }}>{formatTime(s.startTime)} — {formatTime(s.endTime)}</span>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 9999,
+                    background: '#E2EFE7', color: '#0F5940', fontSize: '0.8125rem', fontWeight: 700, flex: 'none',
+                  }}>
+                    {SESSION_TYPES[s.sessionType] || s.sessionType}
+                  </span>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
-            <p className="text-gray-400 text-xs">لم يُحدد الجدول بعد</p>
+            <p style={{ color: HQ.MUTED, fontSize: 14, margin: 0 }}>لم يُحدد الجدول بعد</p>
           )}
-        </div>
-      </div>
+        </section>
 
-      {/* Students list */}
-      <div className="card-base p-4 sm:p-6 mt-4 sm:mt-6">
-        <h2 className="font-bold text-gray-900 mb-4 text-sm sm:text-base">زملاء المجموعة ({students.length})</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {students.map((student) => (
-            <div key={student._id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
-                style={{ backgroundColor: getAvatarColor(`${student.firstName}${student.lastName}`) }}>
-                {getInitials(student.firstName, student.lastName)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-bold text-gray-900 text-xs sm:text-sm truncate">
-                  {student.firstName} {student.lastName}
-                  {student._id === user?._id && <span className="text-primary-600 mr-1 text-xs">(أنت)</span>}
-                </p>
-                <p className="text-[11px] text-gray-400 mt-0.5">
-                  {student.memorizedVerses || 0} آية محفوظة
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* ─── Classmates ─────────────────────────────────────────────── */}
+        <section aria-label="زملاء المجموعة" style={panel}>
+          <h2 style={h2}>زملاء المجموعة ({students.length})</h2>
+          {students.length === 0 ? (
+            <p style={{ color: HQ.MUTED, fontSize: 14, margin: 0 }}>لا يوجد زملاء بعد</p>
+          ) : (
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {students.map((student, i) => (
+                <li key={student._id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 0', borderTop: i === 0 ? 'none' : `1px solid ${HQ.LINE}`,
+                }}>
+                  <span aria-hidden
+                    className="avatar-circle"
+                    style={{
+                      width: 40, height: 40, fontSize: 13, flex: 'none',
+                      backgroundColor: getAvatarColor(`${student.firstName}${student.lastName}`),
+                    }}>
+                    {getInitials(student.firstName, student.lastName)}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: HQ.INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {student.firstName} {student.lastName}
+                      {student._id === user?._id && <span style={{ color: HQ.MENTOR, fontSize: '0.8125rem' }}> (أنت)</span>}
+                    </span>
+                    <span style={{ display: 'block', fontSize: '0.8125rem', color: HQ.MUTED, fontVariantNumeric: 'tabular-nums' }}>
+                      {student.memorizedVerses || 0} آية محفوظة
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
     </PageLayout>
   );

@@ -14,28 +14,14 @@ export default function LoadingSpinner({ size = 'md', text = '', color = 'primar
     gray: 'border-gray-400',
   };
 
-  // For larger sizes, show a more elaborate loader
+  // For larger sizes, show a calm centered loader (no glow effects)
   if (size === 'lg' || size === 'xl') {
     return (
       <div className="flex flex-col items-center justify-center gap-5">
-        <div className="relative">
-          {/* Outer glow ring */}
-          <motion.div
-            className={`${size === 'xl' ? 'w-24 h-24' : 'w-16 h-16'} rounded-full absolute -inset-1`}
-            style={{ 
-              background: color === 'white' 
-                ? 'conic-gradient(from 0deg, transparent, rgba(255,255,255,0.3), transparent)' 
-                : 'conic-gradient(from 0deg, transparent, rgba(29,158,117,0.15), transparent)' 
-            }}
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-          />
-          {/* Main spinner */}
-          <div
-            className={`${sizeMap[size]} ${colorMap[color]} rounded-full animate-spin relative`}
-            style={{ borderTopColor: 'transparent', borderRightColor: 'transparent' }}
-          />
-        </div>
+        <div
+          className={`${sizeMap[size]} ${colorMap[color]} rounded-full animate-spin relative`}
+          style={{ borderTopColor: 'transparent', borderRightColor: 'transparent' }}
+        />
         {text && (
           <motion.p
             initial={{ opacity: 0 }}

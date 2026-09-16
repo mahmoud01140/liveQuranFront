@@ -53,7 +53,7 @@ export default function LessonContent({ content }) {
       // Handle custom blockquotes or warnings
       if (trimmed.startsWith('>')) {
         return (
-          <blockquote key={idx} className="border-r-4 border-primary-500 bg-primary-50/50 p-4 rounded-xl my-4 text-gray-700 leading-relaxed text-sm">
+          <blockquote key={idx} className="my-4 p-4 rounded-xl text-sm" style={{ border: '1px solid #E8E2D4', background: '#FBF7EE', color: '#2A2438', lineHeight: 1.8 }}>
             {parseInlineStyles(trimmed.substring(1).trim())}
           </blockquote>
         );
@@ -62,14 +62,14 @@ export default function LessonContent({ content }) {
       // Handle headings
       if (trimmed.startsWith('###')) {
         return (
-          <h4 key={idx} className="text-base font-bold text-gray-900 mt-5 mb-2">
+          <h4 key={idx} className="text-base font-bold mt-5 mb-2" style={{ color: '#2A2438' }}>
             {parseInlineStyles(trimmed.substring(3).trim())}
           </h4>
         );
       }
       if (trimmed.startsWith('##')) {
         return (
-          <h3 key={idx} className="text-lg font-extrabold text-primary-600 mt-6 mb-3 border-b border-gray-100 pb-1">
+          <h3 key={idx} className="text-lg font-extrabold mt-6 mb-3 pb-1" style={{ color: '#177B58', borderBottom: '1px solid #E8E2D4' }}>
             {parseInlineStyles(trimmed.substring(2).trim())}
           </h3>
         );
@@ -78,7 +78,7 @@ export default function LessonContent({ content }) {
       // Handle lists
       if (trimmed.startsWith('-') || trimmed.startsWith('*')) {
         return (
-          <ul key={idx} className="list-disc list-inside mr-4 my-2 text-sm text-gray-700 space-y-1.5 leading-relaxed">
+          <ul key={idx} className="list-disc list-inside mr-4 my-2 text-sm space-y-1.5" style={{ color: '#2A2438', lineHeight: 1.8 }}>
             <li className="list-item">
               {parseInlineStyles(trimmed.substring(1).trim())}
             </li>
@@ -88,7 +88,7 @@ export default function LessonContent({ content }) {
 
       // Normal paragraph
       return (
-        <p key={idx} className="text-sm text-gray-600 leading-relaxed mb-4">
+        <p key={idx} className="text-sm mb-4" style={{ color: '#756E85', lineHeight: 1.8 }}>
           {parseInlineStyles(trimmed)}
         </p>
       );
@@ -118,7 +118,8 @@ export default function LessonContent({ content }) {
         const verseText = matchText.slice(1, -1);
         elements.push(
           <span key={matchStart} className="inline-block px-1 mx-0.5 my-1">
-            <span className="quran-text font-quran text-emerald-800 bg-emerald-50/70 border border-emerald-100/50 px-2 py-0.5 rounded-lg text-lg select-text shadow-sm font-semibold">
+            <span className="quran-text font-quran text-lg select-text font-semibold"
+              style={{ background: '#E2EFE7', border: '1px solid #E8E2D4', color: '#2A2438', padding: '2px 8px', borderRadius: 8 }}>
               ﴿ {verseText} ﴾
             </span>
           </span>
@@ -134,25 +135,22 @@ export default function LessonContent({ content }) {
         elements.push(
           <span
             key={matchStart}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200/80 shadow-sm mx-1 my-1 relative group"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl mx-1 my-1 relative group"
+            style={{ background: '#FFFFFF', border: '1px solid #E8E2D4' }}
           >
             {/* Rule badge */}
-            <span 
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full select-none flex items-center gap-0.5 cursor-help ${
-                ruleType.includes('إظهار') ? 'bg-blue-50 text-blue-700 border border-blue-100' :
-                ruleType.includes('إدغام') ? 'bg-purple-50 text-purple-700 border border-purple-100' :
-                ruleType.includes('إخفاء') ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                'bg-orange-50 text-orange-700 border border-orange-100'
-              }`}
+            <span
+              className="font-bold px-2 py-0.5 rounded-full select-none flex items-center gap-0.5 cursor-help"
+              style={{ fontSize: '0.8125rem', background: '#FBF7EE', color: '#2A2438', border: '1px solid #E8E2D4' }}
               onMouseEnter={() => setHoveredRule(ruleType)}
               onMouseLeave={() => setHoveredRule(null)}
             >
               {ruleType}
-              <HelpCircle className="w-2.5 h-2.5 text-gray-400" />
+              <HelpCircle className="w-2.5 h-2.5" style={{ color: '#756E85' }} aria-hidden />
             </span>
 
             {/* Quranic Phrase */}
-            <span className="font-quran text-base text-gray-800 select-text">
+            <span className="font-quran text-base select-text" style={{ color: '#2A2438' }}>
               {phrase}
             </span>
 
@@ -160,11 +158,8 @@ export default function LessonContent({ content }) {
             {audioUrl && (
               <button
                 onClick={() => handlePlayAudio(phrase)}
-                className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-                  isPlaying
-                    ? 'bg-primary-500 text-white shadow-md'
-                    : 'bg-primary-50 text-primary-600 hover:bg-primary-100'
-                }`}
+                className="w-6 h-6 rounded-full flex items-center justify-center"
+                style={{ background: isPlaying ? '#177B58' : '#E2EFE7', color: isPlaying ? '#fff' : '#177B58' }}
                 title={isPlaying ? "إيقاف مؤقت" : "استمع للمثال بصوت العفاسي"}
               >
                 {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3 mr-0.5" />}
@@ -173,9 +168,9 @@ export default function LessonContent({ content }) {
 
             {/* Rule description tooltip */}
             {hoveredRule === ruleType && RULE_EXPLANATIONS[ruleType] && (
-              <span className="absolute bottom-full right-1/2 translate-x-1/2 mb-2 w-48 bg-slate-800 text-white text-[10px] p-2 rounded-lg shadow-lg z-50 text-right leading-relaxed pointer-events-none">
+              <span className="absolute bottom-full right-1/2 translate-x-1/2 mb-2 w-48 p-2 rounded-lg z-50 text-right leading-relaxed pointer-events-none"
+                style={{ fontSize: '0.8125rem', background: '#FFFFFF', color: '#2A2438', border: '1px solid #E8E2D4' }}>
                 {RULE_EXPLANATIONS[ruleType]}
-                <span className="absolute top-full right-1/2 translate-x-1/2 w-2 h-2 bg-slate-800 transform rotate-45" />
               </span>
             )}
           </span>
@@ -194,24 +189,28 @@ export default function LessonContent({ content }) {
   };
 
   return (
-    <div className="card-base p-6 bg-white border border-gray-100">
-      <div className="flex items-center justify-between mb-4 border-b border-gray-50 pb-3">
+    <div className="p-6" style={{ background: '#FFFFFF', border: '1px solid #E8E2D4', borderRadius: 18 }}>
+      <div className="flex items-center justify-between mb-4 pb-3" style={{ borderBottom: '1px solid #FBF7EE' }}>
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center text-primary-500">
-            <BookOpen className="w-4.5 h-4.5" />
-          </div>
-          <h3 className="font-black text-gray-900 text-base">الشرح النصي والأمثلة</h3>
+          <span aria-hidden style={{
+            width: 36, height: 36, borderRadius: 12, background: '#E2EFE7', color: '#177B58',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+          }}>
+            <BookOpen size={17} />
+          </span>
+          <h3 className="font-black text-base" style={{ color: '#2A2438', margin: 0 }}>الشرح النصي والأمثلة</h3>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-amber-500 font-semibold bg-amber-50 px-2.5 py-1 rounded-full">
-          <Sparkles className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1"
+          style={{ color: '#177B58', background: '#E2EFE7', borderRadius: 9999 }}>
+          <Sparkles className="w-3.5 h-3.5" aria-hidden />
           <span>أمثلة تلاوة تفاعلية</span>
         </div>
       </div>
 
       <div className="space-y-1">
         {content ? renderFormattedText(content) : (
-          <div className="text-center py-8 text-gray-400 text-sm">
-            <Volume2 className="w-12 h-12 mx-auto mb-2 text-gray-200" />
+          <div className="text-center py-8 text-sm" style={{ color: '#756E85' }}>
+            <Volume2 className="w-12 h-12 mx-auto mb-2" style={{ color: '#E8E2D4' }} aria-hidden />
             لا يوجد محتوى شرح نصي لهذا الدرس.
           </div>
         )}

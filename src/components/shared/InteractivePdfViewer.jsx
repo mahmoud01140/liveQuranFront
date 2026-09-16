@@ -338,22 +338,28 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col bg-slate-900/95 backdrop-blur-md overflow-hidden text-right"
+      transition={{ duration: 0.2 }}
+      className="halaqa fixed inset-0 z-50 flex flex-col overflow-hidden text-right"
+      style={{ background: '#FBF7EE' }}
       dir="rtl"
     >
       {/* Upper toolbar */}
-      <div className="flex flex-nowrap items-center justify-between gap-2 sm:gap-4 p-2.5 sm:p-4 border-b border-slate-700 bg-slate-800/90 backdrop-blur text-white overflow-x-auto no-scrollbar">
+      <div className="flex flex-nowrap items-center justify-between gap-2 sm:gap-4 p-2.5 sm:p-4 overflow-x-auto no-scrollbar"
+        style={{ background: '#FFFFFF', borderBottom: '1px solid #E8E2D4' }}>
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 sm:p-2 hover:bg-slate-700 rounded-xl transition-colors text-slate-300 hover:text-white"
+            aria-label="إغلاق عارض المستند"
+            className="transition-colors"
+            style={{ minWidth: 44, minHeight: 44, borderRadius: 12, border: 'none', background: 'transparent', color: '#756E85', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 6 }}
             title="إغلاق"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden />
           </button>
           <div className="min-w-0">
-            <h2 className="font-bold text-xs sm:text-base md:text-lg truncate max-w-[120px] sm:max-w-xs md:max-w-md">{title}</h2>
-            <p className="text-[10px] sm:text-xs text-slate-400 hidden xs:block">عارض تفاعلي مدمج 📄</p>
+            <h2 className="font-bold text-xs sm:text-base md:text-lg truncate max-w-[120px] sm:max-w-xs md:max-w-md" style={{ color: '#2A2438', margin: 0 }}>{title}</h2>
+            <p className="sm:text-xs" style={{ fontSize: '0.8125rem', color: '#756E85', margin: 0 }}>عارض تفاعلي مدمج</p>
           </div>
         </div>
 
@@ -361,59 +367,78 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
         {!isPdfLoading && !error && (
           <div className="flex items-center gap-1.5 sm:gap-3 mx-1 sm:mx-0 flex-shrink-0">
             {/* Navigation */}
-            <div className="flex items-center bg-slate-700/80 rounded-xl p-0.5 sm:p-1 border border-slate-600">
+            <div className="flex items-center rounded-xl p-0.5 sm:p-1"
+              style={{ background: '#FBF7EE', border: '1px solid #E8E2D4' }}>
               <button
+                type="button"
                 disabled={pageNum <= 1}
                 onClick={() => setPageNum(p => Math.max(1, p - 1))}
-                className="p-1 sm:p-1.5 hover:bg-slate-600 rounded-lg disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                aria-label="الصفحة السابقة"
+                className="rounded-lg disabled:opacity-30 transition-colors"
+                style={{ minWidth: 40, minHeight: 40, border: 'none', background: 'transparent', color: '#2A2438', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 4 }}
                 title="الصفحة السابقة"
               >
-                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden />
               </button>
-              
-              <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 flex items-center gap-1 select-none">
+
+              <span className="sm:text-xs font-semibold px-1.5 sm:px-2 flex items-center gap-1 select-none"
+                style={{ fontSize: '0.8125rem', color: '#2A2438', fontVariantNumeric: 'tabular-nums' }}>
                 <span>{pageNum}</span>
-                <span className="text-slate-400">/</span>
+                <span style={{ color: '#756E85' }}>/</span>
                 <span>{numPages}</span>
               </span>
 
               <button
+                type="button"
                 disabled={pageNum >= numPages}
                 onClick={() => setPageNum(p => Math.min(numPages, p + 1))}
-                className="p-1 sm:p-1.5 hover:bg-slate-600 rounded-lg disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                aria-label="الصفحة التالية"
+                className="rounded-lg disabled:opacity-30 transition-colors"
+                style={{ minWidth: 40, minHeight: 40, border: 'none', background: 'transparent', color: '#2A2438', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 4 }}
                 title="الصفحة التالية"
               >
-                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden />
               </button>
             </div>
 
             {/* Zoom Controls */}
-            <div className="flex items-center bg-slate-700/80 rounded-xl p-0.5 sm:p-1 border border-slate-600">
+            <div className="flex items-center rounded-xl p-0.5 sm:p-1"
+              style={{ background: '#FBF7EE', border: '1px solid #E8E2D4' }}>
               <button
+                type="button"
                 disabled={scale <= 0.5}
                 onClick={() => setScale(s => Math.max(0.5, s - 0.25))}
-                className="p-1 sm:p-1.5 hover:bg-slate-600 rounded-lg transition-colors"
+                aria-label="تصغير"
+                className="rounded-lg disabled:opacity-30 transition-colors"
+                style={{ minWidth: 40, minHeight: 40, border: 'none', background: 'transparent', color: '#2A2438', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 4 }}
                 title="تصغير"
               >
-                <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden />
               </button>
-              <span className="text-[10px] sm:text-xs font-mono font-semibold px-1 sm:px-2 min-w-[36px] sm:min-w-[48px] text-center select-none">
+              <span className="sm:text-xs font-semibold px-1 sm:px-2 text-center select-none"
+                style={{ fontSize: '0.8125rem', color: '#2A2438', minWidth: 48, fontVariantNumeric: 'tabular-nums' }}>
                 {Math.round(scale * 100)}%
               </span>
               <button
+                type="button"
                 disabled={scale >= 2.5}
                 onClick={() => setScale(s => Math.min(2.5, s + 0.25))}
-                className="p-1 sm:p-1.5 hover:bg-slate-600 rounded-lg transition-colors"
+                aria-label="تكبير"
+                className="rounded-lg disabled:opacity-30 transition-colors"
+                style={{ minWidth: 40, minHeight: 40, border: 'none', background: 'transparent', color: '#2A2438', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 4 }}
                 title="تكبير"
               >
-                <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden />
               </button>
               <button
+                type="button"
                 onClick={fitWidth}
-                className="p-1 sm:p-1.5 hover:bg-slate-600 rounded-lg border-r border-slate-600/50 transition-colors ml-0.5"
+                aria-label="ملائمة العرض"
+                className="rounded-lg transition-colors"
+                style={{ minWidth: 40, minHeight: 40, border: 'none', background: 'transparent', color: '#2A2438', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 4, marginRight: 2 }}
                 title="ملائمة العرض"
               >
-                <Maximize className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <Maximize className="w-3.5 h-3.5 sm:w-4 sm:h-4" aria-hidden />
               </button>
             </div>
           </div>
@@ -423,57 +448,74 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
         {!isPdfLoading && !error && (
           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             {/* Tool Selection */}
-            <div className="flex bg-slate-700/85 rounded-xl p-0.5 sm:p-1 border border-slate-600 gap-0.5">
+            <div className="flex rounded-xl p-0.5 sm:p-1 gap-0.5" role="group" aria-label="أدوات المستند"
+              style={{ background: '#FBF7EE', border: '1px solid #E8E2D4' }}>
               <button
+                type="button"
                 onClick={() => setActiveTool('select')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold flex items-center gap-1 transition-all ${
-                  activeTool === 'select'
-                    ? 'bg-primary-500 text-white shadow-sm'
-                    : 'text-slate-300 hover:bg-slate-600'
-                }`}
+                aria-pressed={activeTool === 'select'}
+                className="px-2 sm:px-3 rounded-lg text-xs font-semibold flex items-center gap-1"
+                style={{
+                  minHeight: 44, border: 'none', cursor: 'pointer',
+                  background: activeTool === 'select' ? '#177B58' : 'transparent',
+                  color: activeTool === 'select' ? '#fff' : '#756E85',
+                }}
                 title="أداة التحديد والتحريك"
               >
-                <BookOpen className="w-3.5 h-3.5" />
+                <BookOpen className="w-3.5 h-3.5" aria-hidden />
                 <span className="hidden md:inline">قراءة</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveTool('highlight')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold flex items-center gap-1 transition-all ${
-                  activeTool === 'highlight'
-                    ? 'bg-yellow-500 text-slate-900 shadow-sm'
-                    : 'text-slate-300 hover:bg-slate-600'
-                }`}
+                aria-pressed={activeTool === 'highlight'}
+                className="px-2 sm:px-3 rounded-lg text-xs font-semibold flex items-center gap-1"
+                style={{
+                  minHeight: 44, border: 'none', cursor: 'pointer',
+                  background: activeTool === 'highlight' ? '#177B58' : 'transparent',
+                  color: activeTool === 'highlight' ? '#fff' : '#756E85',
+                }}
                 title="تظليل النصوص والفقرات"
               >
-                <Highlighter className="w-3.5 h-3.5" />
+                <Highlighter className="w-3.5 h-3.5" aria-hidden />
                 <span className="hidden md:inline">تظليل</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setActiveTool('comment')}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold flex items-center gap-1 transition-all ${
-                  activeTool === 'comment'
-                    ? 'bg-teal-500 text-white shadow-sm'
-                    : 'text-slate-300 hover:bg-slate-600'
-                }`}
+                aria-pressed={activeTool === 'comment'}
+                className="px-2 sm:px-3 rounded-lg text-xs font-semibold flex items-center gap-1"
+                style={{
+                  minHeight: 44, border: 'none', cursor: 'pointer',
+                  background: activeTool === 'comment' ? '#177B58' : 'transparent',
+                  color: activeTool === 'comment' ? '#fff' : '#756E85',
+                }}
                 title="إضافة ملاحظة عند النقر"
               >
-                <MessageSquare className="w-3.5 h-3.5" />
+                <MessageSquare className="w-3.5 h-3.5" aria-hidden />
                 <span className="hidden md:inline">ملاحظة</span>
               </button>
             </div>
 
             {/* Colors selection for highlighter */}
             {activeTool === 'highlight' && (
-              <div className="flex items-center bg-slate-700/80 rounded-xl p-1 sm:p-1.5 border border-slate-600 gap-1 sm:gap-1.5">
+              <div className="flex items-center rounded-xl p-1 sm:p-1.5 gap-1 sm:gap-1.5"
+                role="group" aria-label="لون التظليل"
+                style={{ background: '#FBF7EE', border: '1px solid #E8E2D4' }}>
                 {Object.entries(colors).map(([name, config]) => (
                   <button
                     key={name}
+                    type="button"
                     onClick={() => setSelectedColor(name)}
-                    className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full ${config.bg} border-2 transition-all ${
-                      selectedColor === name ? 'border-white scale-110 shadow-sm' : 'border-transparent hover:scale-105'
-                    }`}
+                    aria-label={`لون التظليل ${name}`}
+                    aria-pressed={selectedColor === name}
+                    className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full ${config.bg}`}
+                    style={{
+                      minWidth: 32, minHeight: 32, border: `2px solid ${selectedColor === name ? '#177B58' : 'transparent'}`,
+                      cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    }}
                   />
                 ))}
               </div>
@@ -481,15 +523,21 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
 
             {/* Sidebar toggle */}
             <button
+              type="button"
               onClick={() => setShowSidebar(!showSidebar)}
-              className={`p-1.5 sm:p-2 rounded-xl transition-all border ${
-                showSidebar
-                  ? 'bg-primary-500 text-white border-primary-400'
-                  : 'bg-slate-700 hover:bg-slate-600 text-slate-300 border-slate-600'
-              }`}
+              aria-expanded={showSidebar}
+              aria-label="البحث والتعليقات"
+              className="transition-all"
+              style={{
+                minWidth: 44, minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                background: showSidebar ? '#177B58' : '#FFFFFF',
+                color: showSidebar ? '#fff' : '#756E85',
+                border: `1px solid ${showSidebar ? '#177B58' : '#E8E2D4'}`,
+              }}
               title="البحث والتعليقات"
             >
-              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Search className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden />
             </button>
 
             {/* Download option */}
@@ -498,10 +546,16 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
               download={`${title}.pdf`}
               target="_blank"
               rel="noreferrer"
-              className="p-1.5 sm:p-2 bg-slate-700 hover:bg-slate-600 text-slate-200 hover:text-white rounded-xl transition-colors border border-slate-600 flex items-center justify-center"
+              aria-label="تحميل الملف"
+              className="transition-colors"
+              style={{
+                minWidth: 44, minHeight: 44, borderRadius: 12,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                background: '#FFFFFF', color: '#756E85', border: '1px solid #E8E2D4',
+              }}
               title="تحميل الملف"
             >
-              <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Download className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden />
             </a>
           </div>
         )}
@@ -513,29 +567,41 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
         <AnimatePresence>
           {showSidebar && (
             <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: typeof window !== 'undefined' && window.innerWidth < 640 ? '100%' : 320, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              className="h-full absolute sm:static inset-y-0 right-0 z-20 border-l border-slate-700 bg-slate-800/95 sm:bg-slate-800/90 backdrop-blur text-white flex flex-col flex-shrink-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="h-full absolute sm:static inset-y-0 right-0 z-20 w-full sm:w-80 flex flex-col flex-shrink-0"
+              style={{ background: '#FFFFFF', borderLeft: '1px solid #E8E2D4' }}
             >
               {/* Tab Selector */}
-              <div className="flex border-b border-slate-700 p-2 gap-2">
+              <div className="flex p-2 gap-2" style={{ borderBottom: '1px solid #E8E2D4' }}>
                 <button
+                  type="button"
                   onClick={() => setSidebarTab('search')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    sidebarTab === 'search' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
-                  }`}
+                  aria-selected={sidebarTab === 'search'}
+                  className="flex-1 py-2 px-3 text-xs font-bold flex items-center justify-center gap-1.5"
+                  style={{
+                    minHeight: 44, background: 'none', border: 'none', cursor: 'pointer',
+                    borderBottom: `2px solid ${sidebarTab === 'search' ? '#177B58' : 'transparent'}`,
+                    color: sidebarTab === 'search' ? '#177B58' : '#756E85',
+                  }}
                 >
-                  <Search className="w-4 h-4" />
+                  <Search className="w-4 h-4" aria-hidden />
                   البحث في المستند
                 </button>
                 <button
+                  type="button"
                   onClick={() => setSidebarTab('comments')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    sidebarTab === 'comments' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
-                  }`}
+                  aria-selected={sidebarTab === 'comments'}
+                  className="flex-1 py-2 px-3 text-xs font-bold flex items-center justify-center gap-1.5"
+                  style={{
+                    minHeight: 44, background: 'none', border: 'none', cursor: 'pointer',
+                    borderBottom: `2px solid ${sidebarTab === 'comments' ? '#177B58' : 'transparent'}`,
+                    color: sidebarTab === 'comments' ? '#177B58' : '#756E85',
+                  }}
                 >
-                  <MessageSquare className="w-4 h-4" />
+                  <MessageSquare className="w-4 h-4" aria-hidden />
                   ملاحظاتي ({commentsList.length})
                 </button>
               </div>
@@ -550,20 +616,26 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
                         placeholder="ابحث عن كلمة أو جملة..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-2.5 pl-10 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-right"
+                        aria-label="بحث في المستند"
+                        className="w-full text-sm focus:border-[#177B58] focus:outline-none"
+                        style={{
+                          minHeight: 44, background: '#FFFFFF', color: '#2A2438',
+                          border: '1px solid #E8E2D4', borderRadius: 12, padding: '10px 16px 10px 40px',
+                        }}
                       />
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#756E85' }} aria-hidden />
                     </div>
 
                     {isIndexing && (
-                      <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-900/40 p-3 rounded-lg border border-slate-700">
-                        <Loader2 className="w-4 h-4 animate-spin text-primary-400" />
+                      <div className="flex items-center gap-2 text-xs p-3 rounded-lg"
+                        style={{ color: '#756E85', background: '#FBF7EE', border: '1px solid #E8E2D4' }}>
+                        <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#177B58' }} aria-hidden />
                         <span>جاري فهرسة نصوص الملف للبحث...</span>
                       </div>
                     )}
 
                     {!isIndexing && searchQuery.trim() && (
-                      <div className="text-xs text-slate-400 mb-2">
+                      <div className="text-xs mb-2" style={{ color: '#756E85', fontVariantNumeric: 'tabular-nums' }}>
                         تم العثور على {searchResults.length} نتيجة:
                       </div>
                     )}
@@ -572,28 +644,31 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
                       {searchQuery.trim() && searchResults.map((res, i) => (
                         <button
                           key={i}
+                          type="button"
                           onClick={() => setPageNum(res.pageNum)}
-                          className={`w-full text-right p-3 rounded-xl border text-sm transition-all duration-200 block ${
-                            pageNum === res.pageNum
-                              ? 'bg-primary-500/20 border-primary-500/60'
-                              : 'bg-slate-900/50 border-slate-700/50 hover:bg-slate-900 hover:border-slate-600'
-                          }`}
+                          className="w-full text-right p-3 rounded-xl text-sm block"
+                          style={{
+                            background: pageNum === res.pageNum ? '#E2EFE7' : '#FFFFFF',
+                            border: `1px solid ${pageNum === res.pageNum ? '#177B58' : '#E8E2D4'}`,
+                            cursor: 'pointer',
+                          }}
                         >
                           <div className="flex justify-between items-center mb-1">
-                            <span className="font-bold text-xs text-primary-300 bg-primary-500/10 px-2 py-0.5 rounded">
+                            <span className="font-bold text-xs px-2 py-0.5"
+                              style={{ color: '#0F5940', background: '#E2EFE7', borderRadius: 8, fontVariantNumeric: 'tabular-nums' }}>
                               صفحة {res.pageNum}
                             </span>
-                            <span className="text-[10px] text-slate-500">نتيجة {i + 1}</span>
+                            <span style={{ fontSize: '0.8125rem', color: '#756E85', fontVariantNumeric: 'tabular-nums' }}>نتيجة {i + 1}</span>
                           </div>
-                          <p className="text-slate-300 text-xs leading-relaxed italic" dir="auto">
+                          <p className="text-xs leading-relaxed italic" dir="auto" style={{ color: '#2A2438', margin: 0 }}>
                             {res.snippet}
                           </p>
                         </button>
                       ))}
 
                       {searchQuery.trim() && searchResults.length === 0 && (
-                        <div className="text-center py-6 text-slate-500 text-xs">
-                          <AlertCircle className="w-8 h-8 mx-auto mb-2 text-slate-600" />
+                        <div className="text-center py-6 text-xs" style={{ color: '#756E85' }}>
+                          <AlertCircle className="w-8 h-8 mx-auto mb-2" style={{ color: '#E8E2D4' }} aria-hidden />
                           لم نعثر على أي تطابق للبحث.
                         </div>
                       )}
@@ -604,27 +679,40 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
                     {commentsList.map((c) => (
                       <div
                         key={c.id}
-                        className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-3 hover:border-slate-600 transition-all"
+                        className="rounded-xl p-3"
+                        style={{ background: '#FFFFFF', border: '1px solid #E8E2D4' }}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <button
+                            type="button"
                             onClick={() => setPageNum(c.page)}
-                            className="font-semibold text-xs text-teal-400 bg-teal-500/10 px-2.5 py-0.5 rounded hover:bg-teal-500/20 transition-all"
+                            className="font-semibold text-xs px-2.5 py-0.5"
+                            style={{
+                              minHeight: 36, borderRadius: 8, cursor: 'pointer',
+                              background: '#E2EFE7', color: '#0F5940', border: 'none', fontVariantNumeric: 'tabular-nums',
+                            }}
                           >
                             صفحة {c.page}
                           </button>
                           <button
+                            type="button"
                             onClick={() => deleteAnnotation(c.id)}
-                            className="p-1 hover:bg-slate-800 text-slate-400 hover:text-red-400 rounded transition-colors"
+                            aria-label="حذف الملاحظة"
+                            className="transition-colors"
+                            style={{
+                              minWidth: 40, minHeight: 40, borderRadius: 8, border: 'none',
+                              background: 'none', color: '#C2410C', cursor: 'pointer',
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            }}
                             title="حذف الملاحظة"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5" aria-hidden />
                           </button>
                         </div>
-                        <p className="text-xs text-slate-300 leading-relaxed font-medium break-words">
+                        <p className="text-xs leading-relaxed font-medium break-words" style={{ color: '#2A2438', margin: 0 }}>
                           {c.text}
                         </p>
-                        <span className="text-[10px] text-slate-500 block mt-1">
+                        <span className="block mt-1" style={{ fontSize: '0.8125rem', color: '#756E85', fontVariantNumeric: 'tabular-nums' }}>
                           {new Date(c.createdAt).toLocaleDateString('ar-EG', {
                             hour: '2-digit',
                             minute: '2-digit'
@@ -634,10 +722,10 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
                     ))}
 
                     {commentsList.length === 0 && (
-                      <div className="text-center py-12 text-slate-500 text-xs">
-                        <MessageSquare className="w-10 h-10 mx-auto mb-2 text-slate-600" />
+                      <div className="text-center py-12 text-xs" style={{ color: '#756E85' }}>
+                        <MessageSquare className="w-10 h-10 mx-auto mb-2" style={{ color: '#E8E2D4' }} aria-hidden />
                         لا توجد أي ملاحظات مكتوبة بعد.
-                        <p className="text-[10px] text-slate-600 mt-1">
+                        <p className="mt-1" style={{ fontSize: '0.8125rem', color: '#756E85', marginBottom: 0 }}>
                           اختر أداة "ملاحظة" ثم انقر في أي مكان على الصفحة لإضافة ملاحظة.
                         </p>
                       </div>
@@ -652,27 +740,30 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
         {/* Center Viewer Area */}
         <div
           ref={containerRef}
-          className="flex-1 overflow-auto p-4 flex items-start justify-center bg-slate-950/40 relative select-none"
+          className="halaqa flex-1 overflow-auto p-4 flex items-start justify-center relative select-none"
+          style={{ background: '#FBF7EE' }}
         >
           {isPdfLoading ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 gap-3">
-              <Loader2 className="w-10 h-10 animate-spin text-primary-400" />
-              <p className="text-sm font-semibold animate-pulse">جاري تحميل المستند وبدء العرض...</p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3" style={{ color: '#756E85' }}>
+              <Loader2 className="w-10 h-10 animate-spin" style={{ color: '#177B58' }} aria-hidden />
+              <p className="text-sm font-semibold animate-pulse" style={{ margin: 0 }}>جاري تحميل المستند وبدء العرض...</p>
             </div>
           ) : error ? (
-            <div className="bg-slate-800/80 border border-slate-700 p-6 rounded-2xl text-center max-w-md my-auto shadow-xl">
-              <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-              <h3 className="font-bold text-white text-base mb-2">فشل تحميل الملف</h3>
-              <p className="text-xs text-slate-300 leading-relaxed mb-4">{error}</p>
+            <div className="p-6 rounded-2xl text-center max-w-md my-auto" style={{ background: '#FFFFFF', border: '1px solid #E8E2D4' }}>
+              <AlertCircle className="w-12 h-12 mx-auto mb-3" style={{ color: '#C2410C' }} aria-hidden />
+              <h3 className="font-bold text-base mb-2" style={{ color: '#2A2438', marginTop: 0 }}>فشل تحميل الملف</h3>
+              <p className="text-xs leading-relaxed mb-4" style={{ color: '#756E85' }}>{error}</p>
               <button
+                type="button"
                 onClick={onClose}
-                className="py-2 px-6 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-xs font-bold transition-all"
+                className="font-bold"
+                style={{ minHeight: 48, padding: '8px 24px', borderRadius: 12, cursor: 'pointer', background: '#177B58', color: '#fff', border: 'none', fontSize: '0.8125rem' }}
               >
                 العودة للمكتبة
               </button>
             </div>
           ) : (
-            <div className="relative shadow-2xl rounded-lg bg-white my-4 overflow-hidden border border-slate-200">
+            <div className="relative rounded-lg bg-white my-4 overflow-hidden" style={{ border: '1px solid #E8E2D4' }}>
               {/* PDF Render Canvas */}
               <canvas ref={canvasRef} className="block select-none" />
 
@@ -705,15 +796,21 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
                     >
                       {/* Delete button — always visible for touch */}
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteAnnotation(h.id);
                         }}
                         aria-label="حذف التظليل"
-                        className="absolute -top-3 -left-3 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600"
+                        className="absolute flex items-center justify-center"
+                        style={{
+                          top: -12, left: -12, width: 28, height: 28, borderRadius: 9999,
+                          background: '#C2410C', color: '#fff', border: '2px solid #fff',
+                          cursor: 'pointer',
+                        }}
                         title="حذف التظليل"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-3.5 h-3.5" aria-hidden />
                       </button>
                     </div>
                   ))}
@@ -734,47 +831,55 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
                     >
                       {/* Note Pin Icon */}
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setActiveCommentId(activeCommentId === c.id ? null : c.id);
                         }}
-                        className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-all border-2 ${
-                          activeCommentId === c.id
-                            ? 'bg-teal-500 text-white border-white scale-110'
-                            : 'bg-white text-teal-600 border-teal-500 hover:scale-105'
-                        }`}
+                        aria-label={activeCommentId === c.id ? 'إغلاق الملاحظة' : 'فتح الملاحظة'}
+                        className="rounded-full flex items-center justify-center"
+                        style={{
+                          width: 32, height: 32, cursor: 'pointer',
+                          background: activeCommentId === c.id ? '#177B58' : '#FFFFFF',
+                          color: activeCommentId === c.id ? '#fff' : '#177B58',
+                          border: `2px solid #177B58`,
+                        }}
                       >
-                        <MessageSquare className="w-4 h-4" />
+                        <MessageSquare className="w-4 h-4" aria-hidden />
                       </button>
 
                       {/* Comment Tooltip Popover */}
                       <AnimatePresence>
                         {activeCommentId === c.id && (
                           <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                            className="absolute bottom-10 right-1/2 translate-x-1/2 w-64 bg-slate-800 border border-slate-700 text-white p-3 rounded-xl shadow-xl z-40 text-right"
+                            initial={{ opacity: 0, y: -8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.2 }}
+                            className="absolute bottom-10 right-1/2 translate-x-1/2 w-64 p-3 rounded-xl z-40 text-right"
+                            style={{ background: '#FFFFFF', border: '1px solid #E8E2D4' }}
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <div className="flex items-start justify-between border-b border-slate-700 pb-1.5 mb-1.5">
-                              <span className="text-[10px] text-slate-400">
+                            <div className="flex items-start justify-between pb-1.5 mb-1.5" style={{ borderBottom: '1px solid #E8E2D4' }}>
+                              <span style={{ fontSize: '0.8125rem', color: '#756E85', fontVariantNumeric: 'tabular-nums' }}>
                                 {new Date(c.createdAt).toLocaleDateString('ar-EG', {
                                   hour: '2-digit',
                                   minute: '2-digit'
                                 })}
                               </span>
                               <button
+                                type="button"
                                 onClick={() => deleteAnnotation(c.id)}
-                                className="text-slate-400 hover:text-red-400 p-0.5 rounded transition-colors"
+                                aria-label="حذف الملاحظة"
+                                className="rounded transition-colors"
+                                style={{ minWidth: 36, minHeight: 36, border: 'none', background: 'none', color: '#C2410C', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-3.5 h-3.5" aria-hidden />
                               </button>
                             </div>
-                            <p className="text-xs text-slate-200 leading-relaxed font-medium break-words">
+                            <p className="text-xs leading-relaxed font-medium break-words" style={{ color: '#2A2438', margin: 0 }}>
                               {c.text}
                             </p>
-                            <div className="absolute top-full right-1/2 translate-x-1/2 w-3 h-3 bg-slate-800 border-r border-b border-slate-700 transform rotate-45" />
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -800,15 +905,18 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
               {/* Pending Comment Placement form */}
               <AnimatePresence>
                 {pendingComment && (
-                  <div className="absolute inset-0 bg-slate-950/60 flex items-center justify-center z-40">
+                  <div className="absolute inset-0 flex items-center justify-center z-40"
+                    style={{ background: 'rgba(42,36,56,0.55)' }}>
                     <motion.div
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0.9, opacity: 0 }}
-                      className="bg-slate-800 border border-slate-700 rounded-2xl p-4 w-80 shadow-2xl text-right"
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 12 }}
+                      transition={{ duration: 0.2 }}
+                      className="rounded-2xl p-4 w-80 text-right"
+                      style={{ background: '#FFFFFF', border: '1px solid #E8E2D4' }}
                     >
-                      <h4 className="font-bold text-white text-sm mb-2 flex items-center gap-1.5">
-                        <MessageSquare className="w-4 h-4 text-teal-400" />
+                      <h4 className="font-bold text-sm mb-2 flex items-center gap-1.5" style={{ color: '#2A2438', marginTop: 0 }}>
+                        <MessageSquare className="w-4 h-4" style={{ color: '#177B58' }} aria-hidden />
                         إضافة ملاحظة جديدة
                       </h4>
                       <textarea
@@ -816,23 +924,32 @@ export default function InteractivePdfViewer({ pdfUrl, title, resourceId, onClos
                         placeholder="اكتب ملاحظتك هنا..."
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-600 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500 text-right mb-3 resize-none"
+                        aria-label="نص الملاحظة الجديدة"
+                        className="w-full text-xs focus:border-[#177B58] focus:outline-none resize-none mb-3"
+                        style={{
+                          minHeight: 72, background: '#FFFFFF', color: '#2A2438',
+                          border: '1px solid #E8E2D4', borderRadius: 12, padding: 12,
+                        }}
                         autoFocus
                       />
                       <div className="flex gap-2">
                         <button
+                          type="button"
                           onClick={handleAddComment}
-                          className="flex-1 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1"
+                          className="flex-1 text-xs font-bold flex items-center justify-center gap-1"
+                          style={{ minHeight: 48, background: '#177B58', color: '#fff', border: 'none', borderRadius: 12, cursor: 'pointer' }}
                         >
-                          <Check className="w-3.5 h-3.5" />
+                          <Check className="w-3.5 h-3.5" aria-hidden />
                           حفظ
                         </button>
                         <button
+                          type="button"
                           onClick={() => {
                             setPendingComment(null);
                             setCommentText('');
                           }}
-                          className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl text-xs font-bold transition-all"
+                          className="flex-1 text-xs font-bold"
+                          style={{ minHeight: 48, background: '#FBF7EE', color: '#2A2438', border: 'none', borderRadius: 12, cursor: 'pointer' }}
                         >
                           إلغاء
                         </button>

@@ -14,7 +14,7 @@ import { HQ, HqBadge } from '../../components/halaqa/primitives';
 const LEVEL_TONE = {
   foundation: 'mentor',
   memorization: 'guide',
-  teacher_prep: 'gold',
+  teacher_prep: 'guide',
   senior: 'neutral',
 };
 
@@ -28,7 +28,7 @@ export default function MyGroupsPage() {
   return (
     <PageLayout>
       <div className="halaqa" style={{ maxWidth: 860, margin: '0 auto' }}>
-        <h1 style={{ margin: '0 0 4px', fontSize: 26, fontWeight: 900, color: HQ.INK }}>مجموعاتي</h1>
+        <h1 style={{ margin: '0 0 4px', fontSize: 32, fontWeight: 800, color: HQ.INK }}>مجموعاتي</h1>
         <p style={{ margin: '0 0 16px', fontSize: 14, color: HQ.MUTED }}>
           {groups.length ? `${groups.length} مجموعات — اختر واحدة للمنهج وبدء البث` : 'ستظهر مجموعاتك هنا فور تعيينك'}
         </p>

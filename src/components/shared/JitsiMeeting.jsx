@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 /**
  * JitsiMeeting Component
@@ -270,15 +271,21 @@ export default function JitsiMeeting({
 
   if (error) {
     return (
-      <div className="w-full h-full min-h-[400px] bg-gray-900 flex flex-col items-center justify-center text-white p-6 rounded-2xl">
-        <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mb-4 text-2xl font-bold">
-          ⚠️
-        </div>
+      <div className="w-full h-full min-h-[400px] flex flex-col items-center justify-center p-6 rounded-2xl"
+        style={{ background: '#0C0C1D', color: '#fff' }}>
+        <span aria-hidden style={{
+          width: 64, height: 64, borderRadius: 18, background: 'rgba(255,255,255,0.08)',
+          color: '#C2410C', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+        }}>
+          <AlertTriangle size={30} />
+        </span>
         <h3 className="text-lg font-bold mb-2">عذراً، فشل اتصال Jitsi</h3>
-        <p className="text-gray-400 text-sm text-center max-w-md mb-4">{error}</p>
+        <p className="text-sm text-center max-w-md mb-4" style={{ color: 'rgba(255,255,255,0.65)' }}>{error}</p>
         <button
+          type="button"
           onClick={() => window.location.reload()}
-          className="bg-primary-500 hover:bg-primary-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors"
+          className="px-5 py-2.5 rounded-xl font-bold text-sm"
+          style={{ background: '#177B58', color: '#fff', border: 'none', cursor: 'pointer', minHeight: 48 }}
         >
           إعادة المحاولة
         </button>
@@ -287,16 +294,18 @@ export default function JitsiMeeting({
   }
 
   return (
-    <div className="relative w-full h-full min-h-0 bg-gray-950 rounded-none sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+    <div className="relative w-full h-full min-h-0 overflow-hidden flex flex-col"
+      style={{ background: '#0C0C1D', borderRadius: 18 }}>
       {loading && (
-        <div className="absolute inset-0 z-10 bg-gray-900 flex flex-col items-center justify-center text-white">
-          <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-4" />
-          <p className="text-gray-300 font-semibold text-sm animate-pulse">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center" style={{ background: '#0C0C1D', color: '#fff' }}>
+          <div className="w-12 h-12 rounded-full animate-spin mb-4"
+            style={{ border: '4px solid rgba(255,255,255,0.15)', borderTopColor: '#fff' }} aria-hidden />
+          <p className="font-semibold text-sm animate-pulse">
             جارٍ تجهيز الغرفة المباشرة (Jitsi Meet)...
           </p>
           {!isTeacher && (
-            <p className="text-gray-500 text-xs mt-2">
-              🎧 ستنضم بوضع الصوت فقط — لتوفير الإنترنت والتركيز على التلاوة
+            <p className="text-xs mt-2" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              ستنضم بوضع الصوت فقط — لتوفير الإنترنت والتركيز على التلاوة
             </p>
           )}
         </div>

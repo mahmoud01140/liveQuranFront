@@ -3,7 +3,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Radio, ClipboardList, PhoneOff, UserCheck, Mic, BookOpen,
-  CheckCircle, AlertCircle, Sparkles, ArrowRight
+  CheckCircle, AlertCircle, ArrowRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Navbar from '../../components/shared/Navbar';
@@ -137,7 +137,7 @@ export default function LiveBroadcastPage() {
       socket?.emit('join-group-room', { groupId: selectedGroup });
 
       setIsBroadcasting(true);
-      toast.success('🔴 انطلق البث المباشر!');
+      toast.success('انطلق البث المباشر!');
     } catch (err) {
       toast.error(err?.response?.data?.message || 'خطأ في بدء البث');
     }
@@ -155,7 +155,7 @@ export default function LiveBroadcastPage() {
     setSession(null);
     setDuration(0);
     resetLive();
-    toast('انتهى البث المباشر', { icon: '📴' });
+    toast('انتهى البث المباشر');
   };
 
   // Pre-broadcast setup — lesson is pre-selected from curriculum page
@@ -184,7 +184,7 @@ export default function LiveBroadcastPage() {
               <div style={{ width: 64, height: 64, background: HQ.MENTOR, borderRadius: 18, margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Radio size={30} color="#fff" />
               </div>
-              <h2 style={{ fontSize: 22, fontWeight: 900, color: HQ.INK, margin: '0 0 4px' }}>بدء بث مباشر جديد</h2>
+              <h2 style={{ fontSize: 24, fontWeight: 800, color: HQ.INK, margin: '0 0 4px' }}>بدء بث مباشر جديد</h2>
               <p style={{ color: HQ.MUTED, fontSize: 14, margin: 0 }}>تأكد من بيانات الجلسة ثم انطلق</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -237,9 +237,12 @@ export default function LiveBroadcastPage() {
                 <input
                   value={sessionTitle}
                   onChange={e => setSessionTitle(e.target.value)}
-                  className="input-base font-semibold"
+                  className="font-semibold focus:border-[#177B58] focus:outline-none"
+                  style={{
+                    width: '100%', minHeight: 48, background: HQ.SURFACE, color: HQ.INK,
+                    border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '12px 16px', fontSize: 16,
+                  }}
                   placeholder="عنوان الجلسة..."
-                  style={{ borderColor: HQ.LINE }}
                 />
                 <p style={{ fontSize: 12, color: HQ.MUTED, marginTop: 4 }}>
                   سيظهر هذا الاسم للطلاب في الإشعار المباشر وأعلى شاشة الحصة.
@@ -247,7 +250,12 @@ export default function LiveBroadcastPage() {
               </div>
               <div>
                 <label style={{ fontSize: 14, fontWeight: 700, color: HQ.INK, marginBottom: 6, display: 'block' }}>نوع الجلسة</label>
-                <select value={sessionType} onChange={e => setSessionType(e.target.value)} className="input-base" style={{ borderColor: HQ.LINE }}>
+                <select value={sessionType} onChange={e => setSessionType(e.target.value)}
+                  className="focus:border-[#177B58] focus:outline-none"
+                  style={{
+                    width: '100%', minHeight: 48, background: HQ.SURFACE, color: HQ.INK,
+                    border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '12px 16px', fontSize: 16,
+                  }}>
                   <option value="lesson">درس جديد</option>
                   <option value="review">مراجعة</option>
                   <option value="exam">امتحان</option>
@@ -262,9 +270,12 @@ export default function LiveBroadcastPage() {
                 <textarea
                   value={homeworkText}
                   onChange={e => setHomeworkText(e.target.value)}
-                  className="input-base resize-none h-20"
+                  className="resize-none focus:border-[#177B58] focus:outline-none"
+                  style={{
+                    width: '100%', minHeight: 80, background: HQ.SURFACE, color: HQ.INK,
+                    border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '12px 16px', fontSize: 16,
+                  }}
                   placeholder="اكتب الواجب المطلوب من الطلاب..."
-                  style={{ borderColor: HQ.LINE }}
                 />
               </div>
               <div>
@@ -272,8 +283,11 @@ export default function LiveBroadcastPage() {
                 <input type="date"
                   value={homeworkDeadline}
                   onChange={e => setHomeworkDeadline(e.target.value)}
-                  className="input-base"
-                  style={{ borderColor: HQ.LINE }}
+                  className="focus:border-[#177B58] focus:outline-none"
+                  style={{
+                    width: '100%', minHeight: 48, background: HQ.SURFACE, color: HQ.INK,
+                    border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '12px 16px', fontSize: 16,
+                  }}
                   min={new Date().toISOString().split('T')[0]}
                 />
               </div>

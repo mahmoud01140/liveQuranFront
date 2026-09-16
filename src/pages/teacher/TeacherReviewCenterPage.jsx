@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ClipboardList, CheckCircle, Users, ChevronDown, ChevronLeft, MessageSquare, Clock, Plus, X, Send, Star, Volume2, FileText, Download, Video, Link as LinkIcon, ShieldCheck } from 'lucide-react';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
+import { ClipboardList, CheckCircle, Users, ChevronDown, ChevronLeft, MessageSquare, Clock, Plus, X, Star, Volume2, FileText, Download, Video, Link as LinkIcon, ShieldCheck, Check, Pin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
 import useAuthStore from '../../store/authStore';
@@ -11,6 +11,17 @@ import { formatDateAr, getInitials, getAvatarColor } from '../../utils/helpers';
 import QURAN_SURAHS from '../../utils/quranData';
 import Pagination from '../../components/shared/Pagination';
 import usePagination from '../../hooks/usePagination';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
+
+/* Review center — the teacher's operational desk. Same tabs, fetches,
+   ratings, reviews and modals as before; only the visual layer changed. */
+
+const field = {
+  width: '100%', minHeight: 48, background: HQ.SURFACE, color: HQ.INK,
+  border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '12px 16px',
+  fontSize: 14, fontFamily: 'inherit',
+};
 
 export default function TeacherReviewCenterPage() {
   const { user } = useAuthStore();
@@ -156,7 +167,7 @@ export default function TeacherReviewCenterPage() {
             : s
         ),
       }));
-      toast.success('تم تسجيل المراجعة ✅');
+      toast.success('تم تسجيل المراجعة');
     } catch { toast.error('خطأ'); }
     finally { setCheckingId(null); }
   };
@@ -185,7 +196,7 @@ export default function TeacherReviewCenterPage() {
       }
       setShowAddHomeworkModal(false);
       setAddHomeworkForm({ sessionId: '', homework: '', deadline: '', isQuranHomework: false, surahNumber: '', surahName: '', fromVerse: '', toVerse: '' });
-      toast.success('✅ تم إضافة الواجب وإرساله للطلاب!');
+      toast.success('تم إضافة الواجب وإرساله للطلاب!');
     } catch { toast.error('خطأ في حفظ الواجب'); }
     finally { setSavingHomework(false); }
   };
@@ -241,60 +252,91 @@ export default function TeacherReviewCenterPage() {
     }
   };
 
+  const panel = {
+    background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 20,
+  };
+  const emptyBox = {
+    background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18,
+    padding: 48, textAlign: 'center',
+  };
+  const iconBtn = {
+    minWidth: 44, minHeight: 44, borderRadius: 12, border: 'none', background: 'transparent',
+    color: HQ.MUTED, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  };
+  const primaryBtn = {
+    minHeight: 48, padding: '12px 20px', borderRadius: 12, border: 'none',
+    background: HQ.MENTOR, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  };
+  const ghostBtn = {
+    minHeight: 48, padding: '12px 20px', borderRadius: 12, border: 'none', background: 'transparent',
+    color: HQ.MUTED, fontWeight: 800, fontSize: 14, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  };
+
+  const renderStars = (value, onPick, disabled) => (
+    <div className="flex items-center gap-1" role="radiogroup" aria-label="التقييم من 5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button key={star} type="button" disabled={disabled}
+          role="radio" aria-checked={star === value} aria-label={`${star} من 5`}
+          onClick={() => onPick && onPick(star)}
+          style={{ minWidth: 40, minHeight: 40, border: 'none', background: 'none', cursor: disabled ? 'default' : 'pointer', padding: 8 }}>
+          <Star size={19} aria-hidden color={star <= value ? '#D9A441' : HQ.LINE}
+            fill={star <= value ? '#D9A441' : 'none'} />
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <PageLayout>
-      {/* Header */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <MotionConfig reducedMotion="user">
+      <PageLayout>
+        <div className="halaqa" style={{ maxWidth: 960, margin: '0 auto' }}>
+          {/* Header */}
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="section-title">مركز التصحيح والمراجعة 📝</h1>
-              <p className="section-subtitle">إدارة ومراجعة الواجبات، التلاوات الشفهية، وتدقيق التسجيلات في مكان واحد</p>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: HQ.INK, margin: '0 0 4px' }}>مركز التصحيح والمراجعة</h1>
+              <p className="text-sm" style={{ color: HQ.MUTED, margin: 0 }}>إدارة ومراجعة الواجبات، التلاوات الشفهية، وتدقيق التسجيلات في مكان واحد</p>
             </div>
             {activeTab === 'homework' && (
-              <button onClick={() => setShowAddHomeworkModal(true)} className="btn-primary flex-shrink-0">
-                <Plus className="w-4 h-4" /> إضافة واجب جديد
+              <button type="button" onClick={() => setShowAddHomeworkModal(true)} style={{ ...primaryBtn, flex: 'none' }}>
+                <Plus size={16} aria-hidden /> إضافة واجب جديد
               </button>
             )}
             {activeTab === 'recordings' && (
-              <button onClick={() => setShowAddRecordingModal(true)} className="btn-primary flex-shrink-0">
-                <Plus className="w-4 h-4" /> إضافة تسجيل فيديو
+              <button type="button" onClick={() => setShowAddRecordingModal(true)} style={{ ...primaryBtn, flex: 'none' }}>
+                <Plus size={16} aria-hidden /> إضافة تسجيل فيديو
               </button>
             )}
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex border-b border-gray-200 mb-6 bg-white rounded-2xl p-1 shadow-sm overflow-x-auto">
-            <button
-              onClick={() => setActiveTab('homework')}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
-                activeTab === 'homework' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <ClipboardList className="w-4 h-4" />
-              تسليمات الواجبات ({sessions.length})
-            </button>
-
-            <button
-              onClick={() => setActiveTab('oral_exams')}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
-                activeTab === 'oral_exams' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <Volume2 className="w-4 h-4" />
-              الاختبارات الشفهية ({pendingExams.length})
-              {pendingExams.length > 0 && (
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('recordings')}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
-                activeTab === 'recordings' ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <Video className="w-4 h-4" />
-              تسجيلات الجلسات ({recordings.length})
-            </button>
+          <div className="hq-tabs" role="tablist" aria-label="أقسام المراجعة"
+            style={{ display: 'flex', width: '100%', marginBottom: 24, overflowX: 'auto' }}>
+            {[
+              { key: 'homework', label: `تسليمات الواجبات (${sessions.length})`, Icon: ClipboardList },
+              { key: 'oral_exams', label: `الاختبارات الشفهية (${pendingExams.length})`, Icon: Volume2, alert: pendingExams.length > 0 },
+              { key: 'recordings', label: `تسجيلات الجلسات (${recordings.length})`, Icon: Video },
+            ].map(t => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === t.key}
+                onClick={() => setActiveTab(t.key)}
+                style={{ flex: '1 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+                <t.Icon size={16} aria-hidden />
+                {t.label}
+                {t.alert && (
+                  <span aria-label={`${pendingExams.length} بانتظار التصحيح`} style={{
+                    display: 'inline-flex', alignItems: 'center', padding: '2px 10px', borderRadius: 9999,
+                    background: '#E2EFE7', color: '#0F5940', fontSize: '0.8125rem', fontWeight: 800,
+                  }}>
+                    {pendingExams.length}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
 
           {/* ─── TAB 1: Homework ─── */}
@@ -302,11 +344,11 @@ export default function TeacherReviewCenterPage() {
             isLoadingHomework ? (
               <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
             ) : sessions.length === 0 ? (
-              <div className="card-base p-14 text-center">
-                <ClipboardList className="w-14 h-14 text-gray-200 mx-auto mb-4" />
-                <p className="text-gray-500 font-semibold">لا توجد جلسات بها واجبات حالياً</p>
-                <button onClick={() => setShowAddHomeworkModal(true)} className="btn-primary mt-4 mx-auto">
-                  <Plus className="w-4 h-4" /> إضافة واجب جديد
+              <div style={emptyBox}>
+                <ClipboardList size={52} color={HQ.LINE} style={{ margin: '0 auto 12px' }} aria-hidden />
+                <p className="font-bold" style={{ color: HQ.MUTED, margin: '0 0 16px' }}>لا توجد جلسات بها واجبات حالياً</p>
+                <button type="button" onClick={() => setShowAddHomeworkModal(true)} style={{ ...primaryBtn, margin: '0 auto' }}>
+                  <Plus size={16} aria-hidden /> إضافة واجب جديد
                 </button>
               </div>
             ) : (
@@ -317,52 +359,56 @@ export default function TeacherReviewCenterPage() {
                   const isExpanded = selectedSession === session._id;
 
                   return (
-                    <div key={session._id} className="card-base overflow-hidden">
+                    <div key={session._id} style={panel} className="overflow-hidden">
                       <button
+                        type="button"
                         onClick={() => viewSubmissions(session)}
-                        className="w-full flex items-center gap-4 p-5 text-right hover:bg-gray-50 transition-colors"
-                      >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                          submittedCount > 0 ? 'bg-primary-50' : 'bg-gray-100'
-                        }`}>
-                          <ClipboardList className={`w-5 h-5 ${submittedCount > 0 ? 'text-primary-400' : 'text-gray-400'}`} />
-                        </div>
-                        <div className="flex-1 min-w-0 text-right">
-                          <p className="font-bold text-gray-900 text-sm">{session.title}</p>
-                          <p className="text-xs text-gray-400 mt-0.5 truncate">{session.groupName}</p>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-xs text-primary-500 font-semibold flex items-center gap-1">
-                              <Users className="w-3 h-3" /> {submittedCount} سلّموا
+                        aria-expanded={isExpanded}
+                        className="w-full flex items-center gap-4 text-right"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, minHeight: 60 }}>
+                        <span aria-hidden style={{
+                          width: 40, height: 40, borderRadius: 12, flex: 'none',
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          background: submittedCount > 0 ? '#E2EFE7' : HQ.PAPER, color: submittedCount > 0 ? HQ.MENTOR : HQ.MUTED,
+                        }}>
+                          <ClipboardList size={19} />
+                        </span>
+                        <span className="flex-1 min-w-0 text-right">
+                          <span className="font-bold text-sm" style={{ color: HQ.INK, display: 'block' }}>{session.title}</span>
+                          <span className="text-xs mt-0.5 truncate" style={{ color: HQ.MUTED, display: 'block' }}>{session.groupName}</span>
+                          <span className="flex items-center gap-3 mt-1">
+                            <span className="text-xs font-bold flex items-center gap-1" style={{ color: HQ.MENTOR }}>
+                              <Users size={12} aria-hidden /> {submittedCount} سلّموا
                             </span>
                             {session.homeworkDeadline && (
-                              <span className="text-xs text-gray-400 flex items-center gap-1">
-                                <Clock className="w-3 h-3" /> {formatDateAr(session.homeworkDeadline)}
+                              <span className="text-xs flex items-center gap-1" style={{ color: HQ.MUTED }}>
+                                <Clock size={12} aria-hidden /> {formatDateAr(session.homeworkDeadline)}
                               </span>
                             )}
-                          </div>
-                        </div>
+                          </span>
+                        </span>
                         {isExpanded
-                          ? <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          : <ChevronLeft className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          ? <ChevronDown size={17} color={HQ.MUTED} aria-hidden className="flex-none" />
+                          : <ChevronLeft size={17} color={HQ.MUTED} aria-hidden className="flex-none" />
                         }
                       </button>
 
-                      <AnimatePresence>
+                      <AnimatePresence initial={false}>
                         {isExpanded && (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }}
-                            className="overflow-hidden border-t border-gray-100"
+                            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
                           >
-                            <div className="p-5 space-y-4">
-                              <div className="bg-amber-50 rounded-xl p-3">
-                                <p className="text-xs font-bold text-amber-600 mb-1">نص الواجب</p>
-                                <p className="text-sm text-gray-800">{session.homework}</p>
+                            <div className="pt-4 mt-4 space-y-4" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
+                              <div className="rounded-xl p-3" style={{ background: HQ.PAPER }}>
+                                <p className="text-xs font-bold mb-1" style={{ color: HQ.MUTED }}>نص الواجب</p>
+                                <p className="text-sm" style={{ color: HQ.INK, margin: 0 }}>{session.homework}</p>
                               </div>
                               {session.quranHomework?.surahName && (
-                                <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100 flex flex-col gap-1">
-                                  <p className="text-xs font-bold text-emerald-600 mb-1">📖 تلاوة قرآنية مطلوبة:</p>
-                                  <p className="text-sm text-gray-800">
+                                <div className="rounded-xl p-3 flex flex-col gap-1" style={{ background: '#E2EFE7' }}>
+                                  <p className="text-xs font-bold mb-1" style={{ color: '#0F5940' }}>تلاوة قرآنية مطلوبة:</p>
+                                  <p className="text-sm" style={{ color: HQ.INK, margin: 0 }}>
                                     سورة {session.quranHomework.surahName} (الآيات {session.quranHomework.fromVerse} إلى {session.quranHomework.toVerse})
                                   </p>
                                 </div>
@@ -374,75 +420,85 @@ export default function TeacherReviewCenterPage() {
                                 <>
                                   {submissions.submissions?.length > 0 && (
                                     <div className="space-y-2">
-                                      <p className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
-                                        <CheckCircle className="w-4 h-4 text-green-500" /> تسليمات الطلاب ({submissions.submissions.length})
+                                      <p className="text-sm font-bold mb-2 flex items-center gap-2" style={{ color: HQ.INK }}>
+                                        <CheckCircle size={15} color={HQ.MENTOR} aria-hidden /> تسليمات الطلاب ({submissions.submissions.length})
                                       </p>
                                       {submissions.submissions.map(sub => (
-                                        <div key={sub._id} className={`p-3 rounded-xl border ${sub.isChecked ? 'bg-green-50 border-green-100' : 'bg-gray-50 border-gray-100'}`}>
+                                        <div key={sub._id} className="p-3 rounded-xl"
+                                          style={{ background: sub.isChecked ? '#E2EFE7' : HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
                                           <div className="flex items-center gap-2 mb-2">
-                                            <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                                              style={{ backgroundColor: getAvatarColor(`${sub.student?.firstName} ${sub.student?.lastName}`) }}>
+                                            <span aria-hidden className="avatar-circle"
+                                              style={{
+                                                width: 28, height: 28, fontSize: 11, flex: 'none',
+                                                backgroundColor: getAvatarColor(`${sub.student?.firstName} ${sub.student?.lastName}`),
+                                              }}>
                                               {getInitials(sub.student?.firstName, sub.student?.lastName)}
-                                            </div>
-                                            <span className="text-sm font-semibold text-gray-900">
+                                            </span>
+                                            <span className="text-sm font-bold" style={{ color: HQ.INK }}>
                                               {sub.student?.firstName} {sub.student?.lastName}
                                             </span>
-                                            {sub.isChecked && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">تمت المراجعة ✓</span>}
-                                            <span className="text-xs text-gray-400 mr-auto">{formatDateAr(sub.submittedAt)}</span>
+                                            {sub.isChecked && (
+                                              <span className="text-xs font-bold px-2 py-0.5 flex items-center gap-1"
+                                                style={{ background: '#E2EFE7', color: '#0F5940', borderRadius: 9999 }}>
+                                                <Check size={12} aria-hidden /> تمت المراجعة
+                                              </span>
+                                            )}
+                                            <span className="text-xs mr-auto" style={{ color: HQ.MUTED }}>{formatDateAr(sub.submittedAt)}</span>
                                           </div>
 
-                                          {sub.notes && <p className="text-xs text-gray-600 bg-white rounded-lg p-2 mb-2">ملاحظة الطالب: {sub.notes}</p>}
+                                          {sub.notes && <p className="text-xs rounded-lg p-2 mb-2" style={{ color: HQ.MUTED, background: HQ.SURFACE }}>ملاحظة الطالب: {sub.notes}</p>}
 
                                           {sub.audioUrl && (
-                                            <div className="my-2 p-2 bg-white rounded-xl border border-gray-100 flex flex-col gap-1.5">
-                                              <span className="text-[10px] font-bold text-gray-500 flex items-center gap-1">
-                                                <Volume2 className="w-3.5 h-3.5 text-primary-500" /> تسجيل صوتي مرفق:
+                                            <div className="my-2 p-2 rounded-xl flex flex-col gap-1.5" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+                                              <span className="font-bold flex items-center gap-1" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>
+                                                <Volume2 size={14} color={HQ.MENTOR} aria-hidden /> تسجيل صوتي مرفق:
                                               </span>
-                                              <audio src={sub.audioUrl} controls className="w-full h-8" />
+                                              <audio src={sub.audioUrl} controls className="w-full" style={{ height: 32 }} />
                                             </div>
                                           )}
 
                                           {sub.files && sub.files.length > 0 && (
-                                            <div className="my-2 p-2 bg-white rounded-xl border border-gray-100 flex flex-col gap-1.5">
-                                              <span className="text-[10px] font-bold text-gray-500 flex items-center gap-1">
-                                                <FileText className="w-3.5 h-3.5 text-primary-500" /> الملفات المرفقة:
+                                            <div className="my-2 p-2 rounded-xl flex flex-col gap-1.5" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+                                              <span className="font-bold flex items-center gap-1" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>
+                                                <FileText size={14} color={HQ.MENTOR} aria-hidden /> الملفات المرفقة:
                                               </span>
                                               <div className="flex flex-wrap gap-1.5">
                                                 {sub.files.map((file, fIdx) => (
                                                   <a key={fIdx} href={file.url} target="_blank" rel="noopener noreferrer"
-                                                    className="text-xs bg-gray-50 text-primary-600 px-2.5 py-1.5 rounded-lg border border-gray-200 flex items-center gap-1 hover:bg-gray-100 transition-colors">
-                                                    <Download className="w-3 h-3 text-gray-400" /> {file.name}
+                                                    className="text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1"
+                                                    style={{ background: HQ.PAPER, color: HQ.MENTOR, border: `1px solid ${HQ.LINE}` }}>
+                                                    <Download size={12} color={HQ.MUTED} aria-hidden /> {file.name}
                                                   </a>
                                                 ))}
                                               </div>
                                             </div>
                                           )}
 
-                                          <div className="flex items-center gap-2 my-2.5 p-1">
-                                            <span className="text-xs font-bold text-gray-600">التقييم:</span>
-                                            <div className="flex items-center gap-1">
-                                              {[1, 2, 3, 4, 5].map((star) => (
-                                                <button key={star} type="button" disabled={sub.isChecked}
-                                                  onClick={() => setRatings(p => ({ ...p, [sub._id]: star }))} className="hover:scale-110 transition-transform">
-                                                  <Star className={`w-5 h-5 ${star <= (sub.isChecked ? sub.rating || 5 : ratings[sub._id] || 5) ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`} />
-                                                </button>
-                                              ))}
-                                            </div>
+                                          <div className="flex items-center gap-2 my-2.5">
+                                            <span className="text-xs font-bold" style={{ color: HQ.MUTED }}>التقييم:</span>
+                                            {renderStars(
+                                              sub.isChecked ? (sub.rating || 5) : (ratings[sub._id] || 5),
+                                              sub.isChecked ? null : (v) => setRatings(p => ({ ...p, [sub._id]: v })),
+                                              sub.isChecked,
+                                            )}
                                           </div>
 
                                           {!sub.isChecked && (
                                             <div className="flex gap-2 mt-2">
                                               <input value={feedback[sub._id] || ''} onChange={e => setFeedback(p => ({ ...p, [sub._id]: e.target.value }))}
-                                                className="input-base text-xs py-1.5 flex-1" placeholder="أضف تعليقاً للمعلم (اختياري)..." />
-                                              <button onClick={() => handleCheckHomework(session._id, sub._id)} disabled={checkingId === sub._id}
-                                                className="btn-primary py-1.5 px-3 text-xs disabled:opacity-50">
-                                                {checkingId === sub._id ? <LoadingSpinner size="sm" color="white" /> : 'تسجيل التقييم ✓'}
+                                                aria-label="تعليق للطالب"
+                                                className="flex-1 focus:border-[#177B58] focus:outline-none" style={{ ...field, minHeight: 48 }}
+                                                placeholder="أضف تعليقاً للطالب (اختياري)..." />
+                                              <button type="button" onClick={() => handleCheckHomework(session._id, sub._id)} disabled={checkingId === sub._id}
+                                                style={{ ...primaryBtn, opacity: checkingId === sub._id ? 0.6 : 1 }}>
+                                                {checkingId === sub._id ? <LoadingSpinner size="sm" color="white" /> : 'تسجيل التقييم'}
                                               </button>
                                             </div>
                                           )}
                                           {sub.teacherFeedback && (
-                                            <p className="text-xs text-primary-600 mt-1 flex items-center gap-1 bg-white p-2 rounded-lg border border-gray-100">
-                                              <MessageSquare className="w-3.5 h-3.5" /> {sub.teacherFeedback}
+                                            <p className="text-xs mt-1 flex items-center gap-1 p-2 rounded-lg"
+                                              style={{ color: HQ.MENTOR, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+                                              <MessageSquare size={13} aria-hidden /> {sub.teacherFeedback}
                                             </p>
                                           )}
                                         </div>
@@ -481,68 +537,79 @@ export default function TeacherReviewCenterPage() {
             isLoadingExams ? (
               <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
             ) : pendingExams.length === 0 ? (
-              <div className="card-base p-14 text-center">
-                <CheckCircle className="w-14 h-14 text-green-400 mx-auto mb-4" />
-                <p className="text-gray-500 font-semibold">لا توجد اختبارات شفهية بانتظار التصحيح حالياً</p>
+              <div style={emptyBox}>
+                <CheckCircle size={52} color={HQ.MENTOR} style={{ margin: '0 auto 12px' }} aria-hidden />
+                <p className="font-bold" style={{ color: HQ.MUTED, margin: 0 }}>لا توجد اختبارات شفهية بانتظار التصحيح حالياً</p>
               </div>
             ) : (
               <div>
                 <div className="space-y-4">
                   {pendingExamsPagination.paginatedItems.map((result) => (
-                  <div key={result._id} className="card-base overflow-hidden p-5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold"
-                          style={{ backgroundColor: getAvatarColor(`${result.student?.firstName}${result.student?.lastName}`) }}>
+                  <div key={result._id} className="overflow-hidden p-5" style={panel}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span aria-hidden className="avatar-circle"
+                          style={{
+                            width: 40, height: 40, fontSize: 14, flex: 'none',
+                            backgroundColor: getAvatarColor(`${result.student?.firstName}${result.student?.lastName}`),
+                          }}>
                           {getInitials(result.student?.firstName, result.student?.lastName)}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-gray-900">{result.student?.firstName} {result.student?.lastName}</h3>
-                          <p className="text-xs text-gray-400">التحريري: {result.writtenPercentage || 0}% · {formatDateAr(result.createdAt)}</p>
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="font-bold" style={{ color: HQ.INK, margin: 0 }}>{result.student?.firstName} {result.student?.lastName}</h3>
+                          <p className="text-xs" style={{ color: HQ.MUTED, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+                            التحريري: {result.writtenPercentage || 0}% · {formatDateAr(result.createdAt)}
+                          </p>
                         </div>
                       </div>
-                      <button onClick={() => setReviewingExamId(reviewingExamId === result._id ? null : result._id)} className="btn-primary text-xs py-2">
-                        <Star className="w-4 h-4" /> {reviewingExamId === result._id ? 'إخفاء' : 'تصحيح شفهي'}
+                      <button type="button" onClick={() => setReviewingExamId(reviewingExamId === result._id ? null : result._id)}
+                        style={{ ...primaryBtn, minHeight: 44, fontSize: '0.8125rem', flex: 'none' }}>
+                        <Star size={15} aria-hidden /> {reviewingExamId === result._id ? 'إخفاء' : 'تصحيح شفهي'}
                       </button>
                     </div>
 
                     {result.oralExamRecordings?.length > 0 && (
-                      <div className="mt-4 pt-3 border-t border-gray-100 space-y-2">
-                        <p className="text-xs font-semibold text-gray-500">التسجيلات الصوتية للاختبار:</p>
+                      <div className="mt-4 pt-3 space-y-2" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
+                        <p className="text-xs font-bold" style={{ color: HQ.MUTED }}>التسجيلات الصوتية للاختبار:</p>
                         {result.oralExamRecordings.map((url, j) => (
-                          <div key={j} className="flex items-center gap-3 bg-primary-50 rounded-xl p-2.5">
-                            <Volume2 className="w-4 h-4 text-primary-400 flex-shrink-0" />
-                            <audio src={url} controls className="flex-1 h-7" />
+                          <div key={j} className="flex items-center gap-3 rounded-xl p-2.5" style={{ background: HQ.PAPER }}>
+                            <Volume2 size={15} color={HQ.MENTOR} aria-hidden className="flex-none" />
+                            <audio src={url} controls className="flex-1" style={{ height: 28 }} />
                           </div>
                         ))}
                       </div>
                     )}
 
                     {reviewingExamId === result._id && (
-                      <div className="mt-4 pt-4 border-t border-gray-100 bg-gray-50 p-4 rounded-2xl space-y-4">
+                      <div className="mt-4 pt-4 space-y-4 rounded-2xl p-4" style={{ borderTop: `1px solid ${HQ.LINE}`, background: HQ.PAPER }}>
                         <div>
-                          <label className="text-xs font-bold text-gray-700 mb-1 block">الدرجة الشفهية (من 100)</label>
-                          <input type="number" min={0} max={100} value={examScores[result._id] || ''}
-                            onChange={e => setExamScores(p => ({ ...p, [result._id]: e.target.value }))} className="input-base text-sm w-36" placeholder="0-100" />
+                          <label htmlFor={`oral-score-${result._id}`} className="text-xs font-bold mb-1 block" style={{ color: HQ.INK }}>الدرجة الشفهية (من 100)</label>
+                          <input id={`oral-score-${result._id}`} type="number" min={0} max={100} value={examScores[result._id] || ''}
+                            onChange={e => setExamScores(p => ({ ...p, [result._id]: e.target.value }))}
+                            className="text-sm w-36 focus:border-[#177B58] focus:outline-none"
+                            style={{ ...field, fontVariantNumeric: 'tabular-nums' }} placeholder="0-100" />
                         </div>
                         <div>
-                          <label className="text-xs font-bold text-gray-700 mb-1 block">توجيهات وملاحظات للمعلم للطالب</label>
-                          <textarea value={examNotes[result._id] || ''} onChange={e => setExamNotes(p => ({ ...p, [result._id]: e.target.value }))}
-                            className="input-base text-xs resize-none h-20" placeholder="أدخل الملاحظات والتصويبات..." />
+                          <label htmlFor={`oral-notes-${result._id}`} className="text-xs font-bold mb-1 block" style={{ color: HQ.INK }}>توجيهات وملاحظات للطالب</label>
+                          <textarea id={`oral-notes-${result._id}`} value={examNotes[result._id] || ''} onChange={e => setExamNotes(p => ({ ...p, [result._id]: e.target.value }))}
+                            className="text-sm resize-none focus:border-[#177B58] focus:outline-none" style={{ ...field, minHeight: 80 }}
+                            placeholder="أدخل الملاحظات والتصويبات..." />
                         </div>
 
                         {/* Weak Point Flagging Box */}
-                        <div className="p-3.5 bg-white border border-amber-200 rounded-xl space-y-3">
-                          <p className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
-                            📌 إضافة إلى بنك نقاط الضعف والمراجعة لدى الطالب (اختياري):
+                        <div className="p-3.5 rounded-xl space-y-3" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+                          <p className="text-xs font-bold flex items-center gap-1.5" style={{ color: HQ.INK, margin: 0 }}>
+                            <Pin size={14} color={HQ.MENTOR} aria-hidden />
+                            إضافة إلى بنك نقاط الضعف والمراجعة لدى الطالب (اختياري):
                           </p>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
-                              <label className="text-gray-600 font-semibold mb-1 block">السورة</label>
+                              <label htmlFor={`flag-surah-${result._id}`} className="font-bold mb-1 block" style={{ color: HQ.MUTED }}>السورة</label>
                               <select
+                                id={`flag-surah-${result._id}`}
                                 value={flaggedVerseForms[result._id]?.surahNumber || ''}
                                 onChange={e => setFlaggedVerseForms(p => ({ ...p, [result._id]: { ...p[result._id], surahNumber: e.target.value } }))}
-                                className="input-base text-xs py-1.5">
+                                className="text-sm focus:border-[#177B58] focus:outline-none" style={{ ...field, minHeight: 44 }}>
                                 <option value="">اختر السورة...</option>
                                 {QURAN_SURAHS.map(s => (
                                   <option key={s.number} value={s.number}>{s.number}. {s.name}</option>
@@ -550,36 +617,40 @@ export default function TeacherReviewCenterPage() {
                               </select>
                             </div>
                             <div>
-                              <label className="text-gray-600 font-semibold mb-1 block">رقم الآية</label>
+                              <label htmlFor={`flag-verse-${result._id}`} className="font-bold mb-1 block" style={{ color: HQ.MUTED }}>رقم الآية</label>
                               <input
+                                id={`flag-verse-${result._id}`}
                                 type="number"
                                 min={1}
                                 value={flaggedVerseForms[result._id]?.verseNumber || ''}
                                 onChange={e => setFlaggedVerseForms(p => ({ ...p, [result._id]: { ...p[result._id], verseNumber: e.target.value } }))}
-                                className="input-base text-xs py-1.5"
+                                className="text-sm focus:border-[#177B58] focus:outline-none"
+                                style={{ ...field, minHeight: 44, fontVariantNumeric: 'tabular-nums' }}
                                 placeholder="رقم الآية"
                               />
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <div>
-                              <label className="text-gray-600 font-semibold mb-1 block">نوع الخطأ</label>
+                              <label htmlFor={`flag-type-${result._id}`} className="font-bold mb-1 block" style={{ color: HQ.MUTED }}>نوع الخطأ</label>
                               <select
+                                id={`flag-type-${result._id}`}
                                 value={flaggedVerseForms[result._id]?.errorType || 'hifz'}
                                 onChange={e => setFlaggedVerseForms(p => ({ ...p, [result._id]: { ...p[result._id], errorType: e.target.value } }))}
-                                className="input-base text-xs py-1.5">
+                                className="text-sm focus:border-[#177B58] focus:outline-none" style={{ ...field, minHeight: 44 }}>
                                 <option value="hifz">خطأ في الحفظ والنسيان</option>
                                 <option value="tajweed">ملاحظة تجويدية</option>
                                 <option value="tashkeel">خطأ في التشكيل والضبط</option>
                               </select>
                             </div>
                             <div>
-                              <label className="text-gray-600 font-semibold mb-1 block">تنبيه خاص بالآية</label>
+                              <label htmlFor={`flag-note-${result._id}`} className="font-bold mb-1 block" style={{ color: HQ.MUTED }}>تنبيه خاص بالآية</label>
                               <input
+                                id={`flag-note-${result._id}`}
                                 type="text"
                                 value={flaggedVerseForms[result._id]?.notes || ''}
                                 onChange={e => setFlaggedVerseForms(p => ({ ...p, [result._id]: { ...p[result._id], notes: e.target.value } }))}
-                                className="input-base text-xs py-1.5"
+                                className="text-sm focus:border-[#177B58] focus:outline-none" style={{ ...field, minHeight: 44 }}
                                 placeholder="مثل: إظهار الإخفاء هنا"
                               />
                             </div>
@@ -587,8 +658,9 @@ export default function TeacherReviewCenterPage() {
                         </div>
 
                         <div className="flex gap-2">
-                          <button onClick={() => handleReviewExam(result._id)} disabled={submittingExam} className="btn-primary text-xs py-2 flex-1">
-                            {submittingExam ? <LoadingSpinner size="sm" color="white" /> : 'حفظ التقييم الشفهي وإرسال التنبيهات ✓'}
+                          <button type="button" onClick={() => handleReviewExam(result._id)} disabled={submittingExam}
+                            style={{ ...primaryBtn, flex: 1, opacity: submittingExam ? 0.6 : 1 }}>
+                            {submittingExam ? <LoadingSpinner size="sm" color="white" /> : 'حفظ التقييم الشفهي وإرسال التنبيهات'}
                           </button>
                         </div>
                       </div>
@@ -618,39 +690,38 @@ export default function TeacherReviewCenterPage() {
             isLoadingRecordings ? (
               <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
             ) : (
-              <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
-                <table className="w-full text-right">
-                  <thead className="bg-gray-50 border-b border-gray-100">
-                    <tr>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-500">الجلسة</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-500">التاريخ</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-500">الرابط</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-500 text-center">الحالة</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {recordings.length === 0 ? (
-                      <tr><td colSpan="4" className="py-8 text-center text-gray-400">لا توجد تسجيلات مرفوعة بعد</td></tr>
-                    ) : recordingsPagination.paginatedItems.map((rec) => (
-                      <tr key={rec._id} className="hover:bg-gray-50/50">
-                        <td className="py-4 px-6 font-bold text-gray-900">{rec.session?.title || 'جلسة مباشرة'}</td>
-                        <td className="py-4 px-6 text-sm text-gray-600">{rec.session?.scheduledAt ? formatDateAr(rec.session.scheduledAt, 'dd MMMM yyyy') : '--'}</td>
-                        <td className="py-4 px-6 text-sm">
-                          <a href={rec.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 font-semibold hover:underline flex items-center gap-1">
-                            <LinkIcon className="w-4 h-4" /> مشاهدة التسجيل
-                          </a>
-                        </td>
-                        <td className="py-4 px-6 text-center">
-                          <span className="text-xs bg-green-50 text-green-600 border border-green-100 px-2.5 py-1 rounded-lg font-bold flex items-center justify-center gap-1 w-fit mx-auto">
-                            <ShieldCheck className="w-3.5 h-3.5" /> منشور للطلاب
-                          </span>
-                        </td>
-                      </tr>
+              <div style={panel} className="overflow-hidden">
+                {recordings.length === 0 ? (
+                  <p className="py-8 text-center font-bold" style={{ color: HQ.MUTED, margin: 0 }}>لا توجد تسجيلات مرفوعة بعد</p>
+                ) : (
+                  <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                    {recordingsPagination.paginatedItems.map((rec, i) => (
+                      <li key={rec._id} style={{ padding: '12px 0', borderTop: i === 0 ? 'none' : `1px solid ${HQ.LINE}` }}>
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <div className="min-w-0">
+                            <p className="font-bold" style={{ color: HQ.INK, margin: 0 }}>{rec.session?.title || 'جلسة مباشرة'}</p>
+                            <p className="text-sm" style={{ color: HQ.MUTED, margin: 0 }}>
+                              {rec.session?.scheduledAt ? formatDateAr(rec.session.scheduledAt, 'dd MMMM yyyy') : '--'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3 flex-none">
+                            <a href={rec.url} target="_blank" rel="noopener noreferrer"
+                              className="font-bold flex items-center gap-1"
+                              style={{ color: HQ.MENTOR, fontSize: 14, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
+                              <LinkIcon size={15} aria-hidden /> مشاهدة التسجيل
+                            </a>
+                            <span className="text-xs font-bold px-2.5 py-1 flex items-center gap-1"
+                              style={{ background: '#E2EFE7', color: '#0F5940', borderRadius: 8 }}>
+                              <ShieldCheck size={13} aria-hidden /> منشور للطلاب
+                            </span>
+                          </div>
+                        </div>
+                      </li>
                     ))}
-                  </tbody>
-                </table>
+                  </ul>
+                )}
 
-                <div className="p-4 border-t border-gray-100">
+                <div className="pt-4 mt-4" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
                   <Pagination
                     currentPage={recordingsPagination.currentPage}
                     totalPages={recordingsPagination.totalPages}
@@ -667,72 +738,91 @@ export default function TeacherReviewCenterPage() {
             )
           )}
 
-      {/* ─── Modals ─── */}
-      <AnimatePresence>
-        {showAddHomeworkModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-black text-gray-900">إضافة واجب لجلسة</h2>
-                <button onClick={() => setShowAddHomeworkModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">الجلسة *</label>
-                  <select value={addHomeworkForm.sessionId} onChange={e => setAddHomeworkForm(p => ({ ...p, sessionId: e.target.value }))} className="input-base text-sm">
-                    <option value="">— اختر جلسة —</option>
-                    {allSessions.map(s => <option key={s._id} value={s._id}>{s.title} ({s.groupName})</option>)}
-                  </select>
+        {/* ─── Modals ─── */}
+        <AnimatePresence>
+          {showAddHomeworkModal && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(42,36,56,0.55)' }}>
+              <div className="w-full" role="dialog" aria-modal="true" aria-label="إضافة واجب لجلسة"
+                style={{ ...panel, maxWidth: 560, maxHeight: '90dvh', overflowY: 'auto' }}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-extrabold" style={{ fontSize: '1.25rem', color: HQ.INK, margin: 0 }}>إضافة واجب لجلسة</h2>
+                  <button type="button" onClick={() => setShowAddHomeworkModal(false)} aria-label="إغلاق" style={iconBtn}>
+                    <X size={19} aria-hidden />
+                  </button>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">نص الواجب *</label>
-                  <textarea value={addHomeworkForm.homework} onChange={e => setAddHomeworkForm(p => ({ ...p, homework: e.target.value }))} className="input-base text-xs resize-none h-24" placeholder="تفاصيل الواجب المطلوب..." />
+                <div className="space-y-3">
+                  <div>
+                    <label htmlFor="hw-session" className="text-xs font-bold mb-1 block" style={{ color: HQ.INK }}>الجلسة *</label>
+                    <select id="hw-session" value={addHomeworkForm.sessionId} onChange={e => setAddHomeworkForm(p => ({ ...p, sessionId: e.target.value }))}
+                      className="text-sm focus:border-[#177B58] focus:outline-none" style={field}>
+                      <option value="">— اختر جلسة —</option>
+                      {allSessions.map(s => <option key={s._id} value={s._id}>{s.title} ({s.groupName})</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="hw-text" className="text-xs font-bold mb-1 block" style={{ color: HQ.INK }}>نص الواجب *</label>
+                    <textarea id="hw-text" value={addHomeworkForm.homework} onChange={e => setAddHomeworkForm(p => ({ ...p, homework: e.target.value }))}
+                      className="text-sm resize-none focus:border-[#177B58] focus:outline-none" style={{ ...field, minHeight: 96 }}
+                      placeholder="تفاصيل الواجب المطلوب..." />
+                  </div>
+                  <div>
+                    <label htmlFor="hw-deadline" className="text-xs font-bold mb-1 block" style={{ color: HQ.INK }}>تاريخ التسليم</label>
+                    <input id="hw-deadline" type="date" value={addHomeworkForm.deadline || ''} onChange={e => setAddHomeworkForm(p => ({ ...p, deadline: e.target.value }))}
+                      className="text-sm focus:border-[#177B58] focus:outline-none" style={field} />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">تاريخ التسليم</label>
-                  <input type="date" value={addHomeworkForm.deadline || ''} onChange={e => setAddHomeworkForm(p => ({ ...p, deadline: e.target.value }))} className="input-base text-sm" />
+                <div className="flex gap-2 mt-5">
+                  <button type="button" onClick={() => setShowAddHomeworkModal(false)} style={{ ...ghostBtn, flex: 1 }}>إلغاء</button>
+                  <button type="button" onClick={handleSaveHomework} disabled={savingHomework || !addHomeworkForm.sessionId || !addHomeworkForm.homework.trim()}
+                    style={{ ...primaryBtn, flex: 1, opacity: (savingHomework || !addHomeworkForm.sessionId || !addHomeworkForm.homework.trim()) ? 0.55 : 1 }}>
+                    {savingHomework ? <LoadingSpinner size="sm" color="white" /> : 'حفظ وإرسال'}
+                  </button>
                 </div>
               </div>
-              <div className="flex gap-2 mt-5">
-                <button onClick={() => setShowAddHomeworkModal(false)} className="btn-ghost flex-1">إلغاء</button>
-                <button onClick={handleSaveHomework} disabled={savingHomework || !addHomeworkForm.sessionId || !addHomeworkForm.homework.trim()} className="btn-primary flex-1">
-                  {savingHomework ? <LoadingSpinner size="sm" color="white" /> : 'حفظ وإرسال'}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          )}
 
-        {showAddRecordingModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-black text-gray-900">إضافة تسجيل جلسة</h2>
-                <button onClick={() => setShowAddRecordingModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">الجلسة المنتهية *</label>
-                  <select value={addRecordingForm.sessionId} onChange={e => setAddRecordingForm(p => ({ ...p, sessionId: e.target.value }))} className="input-base text-sm">
-                    <option value="">— اختر الجلسة —</option>
-                    {sessionsWithoutRecording.map(s => <option key={s._id} value={s._id}>{s.title} ({s.groupName})</option>)}
-                  </select>
+          {showAddRecordingModal && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(42,36,56,0.55)' }}>
+              <div className="w-full" role="dialog" aria-modal="true" aria-label="إضافة تسجيل جلسة"
+                style={{ ...panel, maxWidth: 560, maxHeight: '90dvh', overflowY: 'auto' }}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-extrabold" style={{ fontSize: '1.25rem', color: HQ.INK, margin: 0 }}>إضافة تسجيل جلسة</h2>
+                  <button type="button" onClick={() => setShowAddRecordingModal(false)} aria-label="إغلاق" style={iconBtn}>
+                    <X size={19} aria-hidden />
+                  </button>
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-700 mb-1 block">رابط التسجيل (Youtube, Drive, Zoom) *</label>
-                  <input type="url" value={addRecordingForm.url} onChange={e => setAddRecordingForm(p => ({ ...p, url: e.target.value }))} placeholder="https://..." className="input-base text-sm text-left" dir="ltr" />
+                <div className="space-y-3">
+                  <div>
+                    <label htmlFor="rec-session" className="text-xs font-bold mb-1 block" style={{ color: HQ.INK }}>الجلسة المنتهية *</label>
+                    <select id="rec-session" value={addRecordingForm.sessionId} onChange={e => setAddRecordingForm(p => ({ ...p, sessionId: e.target.value }))}
+                      className="text-sm focus:border-[#177B58] focus:outline-none" style={field}>
+                      <option value="">— اختر الجلسة —</option>
+                      {sessionsWithoutRecording.map(s => <option key={s._id} value={s._id}>{s.title} ({s.groupName})</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="rec-url" className="text-xs font-bold mb-1 block" style={{ color: HQ.INK }}>رابط التسجيل (Youtube, Drive, Zoom) *</label>
+                    <input id="rec-url" type="url" value={addRecordingForm.url} onChange={e => setAddRecordingForm(p => ({ ...p, url: e.target.value }))}
+                      placeholder="https://..." className="text-sm focus:border-[#177B58] focus:outline-none"
+                      style={{ ...field, direction: 'ltr', textAlign: 'left' }} dir="ltr" />
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-5">
+                  <button type="button" onClick={() => setShowAddRecordingModal(false)} style={{ ...ghostBtn, flex: 1 }}>إلغاء</button>
+                  <button type="button" onClick={handleSaveRecording} disabled={savingRecording || !addRecordingForm.sessionId || !addRecordingForm.url}
+                    style={{ ...primaryBtn, flex: 1, opacity: (savingRecording || !addRecordingForm.sessionId || !addRecordingForm.url) ? 0.55 : 1 }}>
+                    {savingRecording ? <LoadingSpinner size="sm" color="white" /> : 'نشر الفيديو'}
+                  </button>
                 </div>
               </div>
-              <div className="flex gap-2 mt-5">
-                <button onClick={() => setShowAddRecordingModal(false)} className="btn-ghost flex-1">إلغاء</button>
-                <button onClick={handleSaveRecording} disabled={savingRecording || !addRecordingForm.sessionId || !addRecordingForm.url} className="btn-primary flex-1">
-                  {savingRecording ? <LoadingSpinner size="sm" color="white" /> : 'نشر الفيديو'}
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </PageLayout>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        </div>
+      </PageLayout>
+    </MotionConfig>
   );
 }

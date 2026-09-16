@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Mail, BookOpen, ArrowLeft, CheckCircle } from 'lucide-react';
+import { motion, MotionConfig } from 'framer-motion';
+import { Mail, BookOpen, ArrowRight, CircleCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import './Auth.css';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -30,87 +31,85 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50 flex items-center justify-center p-4">
-      <div className="absolute top-20 right-10 w-72 h-72 bg-primary-100 rounded-full blur-3xl opacity-40 pointer-events-none" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="w-full max-w-md relative z-10"
-      >
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6 group">
-            <div className="w-10 h-10 bg-gradient-quran rounded-xl flex items-center justify-center shadow-md group-hover:shadow-green transition-shadow duration-300">
-              <BookOpen className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-gray-900 group-hover:text-primary-500 transition-colors">منصة تحفيظ القرآن</span>
-          </Link>
-          <h1 className="text-2xl font-black text-gray-900">نسيت كلمة المرور</h1>
-          <p className="text-gray-500 mt-1">أدخل بريدك الإلكتروني لإرسال رابط إعادة التعيين</p>
-        </div>
-
-        {isSent ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="card-base p-8 text-center"
-          >
-            <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-500" />
-            </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">تم إرسال الرابط!</h2>
-            <p className="text-gray-500 text-sm mb-6">
-              إذا كان البريد الإلكتروني مسجلاً لدينا، ستتلقى رابط إعادة تعيين كلمة المرور خلال دقائق.
-            </p>
-            <Link to="/login" className="btn-primary inline-flex items-center gap-2 px-6 py-2.5">
-              العودة لتسجيل الدخول
+    <MotionConfig reducedMotion="user">
+      <div className="auth" dir="rtl">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          className="w-full max-w-md"
+        >
+          <div className="text-center mb-8">
+            <Link to="/" className="inline-flex items-center gap-2 mb-6 min-h-[44px]">
+              <span
+                aria-hidden
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: '#177B58' }}
+              >
+                <BookOpen className="w-5 h-5 text-white" />
+              </span>
+              <span className="font-bold text-lg" style={{ color: '#2A2438' }}>الحلقة</span>
             </Link>
-          </motion.div>
-        ) : (
-          <form onSubmit={handleSubmit} className="card-base p-8 space-y-5">
-            <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1.5 block">البريد الإلكتروني</label>
-              <div className="relative rounded-xl">
-                <Mail className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input-base pr-10"
-                  placeholder="your@email.com"
-                  dir="ltr"
-                  id="forgot-email"
-                />
-              </div>
-            </div>
+            <h1 className="text-2xl font-extrabold" style={{ color: '#2A2438' }}>نسيت كلمة المرور</h1>
+            <p className="mt-1" style={{ color: '#756E85' }}>أدخل بريدك الإلكتروني لإرسال رابط إعادة التعيين</p>
+          </div>
 
-            <motion.button
-              type="submit"
-              disabled={isLoading}
-              whileHover={{ scale: isLoading ? 1 : 1.01 }}
-              whileTap={{ scale: isLoading ? 1 : 0.99 }}
-              className="btn-primary w-full py-3.5 text-base"
-            >
-              {isLoading ? <LoadingSpinner size="sm" color="white" /> : 'إرسال رابط إعادة التعيين'}
-            </motion.button>
-
-            <p className="text-center text-sm text-gray-500 pt-1">
-              تتذكر كلمة المرور؟{' '}
-              <Link to="/login" className="text-primary-400 font-semibold hover:underline hover:text-primary-500 transition-colors">
-                تسجيل الدخول
+          {isSent ? (
+            <div className="auth-card text-center">
+              <span
+                aria-hidden
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                style={{ background: '#E2EFE7' }}
+              >
+                <CircleCheck className="w-8 h-8" style={{ color: '#177B58' }} />
+              </span>
+              <h2 className="text-lg font-extrabold mb-2" style={{ color: '#2A2438' }}>تم إرسال الرابط!</h2>
+              <p className="text-sm mb-6" style={{ color: '#756E85' }}>
+                إذا كان البريد الإلكتروني مسجلاً لدينا، ستتلقى رابط إعادة تعيين كلمة المرور خلال دقائق.
+              </p>
+              <Link to="/login" className="auth-btn auth-btn-auto px-6">
+                العودة لتسجيل الدخول
               </Link>
-            </p>
-          </form>
-        )}
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="auth-card space-y-5">
+              <div>
+                <label htmlFor="forgot-email" className="auth-label">البريد الإلكتروني</label>
+                <div className="relative">
+                  <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#756E85]" aria-hidden />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="auth-input pr-10"
+                    style={{ direction: 'ltr', textAlign: 'left' }}
+                    placeholder="your@email.com"
+                    id="forgot-email"
+                  />
+                </div>
+              </div>
 
-        <div className="text-center mt-5">
-          <Link to="/" className="text-xs text-gray-400 hover:text-primary-400 transition-colors inline-flex items-center gap-1">
-            <ArrowLeft className="w-3 h-3" />
-            الرجوع للرئيسية
-          </Link>
-        </div>
-      </motion.div>
-    </div>
+              <button type="submit" disabled={isLoading} className="auth-btn">
+                {isLoading ? <LoadingSpinner size="sm" color="white" /> : 'إرسال رابط إعادة التعيين'}
+              </button>
+
+              <p className="text-center text-sm pt-1" style={{ color: '#756E85' }}>
+                تتذكر كلمة المرور؟{' '}
+                <Link to="/login" className="auth-link text-sm">
+                  تسجيل الدخول
+                </Link>
+              </p>
+            </form>
+          )}
+
+          <div className="text-center mt-5">
+            <Link to="/" className="auth-link-quiet">
+              <ArrowRight className="w-3 h-3" aria-hidden />
+              الرجوع للرئيسية
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    </MotionConfig>
   );
 }

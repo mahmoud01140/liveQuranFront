@@ -188,32 +188,46 @@ export default function VideoPlayer({ url, title, onClose }) {
 
   /* ── Main render ──────────────────────────────────────── */
   return (
-    <div className="video-player-wrapper rounded-2xl overflow-hidden border border-gray-200 shadow-lg bg-white">
+    <div className="halaqa video-player-wrapper rounded-2xl overflow-hidden" style={{ background: '#FFFFFF', border: '1px solid #E8E2D4' }}>
 
       {/* ── Header ──────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-gray-900 text-white">
-        <h3 className="font-bold text-sm truncate flex-1 flex items-center gap-2">
-          <Play className="w-4 h-4 text-primary-400 flex-shrink-0" />
+      <div className="flex items-center justify-between px-4 py-2.5" style={{ background: '#FFFFFF', borderBottom: '1px solid #E8E2D4' }}>
+        <h3 className="font-bold text-sm truncate flex-1 flex items-center gap-2" style={{ color: '#2A2438', margin: 0 }}>
+          <Play className="w-4 h-4 flex-none" style={{ color: '#177B58' }} aria-hidden />
           {title || 'مشغل الفيديو'}
         </h3>
 
         <div className="flex items-center gap-1">
           {/* Toggle notes panel */}
           <button
+            type="button"
             onClick={() => setShowPanel(!showPanel)}
-            className={`p-1.5 rounded-lg transition-colors ${
-              showPanel ? 'bg-primary-500/30 text-primary-300' : 'text-gray-400 hover:text-white hover:bg-white/10'
-            }`}
+            aria-expanded={showPanel}
+            aria-label="ملاحظات ومرجعيات"
+            className="transition-colors"
+            style={{
+              minWidth: 44, minHeight: 44, borderRadius: 12, border: 'none', cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: showPanel ? '#E2EFE7' : 'transparent',
+              color: showPanel ? '#177B58' : '#756E85',
+            }}
             title="ملاحظات ومرجعيات"
           >
-            <MessageSquare className="w-4 h-4" />
+            <MessageSquare className="w-4 h-4" aria-hidden />
           </button>
           {onClose && (
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              aria-label="إغلاق المشغل"
+              className="transition-colors"
+              style={{
+                minWidth: 44, minHeight: 44, borderRadius: 12, border: 'none', cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                background: 'transparent', color: '#756E85',
+              }}
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4" aria-hidden />
             </button>
           )}
         </div>
@@ -223,18 +237,24 @@ export default function VideoPlayer({ url, title, onClose }) {
       <div className="flex flex-col lg:flex-row">
 
         {/* Video area */}
-        <div className={`${showPanel ? 'lg:w-2/3' : 'w-full'} transition-all duration-300`}>
+        <div className={`${showPanel ? 'lg:w-2/3' : 'w-full'}`}>
           {renderVideo()}
 
           {/* Bookmark markers bar (direct video only) */}
           {isDirect && duration > 0 && progress?.bookmarks?.length > 0 && (
-            <div className="relative h-1.5 bg-gray-100">
+            <div className="relative" style={{ height: 6, background: '#E8E2D4' }}>
               {progress.bookmarks.map((b) => (
                 <div
                   key={b.id}
-                  className="absolute w-2.5 h-2.5 bg-amber-400 rounded-full -top-0.5 cursor-pointer
-                             hover:scale-150 transition-transform border border-white shadow-sm z-10"
-                  style={{ left: `${Math.min((b.time / duration) * 100, 99)}%` }}
+                  role="button" tabIndex={0}
+                  aria-label={`مرجعية: ${b.label}`}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); seekTo(b.time); } }}
+                  className="absolute rounded-full cursor-pointer"
+                  style={{
+                    width: 10, height: 10, top: -2, background: '#177B58',
+                    border: '2px solid #fff', boxShadow: '0 1px 4px rgba(42,36,56,0.25)', zIndex: 10,
+                    left: `${Math.min((b.time / duration) * 100, 99)}%`,
+                  }}
                   onClick={() => seekTo(b.time)}
                   title={`${b.label} — ${fmtTime(b.time)}`}
                 />
@@ -251,26 +271,28 @@ export default function VideoPlayer({ url, title, onClose }) {
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="flex items-center justify-between px-4 py-2.5
-                                bg-gradient-to-l from-primary-50 to-emerald-50 border-t border-primary-100">
+                <div className="flex items-center justify-between px-4 py-2.5"
+                  style={{ background: '#FBF7EE', borderTop: '1px solid #E8E2D4' }}>
                   <div className="flex items-center gap-2 text-sm">
-                    <RotateCcw className="w-4 h-4 text-primary-500" />
-                    <span className="text-gray-700 font-medium">
-                      أكملت حتى <span className="font-bold text-primary-600">{fmtTime(getLastPosition())}</span>
+                    <RotateCcw className="w-4 h-4" style={{ color: '#177B58' }} aria-hidden />
+                    <span className="font-medium" style={{ color: '#2A2438' }}>
+                      أكملت حتى <span className="font-bold" style={{ color: '#177B58' }}>{fmtTime(getLastPosition())}</span>
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       onClick={handleResume}
-                      className="text-xs font-bold bg-primary-400 text-white px-3 py-1.5 rounded-lg
-                                 hover:bg-primary-500 transition-colors"
+                      className="text-xs font-bold px-3"
+                      style={{ minHeight: 44, background: '#177B58', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}
                     >
                       استئناف
                     </button>
                     <button
+                      type="button"
                       onClick={() => setShowResumePrompt(false)}
-                      className="text-xs font-semibold text-gray-500 px-3 py-1.5 rounded-lg
-                                 hover:bg-gray-100 transition-colors"
+                      className="text-xs font-bold px-3"
+                      style={{ minHeight: 44, background: 'none', border: 'none', cursor: 'pointer', color: '#756E85' }}
                     >
                       من البداية
                     </button>
@@ -281,32 +303,34 @@ export default function VideoPlayer({ url, title, onClose }) {
           </AnimatePresence>
 
           {/* Quick actions bar */}
-          <div className="flex items-center justify-between px-4 py-2 border-t border-gray-100 bg-gray-50/50">
+          <div className="flex items-center justify-between px-4 py-2" style={{ borderTop: '1px solid #E8E2D4', background: '#FBF7EE' }}>
             {isDirect ? (
-              <span className="text-xs text-gray-400 flex items-center gap-1">
-                <Clock className="w-3 h-3" /> {fmtTime(currentTime)} / {fmtTime(duration)}
+              <span className="text-xs flex items-center gap-1" style={{ color: '#756E85', fontVariantNumeric: 'tabular-nums' }}>
+                <Clock className="w-3 h-3" aria-hidden /> {fmtTime(currentTime)} / {fmtTime(duration)}
               </span>
             ) : (
-              <span className="text-xs text-gray-400">
+              <span className="text-xs" style={{ color: '#756E85' }}>
                 {type === 'youtube' ? 'YouTube' : type === 'vimeo' ? 'Vimeo' : 'فيديو'}
               </span>
             )}
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => { setShowPanel(true); setPanelTab('bookmarks'); handleAddBookmark(); }}
-                className="text-xs text-amber-600 hover:text-amber-700 font-semibold flex items-center gap-1
-                           hover:bg-amber-50 px-2 py-1 rounded-lg transition-colors"
+                className="text-xs font-bold flex items-center gap-1 px-2 py-1 rounded-lg"
+                style={{ minHeight: 40, color: '#177B58', background: 'none', border: 'none', cursor: 'pointer' }}
                 title="إضافة مرجعية هنا"
               >
-                <BookmarkPlus className="w-3.5 h-3.5" /> مرجعية
+                <BookmarkPlus className="w-3.5 h-3.5" aria-hidden /> مرجعية
               </button>
               <button
+                type="button"
                 onClick={() => { setShowPanel(true); setPanelTab('notes'); }}
-                className="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1
-                           hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors"
+                className="text-xs font-bold flex items-center gap-1 px-2 py-1 rounded-lg"
+                style={{ minHeight: 40, color: '#177B58', background: 'none', border: 'none', cursor: 'pointer' }}
                 title="إضافة ملاحظة"
               >
-                <StickyNote className="w-3.5 h-3.5" /> ملاحظة
+                <StickyNote className="w-3.5 h-3.5" aria-hidden /> ملاحظة
               </button>
             </div>
           </div>
@@ -316,35 +340,41 @@ export default function VideoPlayer({ url, title, onClose }) {
         <AnimatePresence>
           {showPanel && (
             <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 'auto', opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="lg:w-1/3 w-full border-t lg:border-t-0 lg:border-r border-gray-200
-                         bg-gray-50/50 flex flex-col max-h-[500px] min-w-0 lg:min-w-[280px]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="halaqa lg:w-1/3 w-full flex flex-col max-h-[500px] min-w-0 lg:min-w-[280px]"
+              style={{ borderTop: '1px solid #E8E2D4', background: '#FBF7EE' }}
             >
               {/* Tabs */}
-              <div className="flex border-b border-gray-200 flex-shrink-0">
+              <div className="flex flex-none" style={{ borderBottom: '1px solid #E8E2D4' }}>
                 <button
+                  type="button"
                   onClick={() => setPanelTab('notes')}
-                  className={`flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors ${
-                    panelTab === 'notes'
-                      ? 'text-blue-600 border-b-2 border-blue-500 bg-blue-50/50'
-                      : 'text-gray-400 hover:text-gray-600'
-                  }`}
+                  aria-selected={panelTab === 'notes'}
+                  className="flex-1 text-xs font-bold flex items-center justify-center gap-1.5"
+                  style={{
+                    minHeight: 48, background: 'none', border: 'none', cursor: 'pointer',
+                    borderBottom: `2px solid ${panelTab === 'notes' ? '#177B58' : 'transparent'}`,
+                    color: panelTab === 'notes' ? '#177B58' : '#756E85',
+                  }}
                 >
-                  <FileText className="w-3.5 h-3.5" />
+                  <FileText className="w-3.5 h-3.5" aria-hidden />
                   ملاحظات ({progress?.notes?.length || 0})
                 </button>
                 <button
+                  type="button"
                   onClick={() => setPanelTab('bookmarks')}
-                  className={`flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors ${
-                    panelTab === 'bookmarks'
-                      ? 'text-amber-600 border-b-2 border-amber-500 bg-amber-50/50'
-                      : 'text-gray-400 hover:text-gray-600'
-                  }`}
+                  aria-selected={panelTab === 'bookmarks'}
+                  className="flex-1 text-xs font-bold flex items-center justify-center gap-1.5"
+                  style={{
+                    minHeight: 48, background: 'none', border: 'none', cursor: 'pointer',
+                    borderBottom: `2px solid ${panelTab === 'bookmarks' ? '#177B58' : 'transparent'}`,
+                    color: panelTab === 'bookmarks' ? '#177B58' : '#756E85',
+                  }}
                 >
-                  <Bookmark className="w-3.5 h-3.5" />
+                  <Bookmark className="w-3.5 h-3.5" aria-hidden />
                   مرجعيات ({progress?.bookmarks?.length || 0})
                 </button>
               </div>
@@ -356,33 +386,38 @@ export default function VideoPlayer({ url, title, onClose }) {
                     progress.notes.map((n) => (
                       <div
                         key={n.id}
-                        className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm
-                                   hover:shadow-md transition-shadow group"
+                        className="rounded-xl p-3 group"
+                        style={{ background: '#FFFFFF', border: '1px solid #E8E2D4' }}
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <button
+                            type="button"
                             onClick={() => seekTo(n.time)}
-                            className="text-[11px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5
-                                       rounded-full hover:bg-blue-100 transition-colors"
+                            className="font-bold"
+                            style={{
+                              fontSize: '0.8125rem', padding: '6px 12px', borderRadius: 9999, cursor: 'pointer',
+                              background: '#E2EFE7', color: '#0F5940', border: 'none', fontVariantNumeric: 'tabular-nums',
+                            }}
                           >
                             {fmtTime(n.time)}
                           </button>
                           <button
+                            type="button"
                             onClick={() => removeNote(n.id)}
                             aria-label="حذف الملاحظة"
-                            className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-lg
-                                       transition-all min-w-[32px] min-h-[32px] inline-flex items-center justify-center"
+                            className="inline-flex items-center justify-center"
+                            style={{ minWidth: 40, minHeight: 40, borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', color: '#C2410C' }}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5" aria-hidden />
                           </button>
                         </div>
-                        <p className="text-xs text-gray-700 leading-relaxed">{n.text}</p>
+                        <p className="text-xs" style={{ color: '#2A2438', lineHeight: 1.8, margin: 0 }}>{n.text}</p>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-8 text-gray-300">
-                      <FileText className="w-8 h-8 mx-auto mb-2" />
-                      <p className="text-xs">لا توجد ملاحظات بعد</p>
+                    <div className="text-center py-8" style={{ color: '#756E85' }}>
+                      <FileText className="w-8 h-8 mx-auto mb-2" style={{ color: '#E8E2D4' }} aria-hidden />
+                      <p className="text-xs" style={{ margin: 0 }}>لا توجد ملاحظات بعد</p>
                     </div>
                   )
                 ) : (
@@ -390,38 +425,43 @@ export default function VideoPlayer({ url, title, onClose }) {
                     progress.bookmarks.map((b) => (
                       <div
                         key={b.id}
-                        className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm
-                                   hover:shadow-md transition-shadow group flex items-center gap-2"
+                        className="rounded-xl p-3 group flex items-center gap-2"
+                        style={{ background: '#FFFFFF', border: '1px solid #E8E2D4' }}
                       >
                         <button
+                          type="button"
                           onClick={() => seekTo(b.time)}
-                          className="text-[11px] font-bold bg-amber-50 text-amber-600 px-2 py-0.5
-                                     rounded-full hover:bg-amber-100 transition-colors flex-shrink-0"
+                          className="font-bold flex-none"
+                          style={{
+                            fontSize: '0.8125rem', padding: '6px 12px', borderRadius: 9999, cursor: 'pointer',
+                            background: '#E2EFE7', color: '#0F5940', border: 'none', fontVariantNumeric: 'tabular-nums',
+                          }}
                         >
                           {fmtTime(b.time)}
                         </button>
-                        <span className="text-xs text-gray-700 flex-1 truncate">{b.label}</span>
+                        <span className="text-xs flex-1 truncate" style={{ color: '#2A2438' }}>{b.label}</span>
                         <button
+                          type="button"
                           onClick={() => removeBookmark(b.id)}
                           aria-label="حذف العلامة"
-                          className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-50 rounded-lg
-                                     transition-all flex-shrink-0 min-w-[32px] min-h-[32px] inline-flex items-center justify-center"
+                          className="inline-flex items-center justify-center flex-none"
+                          style={{ minWidth: 40, minHeight: 40, borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', color: '#C2410C' }}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden />
                         </button>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-8 text-gray-300">
-                      <Bookmark className="w-8 h-8 mx-auto mb-2" />
-                      <p className="text-xs">لا توجد مرجعيات بعد</p>
+                    <div className="text-center py-8" style={{ color: '#756E85' }}>
+                      <Bookmark className="w-8 h-8 mx-auto mb-2" style={{ color: '#E8E2D4' }} aria-hidden />
+                      <p className="text-xs" style={{ margin: 0 }}>لا توجد مرجعيات بعد</p>
                     </div>
                   )
                 )}
               </div>
 
               {/* Add form */}
-              <div className="p-3 border-t border-gray-200 flex-shrink-0 bg-white">
+              <div className="p-3 flex-none" style={{ borderTop: '1px solid #E8E2D4', background: '#FFFFFF' }}>
                 {panelTab === 'notes' ? (
                   <div className="space-y-2">
                     {!isDirect && (
@@ -430,9 +470,9 @@ export default function VideoPlayer({ url, title, onClose }) {
                         placeholder="الوقت (مثال: 5:30)"
                         value={manualTime}
                         onChange={(e) => setManualTime(e.target.value)}
-                        className="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg
-                                   px-3 py-2 focus:ring-2 focus:ring-blue-300 outline-none text-right"
-                        style={{ direction: 'ltr' }}
+                        aria-label="وقت الملاحظة"
+                        className="w-full text-xs focus:border-[#177B58] focus:outline-none text-right"
+                        style={{ minHeight: 44, background: '#FFFFFF', border: '1px solid #E8E2D4', color: '#2A2438', borderRadius: 8, padding: '8px 12px', direction: 'ltr' }}
                       />
                     )}
                     <div className="flex gap-2">
@@ -442,16 +482,19 @@ export default function VideoPlayer({ url, title, onClose }) {
                         value={noteText}
                         onChange={(e) => setNoteText(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
-                        className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg
-                                   px-3 py-2 focus:ring-2 focus:ring-blue-300 outline-none text-right"
+                        aria-label="نص الملاحظة"
+                        className="flex-1 text-xs focus:border-[#177B58] focus:outline-none text-right"
+                        style={{ minHeight: 44, background: '#FFFFFF', border: '1px solid #E8E2D4', color: '#2A2438', borderRadius: 8, padding: '8px 12px' }}
                       />
                       <button
+                        type="button"
                         onClick={handleAddNote}
                         disabled={!noteText.trim()}
-                        className="px-3 py-2 bg-blue-500 text-white rounded-lg text-xs font-bold
-                                   hover:bg-blue-600 disabled:opacity-40 transition-colors flex-shrink-0"
+                        aria-label="إضافة ملاحظة"
+                        className="flex-none"
+                        style={{ minWidth: 48, minHeight: 44, background: '#177B58', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', opacity: !noteText.trim() ? 0.45 : 1 }}
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="w-3.5 h-3.5" aria-hidden />
                       </button>
                     </div>
                   </div>
@@ -463,9 +506,9 @@ export default function VideoPlayer({ url, title, onClose }) {
                         placeholder="الوقت (مثال: 5:30)"
                         value={manualTime}
                         onChange={(e) => setManualTime(e.target.value)}
-                        className="w-full text-xs bg-gray-50 border border-gray-200 rounded-lg
-                                   px-3 py-2 focus:ring-2 focus:ring-amber-300 outline-none text-right"
-                        style={{ direction: 'ltr' }}
+                        aria-label="وقت المرجعية"
+                        className="w-full text-xs focus:border-[#177B58] focus:outline-none text-right"
+                        style={{ minHeight: 44, background: '#FFFFFF', border: '1px solid #E8E2D4', color: '#2A2438', borderRadius: 8, padding: '8px 12px', direction: 'ltr' }}
                       />
                     )}
                     <div className="flex gap-2">
@@ -475,15 +518,18 @@ export default function VideoPlayer({ url, title, onClose }) {
                         value={bookmarkLabel}
                         onChange={(e) => setBookmarkLabel(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleAddBookmark()}
-                        className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-lg
-                                   px-3 py-2 focus:ring-2 focus:ring-amber-300 outline-none text-right"
+                        aria-label="عنوان المرجعية"
+                        className="flex-1 text-xs focus:border-[#177B58] focus:outline-none text-right"
+                        style={{ minHeight: 44, background: '#FFFFFF', border: '1px solid #E8E2D4', color: '#2A2438', borderRadius: 8, padding: '8px 12px' }}
                       />
                       <button
+                        type="button"
                         onClick={handleAddBookmark}
-                        className="px-3 py-2 bg-amber-500 text-white rounded-lg text-xs font-bold
-                                   hover:bg-amber-600 transition-colors flex-shrink-0"
+                        aria-label="إضافة مرجعية"
+                        className="flex-none"
+                        style={{ minWidth: 48, minHeight: 44, background: '#177B58', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                       >
-                        <BookmarkPlus className="w-3.5 h-3.5" />
+                        <BookmarkPlus className="w-3.5 h-3.5" aria-hidden />
                       </button>
                     </div>
                   </div>

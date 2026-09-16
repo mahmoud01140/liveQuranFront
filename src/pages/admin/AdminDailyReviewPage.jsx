@@ -1,30 +1,48 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, MotionConfig } from 'framer-motion';
 import {
   BookOpen, Check, Clock, AlertCircle, Star, Users, Filter,
-  ChevronLeft, MessageSquare, RefreshCw, X, Shield, Mic, Square, Play, Pause, Volume2, Trash2
+  ChevronLeft, MessageSquare, RefreshCw, X, Shield, Mic, Square, Play, Pause, Volume2, Trash2, Search,
 } from 'lucide-react';
 import PageLayout from '../../components/shared/PageLayout';
 import useAuthStore from '../../store/authStore';
 import useGroupStore from '../../store/groupStore';
 import useDailyRecordStore from '../../store/dailyRecordStore';
-import { timeAgoAr, getInitials, getAvatarColor, getLevelLabel, getLevelColor } from '../../utils/helpers';
+import { timeAgoAr, getInitials, getAvatarColor, getLevelLabel } from '../../utils/helpers';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import Pagination from '../../components/shared/Pagination';
 import usePagination from '../../hooks/usePagination';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
 
-const STATUS_MAP = {
-  pending: { label: 'قيد المراجعة', color: 'bg-amber-50 text-amber-600', dot: 'bg-amber-400' },
-  approved: { label: 'تمت الموافقة', color: 'bg-green-50 text-green-600', dot: 'bg-green-400' },
-  needs_review: { label: 'يحتاج مراجعة', color: 'bg-red-50 text-red-600', dot: 'bg-red-400' },
+/* Admin daily review — all groups' records and recitations.
+   Same fetches, forms, audio and payloads as before; visual only. */
+
+const STATUS_TONE = {
+  pending: { label: 'قيد المراجعة', bg: '#FBF7EE', fg: '#B45309', border: '#B45309', dot: '#B45309' },
+  approved: { label: 'تمت الموافقة', bg: '#E2EFE7', fg: '#0F5940', border: '#E2EFE7', dot: '#177B58' },
+  needs_review: { label: 'يحتاج مراجعة', bg: '#FFFFFF', fg: '#C2410C', border: '#C2410C', dot: '#C2410C' },
 };
 
 const ACTIVITY_LABELS = { memorization: 'حفظ', review: 'مراجعة', tajweed: 'تجويد' };
 
-const RECITATION_STATUS_MAP = {
-  pending: { label: 'تلاوات معلقة', color: 'bg-amber-50 text-amber-600', dot: 'bg-amber-400' },
-  reviewed: { label: 'تم تقييمها', color: 'bg-green-50 text-green-600', dot: 'bg-green-400' },
+const RECITATION_TONE = {
+  pending: { label: 'تلاوات معلقة', bg: '#FBF7EE', fg: '#B45309', border: '#B45309', dot: '#B45309' },
+  reviewed: { label: 'تم تقييمها', bg: '#E2EFE7', fg: '#0F5940', border: '#E2EFE7', dot: '#177B58' },
+};
+
+const LEVEL_TONE = {
+  foundation: { wash: '#E2EFE7', fg: '#0F5940' },
+  memorization: { wash: '#ECE9F4', fg: '#4A3F6B' },
+  teacher_prep: { wash: '#ECE9F4', fg: '#4A3F6B' },
+  senior: { wash: '#FBF7EE', fg: '#2A2438' },
+};
+
+const field = {
+  width: '100%', minHeight: 48, background: HQ.SURFACE, color: HQ.INK,
+  border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '12px 16px',
+  fontSize: 14, fontFamily: 'inherit',
 };
 
 export default function AdminDailyReviewPage() {
@@ -33,7 +51,7 @@ export default function AdminDailyReviewPage() {
   const { groupRecords, pendingCount, isLoading, fetchGroupRecords, reviewRecord } = useDailyRecordStore();
 
   const [selectedGroup, setSelectedGroup] = useState(null);
-  
+
   // Daily record state
   const [statusFilter, setStatusFilter] = useState('pending');
   const [reviewingId, setReviewingId] = useState(null);
@@ -99,7 +117,7 @@ export default function AdminDailyReviewPage() {
   const handleReview = async (recordId) => {
     try {
       await reviewRecord(recordId, reviewForm);
-      toast.success(reviewForm.status === 'approved' ? 'تمت الموافقة ✅' : 'تم طلب المراجعة');
+      toast.success(reviewForm.status === 'approved' ? 'تمت الموافقة' : 'تم طلب المراجعة');
       setReviewingId(null);
       setReviewForm({ status: 'approved', teacherNotes: '', rating: 5 });
     } catch {
@@ -134,7 +152,7 @@ export default function AdminDailyReviewPage() {
       await api.put(`/student-recitations/${recitationId}/review`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      toast.success('تم إرسال التقييم بنجاح وإشعار الطالب! ✅');
+      toast.success('تم إرسال التقييم بنجاح وإشعار الطالب!');
       setReviewingRecitationId(null);
       setRecitationForm({ rating: 5, teacherNotes: '' });
       setRecordedFeedbackUrl(null);
@@ -262,516 +280,579 @@ export default function AdminDailyReviewPage() {
     }
   };
 
+  const panel = {
+    background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 20,
+  };
+  const emptyBox = {
+    background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18,
+    padding: 48, textAlign: 'center',
+  };
+  const primaryBtn = {
+    minHeight: 48, padding: '12px 20px', borderRadius: 12, border: 'none',
+    background: HQ.MENTOR, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  };
+  const ghostBtn = {
+    minHeight: 48, padding: '12px 20px', borderRadius: 12, border: 'none', background: 'transparent',
+    color: HQ.MUTED, fontWeight: 800, fontSize: 14, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  };
+  const outlineBtn = {
+    minHeight: 48, padding: '12px 20px', borderRadius: 12, background: HQ.SURFACE,
+    color: HQ.MENTOR, border: `1.5px solid ${HQ.MENTOR}`, fontWeight: 800, fontSize: 14, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  };
+  const iconBtn = {
+    minWidth: 44, minHeight: 44, borderRadius: 12, border: 'none', background: 'transparent',
+    color: HQ.MUTED, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  };
+
+  const renderStars = (value, onPick) => (
+    <div className="flex items-center gap-1" role="radiogroup" aria-label="التقييم من 5">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <button key={s} type="button"
+          role="radio" aria-checked={s === value} aria-label={`${s} من 5`}
+          onClick={() => onPick && onPick(s)}
+          style={{ minWidth: 40, minHeight: 40, border: 'none', background: 'none', cursor: onPick ? 'pointer' : 'default', padding: 8 }}>
+          <Star size={19} aria-hidden color={s <= value ? '#D9A441' : HQ.LINE}
+            fill={s <= value ? '#D9A441' : 'none'} />
+        </button>
+      ))}
+    </div>
+  );
+
+  const statusChip = (tone) => ({
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    fontSize: '0.8125rem', fontWeight: 700, padding: '4px 12px', borderRadius: 9999,
+    background: tone.bg, color: tone.fg, border: `1px solid ${tone.border}`,
+  });
 
   // Group selection
   if (!selectedGroup) {
     return (
       <PageLayout>
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <h1 className="section-title flex items-center gap-2">
-            <Shield className="w-6 h-6 text-amber-500" /> مراجعة سجلات الحفظ
-          </h1>
-          <p className="section-subtitle">اختر مجموعة لمراجعة سجلات الحفظ اليومية والتقييم</p>
-        </motion.div>
+        <MotionConfig reducedMotion="user">
+          <div className="halaqa" style={{ maxWidth: 960, margin: '0 auto' }}>
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="mb-6">
+              <h1 className="flex items-center gap-2" style={{ fontSize: '1.5rem', fontWeight: 800, color: HQ.INK, margin: '0 0 4px' }}>
+                <Shield size={22} color={HQ.MENTOR} aria-hidden /> مراجعة سجلات الحفظ
+              </h1>
+              <p className="text-sm" style={{ color: HQ.MUTED, margin: 0 }}>اختر مجموعة لمراجعة سجلات الحفظ اليومية والتقييم</p>
+            </motion.div>
 
-        <div className="mb-5">
-          <input type="text" placeholder="ابحث عن مجموعة..." value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)} className="input-base max-w-md" />
-        </div>
-
-        {filteredGroups.length === 0 ? (
-          <div className="empty-state"><Users className="empty-state-icon" /><p>لا توجد مجموعات</p></div>
-        ) : (
-          <div>
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 stagger-children">
-              {groupsPagination.paginatedItems.map(group => {
-                const lc = getLevelColor(group.level);
-                return (
-                  <motion.button key={group._id} whileHover={{ y: -3 }} onClick={() => setSelectedGroup(group)}
-                    className="card-base p-6 text-right hover:shadow-md transition-all w-full">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold px-2.5 py-1 rounded-lg" style={{ backgroundColor: lc.bg, color: lc.text }}>
-                        {getLevelLabel(group.level)}
-                      </span>
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5" /> {group.students?.length || 0}/{group.maxStudents}
-                      </span>
-                    </div>
-                    <h3 className="font-black text-gray-900 mb-1">{group.name}</h3>
-                    <p className="text-xs text-gray-400 mb-3">
-                      المعلم: {group.teacher?.firstName ? `${group.teacher.firstName} ${group.teacher.lastName}` : 'غير معيّن'}
-                    </p>
-                    <div className="flex items-center gap-2 text-amber-500 text-sm font-semibold mt-2">
-                      <BookOpen className="w-4 h-4" /> مراجعة السجلات
-                      <ChevronLeft className="w-4 h-4 mr-auto" />
-                    </div>
-                  </motion.button>
-                );
-              })}
+            <div className="mb-5">
+              <div className="relative" style={{ maxWidth: 448 }}>
+                <Search size={15} color={HQ.MUTED} aria-hidden className="absolute right-3.5 top-1/2 -translate-y-1/2" />
+                <input type="text" placeholder="ابحث عن مجموعة..." value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)} aria-label="بحث عن مجموعة"
+                  className="pr-10 focus:border-[#177B58] focus:outline-none" style={field} />
+              </div>
             </div>
 
-            <Pagination
-              currentPage={groupsPagination.currentPage}
-              totalPages={groupsPagination.totalPages}
-              totalItems={groupsPagination.totalItems}
-              pageSize={groupsPagination.pageSize}
-              onPageChange={groupsPagination.setCurrentPage}
-              onPageSizeChange={groupsPagination.setPageSize}
-              showPageSize={true}
-              pageSizeOptions={[6, 9, 18, 36]}
-              itemName="مجموعة"
-              className="mt-6"
-            />
+            {filteredGroups.length === 0 ? (
+              <div style={emptyBox}>
+                <Users size={52} color={HQ.LINE} style={{ margin: '0 auto 12px' }} aria-hidden />
+                <p className="font-bold" style={{ color: HQ.MUTED, margin: 0 }}>لا توجد مجموعات</p>
+              </div>
+            ) : (
+              <div>
+                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {groupsPagination.paginatedItems.map(group => {
+                    const tone = LEVEL_TONE[group.level] || { wash: HQ.PAPER, fg: HQ.MUTED };
+                    return (
+                      <button key={group._id} type="button" onClick={() => setSelectedGroup(group)}
+                        className="p-6 text-right w-full"
+                        style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, cursor: 'pointer' }}>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs font-bold px-2.5 py-1" style={{ backgroundColor: tone.wash, color: tone.fg, borderRadius: 8 }}>
+                            {getLevelLabel(group.level)}
+                          </span>
+                          <span className="text-xs flex items-center gap-1" style={{ color: HQ.MUTED, fontVariantNumeric: 'tabular-nums' }}>
+                            <Users size={13} aria-hidden /> {group.students?.length || 0}/{group.maxStudents}
+                          </span>
+                        </div>
+                        <h3 className="font-extrabold" style={{ color: HQ.INK, margin: '0 0 4px' }}>{group.name}</h3>
+                        <p className="text-xs mb-3" style={{ color: HQ.MUTED, marginTop: 0 }}>
+                          المعلم: {group.teacher?.firstName ? `${group.teacher.firstName} ${group.teacher.lastName}` : 'غير معيّن'}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm font-bold" style={{ color: HQ.MENTOR }}>
+                          <BookOpen size={15} aria-hidden /> مراجعة السجلات
+                          <ChevronLeft size={15} aria-hidden style={{ marginRight: 'auto' }} />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <Pagination
+                  currentPage={groupsPagination.currentPage}
+                  totalPages={groupsPagination.totalPages}
+                  totalItems={groupsPagination.totalItems}
+                  pageSize={groupsPagination.pageSize}
+                  onPageChange={groupsPagination.setCurrentPage}
+                  onPageSizeChange={groupsPagination.setPageSize}
+                  showPageSize={true}
+                  pageSizeOptions={[6, 9, 18, 36]}
+                  itemName="مجموعة"
+                  className="mt-6"
+                />
+              </div>
+            )}
           </div>
-        )}
+        </MotionConfig>
       </PageLayout>
     );
   }
 
   return (
     <PageLayout>
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <button onClick={() => setSelectedGroup(null)} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-            <ChevronLeft className="w-5 h-5 text-gray-400" style={{ transform: 'scaleX(-1)' }} />
-          </button>
-          <div>
-            <h1 className="section-title">سجلات {selectedGroup.name}</h1>
-            <p className="section-subtitle">
-              {activeReviewType === 'daily_records'
-                ? (pendingCount > 0 ? `${pendingCount} سجل بانتظار المراجعة` : 'لا توجد سجلات معلقة')
-                : 'مراجعة وتقييم التسجيلات الصوتية المرسلة من الطلاب'}
-            </p>
-          </div>
-        </div>
-
-        {/* Toggle between Daily Records and Recitations */}
-        <div className="flex gap-4 border-b border-gray-200 pb-2.5 mb-5 flex-shrink-0">
-          <button
-            onClick={() => setActiveReviewType('daily_records')}
-            className={`pb-1 text-sm font-black transition-all ${
-              activeReviewType === 'daily_records'
-                ? 'text-amber-600 border-b-2 border-amber-600'
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            📋 نشاطات الحفظ اليومية
-          </button>
-          <button
-            onClick={() => setActiveReviewType('recitations')}
-            className={`pb-1 text-sm font-black transition-all ${
-              activeReviewType === 'recitations'
-                ? 'text-amber-600 border-b-2 border-amber-600'
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            🎙️ تسجيلات التلاوة الذاتية
-          </button>
-        </div>
-
-        {/* Status filter tabs */}
-        {activeReviewType === 'daily_records' ? (
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { key: 'pending', label: 'معلقة', icon: Clock, count: pendingCount },
-              { key: 'approved', label: 'موافق عليها', icon: Check },
-              { key: 'needs_review', label: 'تحتاج مراجعة', icon: AlertCircle },
-              { key: 'all', label: 'الكل', icon: Filter },
-            ].map(tab => (
-              <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  statusFilter === tab.key
-                    ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
-                }`}>
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-                {tab.count > 0 && (
-                  <span className="bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
-                    {tab.count}
-                  </span>
-                )}
+      <MotionConfig reducedMotion="user">
+        <div className="halaqa" style={{ maxWidth: 960, margin: '0 auto' }}>
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <button type="button" onClick={() => setSelectedGroup(null)} aria-label="العودة لاختيار المجموعة" style={iconBtn}>
+                <ChevronLeft size={19} color={HQ.MUTED} aria-hidden style={{ transform: 'scaleX(-1)' }} />
               </button>
-            ))}
-          </div>
-        ) : (
-          <div className="flex gap-2 flex-wrap">
-            {[
-              { key: 'pending', label: 'بانتظار التقييم', icon: Clock },
-              { key: 'reviewed', label: 'تم تقييمها', icon: Check },
-              { key: 'all', label: 'الكل', icon: Filter },
-            ].map(tab => (
-              <button key={tab.key} onClick={() => setRecitationStatusFilter(tab.key)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                  recitationStatusFilter === tab.key
-                    ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
-                }`}>
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </motion.div>
-
-      {/* Content Rendering */}
-      {activeReviewType === 'daily_records' ? (
-        isLoading ? (
-          <div className="card-base p-12 text-center">
-            <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin text-amber-300" />
-          </div>
-        ) : groupRecords.length === 0 ? (
-          <div className="card-base p-12 text-center text-gray-400">
-            <BookOpen className="w-14 h-14 mx-auto mb-3 text-gray-200" />
-            <p className="font-semibold">لا توجد سجلات {statusFilter !== 'all' ? STATUS_MAP[statusFilter]?.label || '' : ''}</p>
-          </div>
-        ) : (
-          <div>
-            <div className="space-y-3 stagger-children">
-              {recordsPagination.paginatedItems.map((record) => {
-                const si = STATUS_MAP[record.status];
-                const isReviewing = reviewingId === record._id;
-
-                return (
-                  <motion.div key={record._id} whileHover={{ y: -1 }} className="card-base p-5">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                        style={{ backgroundColor: getAvatarColor(`${record.student?.firstName}${record.student?.lastName}`) }}>
-                        {getInitials(record.student?.firstName, record.student?.lastName)}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="font-bold text-gray-900">{record.student?.firstName} {record.student?.lastName}</span>
-                          <span className="text-gray-300">—</span>
-                          <span className="font-semibold text-gray-700">سورة {record.surahName}</span>
-                          <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
-                            آية {record.fromVerse}-{record.toVerse} ({record.versesCount} آية)
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${si.color}`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${si.dot}`} />
-                            {si.label}
-                          </span>
-                          <span className="text-xs text-gray-400">{timeAgoAr(record.date)}</span>
-                          <span className="text-xs bg-gray-50 text-gray-500 px-2 py-0.5 rounded-lg">
-                            {ACTIVITY_LABELS[record.activityType] || 'حفظ'}
-                          </span>
-                        </div>
-
-                        {record.studentNotes && (
-                          <p className="text-xs text-gray-500 mt-2 bg-gray-50 rounded-lg px-3 py-1.5">📝 {record.studentNotes}</p>
-                        )}
-
-                        {record.teacherNotes && (
-                          <p className="text-xs text-amber-700 mt-1.5 bg-amber-50 rounded-lg px-3 py-1.5">👨‍🏫 {record.teacherNotes}</p>
-                        )}
-
-                        {record.rating && (
-                          <div className="flex items-center gap-0.5 mt-1.5">
-                            {[1,2,3,4,5].map(s => <Star key={s} className={`w-3.5 h-3.5 ${s <= record.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />)}
-                          </div>
-                        )}
-
-                        {/* Review form */}
-                        {isReviewing && (
-                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                            className="mt-4 pt-4 border-t border-gray-100">
-                            <div className="flex gap-2 mb-3">
-                              <button onClick={() => setReviewForm({ ...reviewForm, status: 'approved' })}
-                                className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all ${
-                                  reviewForm.status === 'approved' ? 'bg-green-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                <Check className="w-3.5 h-3.5" /> موافقة
-                              </button>
-                              <button onClick={() => setReviewForm({ ...reviewForm, status: 'needs_review' })}
-                                className={`text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all ${
-                                  reviewForm.status === 'needs_review' ? 'bg-red-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                <AlertCircle className="w-3.5 h-3.5" /> يحتاج مراجعة
-                              </button>
-                            </div>
-
-                            <div className="flex items-center gap-2 mb-3">
-                              <span className="text-xs font-semibold text-gray-600">التقييم:</span>
-                              <div className="flex gap-0.5">
-                                {[1,2,3,4,5].map(s => (
-                                  <button key={s} type="button" onClick={() => setReviewForm({ ...reviewForm, rating: s })}>
-                                    <Star className={`w-5 h-5 transition-colors ${s <= reviewForm.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200 hover:text-amber-200'}`} />
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-
-                            <textarea value={reviewForm.teacherNotes}
-                              onChange={(e) => setReviewForm({ ...reviewForm, teacherNotes: e.target.value })}
-                              className="input-base text-sm mb-3" rows={2} maxLength={500}
-                              placeholder="ملاحظات للطالب (اختياري)..." />
-
-                            <div className="flex gap-2">
-                              <button onClick={() => handleReview(record._id)} className="btn-primary text-sm py-2 flex-1 shadow-sm"
-                                style={{ backgroundColor: '#D97706' }}>
-                                <Check className="w-4 h-4" /> تأكيد المراجعة
-                              </button>
-                              <button onClick={() => setReviewingId(null)} className="btn-ghost text-sm py-2">
-                                <X className="w-4 h-4" /> إلغاء
-                              </button>
-                            </div>
-                          </motion.div>
-                        )}
-                      </div>
-
-                      {record.status === 'pending' && !isReviewing && (
-                        <button onClick={() => { setReviewingId(record._id); setReviewForm({ status: 'approved', teacherNotes: '', rating: 5 }); }}
-                          className="btn-outline text-xs py-2 px-3 flex-shrink-0" style={{ borderColor: '#D97706', color: '#D97706' }}>
-                          <MessageSquare className="w-3.5 h-3.5" /> مراجعة
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
+              <div>
+                <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: HQ.INK, margin: '0 0 4px' }}>سجلات {selectedGroup.name}</h1>
+                <p className="text-sm" style={{ color: HQ.MUTED, margin: 0 }}>
+                  {activeReviewType === 'daily_records'
+                    ? (pendingCount > 0 ? `${pendingCount} سجل بانتظار المراجعة` : 'لا توجد سجلات معلقة')
+                    : 'مراجعة وتقييم التسجيلات الصوتية المرسلة من الطلاب'}
+                </p>
+              </div>
             </div>
 
-            <Pagination
-              currentPage={recordsPagination.currentPage}
-              totalPages={recordsPagination.totalPages}
-              totalItems={recordsPagination.totalItems}
-              pageSize={recordsPagination.pageSize}
-              onPageChange={recordsPagination.setCurrentPage}
-              onPageSizeChange={recordsPagination.setPageSize}
-              showPageSize={true}
-              pageSizeOptions={[5, 10, 20, 50]}
-              itemName="سجل"
-              className="mt-6"
-            />
-          </div>
-        )
-      ) : (
-        /* Recitations Review for Admin */
-        loadingRecitations ? (
-          <div className="card-base p-12 text-center">
-            <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin text-amber-300" />
-          </div>
-        ) : recitations.length === 0 ? (
-          <div className="card-base p-12 text-center text-gray-400">
-            <Mic className="w-14 h-14 mx-auto mb-3 text-gray-200" />
-            <p className="font-semibold">لا توجد تسجيلات تلاوة {recitationStatusFilter !== 'all' ? RECITATION_STATUS_MAP[recitationStatusFilter]?.label || '' : ''}</p>
-          </div>
-        ) : (
-          <div>
-            <div className="space-y-3 stagger-children">
-              {recitationsPagination.paginatedItems.map((rec) => {
-              const rsi = RECITATION_STATUS_MAP[rec.status] || { label: rec.status, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' };
-              const isReviewing = reviewingRecitationId === rec._id;
+            {/* Toggle between Daily Records and Recitations */}
+            <div className="hq-tabs" role="tablist" aria-label="نوع المراجعة"
+              style={{ display: 'flex', width: '100%', marginBottom: 20, overflowX: 'auto' }}>
+              {[
+                { key: 'daily_records', label: 'نشاطات الحفظ اليومية' },
+                { key: 'recitations', label: 'تسجيلات التلاوة الذاتية' },
+              ].map(t => (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeReviewType === t.key}
+                  onClick={() => setActiveReviewType(t.key)}
+                  style={{ flex: '1 0 auto', whiteSpace: 'nowrap' }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-              return (
-                <motion.div key={rec._id} whileHover={{ y: -1 }} className="card-base p-5">
-                  <div className="flex flex-col md:flex-row md:items-start gap-4">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mx-auto md:mx-0"
-                      style={{ backgroundColor: getAvatarColor(`${rec.student?.firstName}${rec.student?.lastName}`) }}>
-                      {getInitials(rec.student?.firstName, rec.student?.lastName)}
-                    </div>
+            {/* Status filter tabs */}
+            {activeReviewType === 'daily_records' ? (
+              <div className="flex gap-2 flex-wrap" role="group" aria-label="تصفية حسب الحالة">
+                {[
+                  { key: 'pending', label: 'معلقة', Icon: Clock, count: pendingCount },
+                  { key: 'approved', label: 'موافق عليها', Icon: Check },
+                  { key: 'needs_review', label: 'تحتاج مراجعة', Icon: AlertCircle },
+                  { key: 'all', label: 'الكل', Icon: Filter },
+                ].map(tab => (
+                  <button key={tab.key} type="button" onClick={() => setStatusFilter(tab.key)}
+                    aria-pressed={statusFilter === tab.key}
+                    className="flex items-center gap-1.5 px-4 text-sm font-bold"
+                    style={{
+                      minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                      border: `1px solid ${statusFilter === tab.key ? HQ.MENTOR : HQ.LINE}`,
+                      background: statusFilter === tab.key ? HQ.MENTOR : HQ.SURFACE,
+                      color: statusFilter === tab.key ? '#fff' : HQ.MUTED,
+                    }}>
+                    <tab.Icon size={15} aria-hidden />
+                    {tab.label}
+                    {tab.count > 0 && (
+                      <span style={{
+                        fontSize: '0.8125rem', padding: '2px 10px', borderRadius: 9999, fontWeight: 800,
+                        fontVariantNumeric: 'tabular-nums', minWidth: 20, textAlign: 'center',
+                        background: statusFilter === tab.key ? '#fff' : '#E2EFE7', color: '#0F5940',
+                      }}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="flex gap-2 flex-wrap" role="group" aria-label="تصفية التسجيلات">
+                {[
+                  { key: 'pending', label: 'بانتظار التقييم', Icon: Clock },
+                  { key: 'reviewed', label: 'تم تقييمها', Icon: Check },
+                  { key: 'all', label: 'الكل', Icon: Filter },
+                ].map(tab => (
+                  <button key={tab.key} type="button" onClick={() => setRecitationStatusFilter(tab.key)}
+                    aria-pressed={recitationStatusFilter === tab.key}
+                    className="flex items-center gap-1.5 px-4 text-sm font-bold"
+                    style={{
+                      minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                      border: `1px solid ${recitationStatusFilter === tab.key ? HQ.MENTOR : HQ.LINE}`,
+                      background: recitationStatusFilter === tab.key ? HQ.MENTOR : HQ.SURFACE,
+                      color: recitationStatusFilter === tab.key ? '#fff' : HQ.MUTED,
+                    }}>
+                    <tab.Icon size={15} aria-hidden />
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </motion.div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1 justify-center md:justify-start">
-                        <span className="font-bold text-gray-900">{rec.student?.firstName} {rec.student?.lastName}</span>
-                        <span className="text-gray-300">—</span>
-                        <span className="font-semibold text-gray-700">سورة {rec.surahName}</span>
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg">
-                          آية {rec.fromVerse}-{rec.toVerse} ({rec.toVerse - rec.fromVerse + 1} آية)
-                        </span>
-                      </div>
+          {/* Content Rendering */}
+          {activeReviewType === 'daily_records' ? (
+            isLoading ? (
+              <div style={emptyBox} aria-label="جارٍ تحميل السجلات">
+                <RefreshCw size={30} color={HQ.MENTOR} className="animate-spin" style={{ margin: '0 auto' }} aria-hidden />
+              </div>
+            ) : groupRecords.length === 0 ? (
+              <div style={emptyBox}>
+                <BookOpen size={52} color={HQ.LINE} style={{ margin: '0 auto 12px' }} aria-hidden />
+                <p className="font-bold" style={{ color: HQ.MUTED, margin: 0 }}>لا توجد سجلات {statusFilter !== 'all' ? STATUS_TONE[statusFilter]?.label || '' : ''}</p>
+              </div>
+            ) : (
+              <div>
+                <div className="space-y-3">
+                  {recordsPagination.paginatedItems.map((record) => {
+                    const tone = STATUS_TONE[record.status] || STATUS_TONE.pending;
+                    const isReviewing = reviewingId === record._id;
 
-                      <div className="flex items-center gap-2 flex-wrap justify-center md:justify-start mb-3">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 ${rsi.color}`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${rsi.dot}`} />
-                          {rsi.label}
-                        </span>
-                        <span className="text-xs text-gray-400">{timeAgoAr(rec.createdAt)}</span>
-                      </div>
+                    return (
+                      <div key={record._id} style={panel}>
+                        <div className="flex items-start gap-3">
+                          <span aria-hidden className="avatar-circle"
+                            style={{
+                              width: 40, height: 40, fontSize: 14, flex: 'none',
+                              backgroundColor: getAvatarColor(`${record.student?.firstName}${record.student?.lastName}`),
+                            }}>
+                            {getInitials(record.student?.firstName, record.student?.lastName)}
+                          </span>
 
-                      <div className="flex items-center gap-3 bg-primary-50 border border-primary-100 rounded-2xl p-3 mb-3">
-                        <Volume2 className="w-4 h-4 text-primary-400 flex-shrink-0" />
-                        <audio src={rec.audioUrl} controls className="flex-1 h-7" />
-                      </div>
-
-                      {rec.status === 'reviewed' && (
-                        <div className="bg-slate-50 rounded-2xl p-3 border border-gray-100 space-y-1.5">
-                          {rec.rating && (
-                            <div className="flex items-center gap-0.5">
-                              <span className="text-xs text-gray-400 ml-1">التقييم:</span>
-                              {[1,2,3,4,5].map(s => <Star key={s} className={`w-3.5 h-3.5 ${s <= rec.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />)}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <span className="font-bold" style={{ color: HQ.INK }}>{record.student?.firstName} {record.student?.lastName}</span>
+                              <span style={{ color: HQ.LINE }} aria-hidden>—</span>
+                              <span className="font-bold" style={{ color: HQ.INK }}>سورة {record.surahName}</span>
+                              <span className="text-xs px-2 py-0.5" style={{ background: HQ.PAPER, color: HQ.MUTED, borderRadius: 8, fontVariantNumeric: 'tabular-nums' }}>
+                                آية {record.fromVerse}-{record.toVerse} ({record.versesCount} آية)
+                              </span>
                             </div>
-                          )}
-                          {rec.teacherNotes && (
-                            <p className="text-xs text-primary-700 leading-relaxed">👨‍🏫 <strong>ملاحظات المقيم:</strong> {rec.teacherNotes}</p>
-                          )}
-                          {rec.teacherAudioUrl && (
-                            <div className="flex items-center gap-2 pt-1 border-t border-slate-200/50 mt-1">
-                              <span className="text-[10px] text-gray-400 flex-shrink-0">🎙️ الرد الصوتي:</span>
-                              <audio src={rec.teacherAudioUrl} controls className="flex-1 h-6" />
-                            </div>
-                          )}
-                        </div>
-                      )}
 
-                      {/* Recitation Review Form for Admin */}
-                      {isReviewing && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                          className="mt-4 bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-4">
-                          
-                          <div className="bg-white p-3 rounded-xl border border-gray-100 flex items-center justify-between flex-wrap gap-2">
-                            <div>
-                              <span className="text-xs font-bold text-gray-700 block">🎧 المقارنة بالتلاوة المرجعية</span>
-                              <span className="text-[10px] text-gray-400 block mt-0.5">استمع لتلاوة الشيخ العفاسي للآيات المحددة</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span style={statusChip(tone)}>
+                                <span aria-hidden style={{ width: 7, height: 7, borderRadius: 9999, background: tone.dot }} />
+                                {tone.label}
+                              </span>
+                              <span className="text-xs" style={{ color: HQ.MUTED }}>{timeAgoAr(record.date)}</span>
+                              <span className="text-xs px-2 py-0.5" style={{ background: HQ.PAPER, color: HQ.MUTED, borderRadius: 8 }}>
+                                {ACTIVITY_LABELS[record.activityType] || 'حفظ'}
+                              </span>
                             </div>
-                            
-                            <button
-                              type="button"
-                              onClick={() => playReferenceRecitation(rec)}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
-                                playingRefId === rec._id
-                                  ? 'bg-slate-800 text-white border-slate-700'
-                                  : 'bg-primary-50 text-primary-600 border-primary-100 hover:bg-primary-100'
-                              }`}
-                            >
-                              {refLoadingId === rec._id ? (
-                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                              ) : playingRefId === rec._id ? (
-                                <>
-                                  <Pause className="w-3.5 h-3.5" />
-                                  <span>إيقاف (آية {rec.fromVerse + refCurrentIdx})</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="w-3.5 h-3.5 mr-0.5" />
-                                  <span>تشغيل المرجع</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
 
-                          <div className="bg-white p-3 rounded-xl border border-gray-100">
-                            <span className="text-xs font-bold text-gray-700 block mb-2">🎙️ تسجيل رد صوتي أو توجيه</span>
-                            
-                            {!recordedFeedbackUrl && !isRecordingFeedback ? (
-                              <button
-                                type="button"
-                                onClick={startFeedbackRecording}
-                                className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border border-rose-100 shadow-sm"
-                              >
-                                <Mic className="w-3.5 h-3.5" /> تسجيل ملاحظة شفهية
-                              </button>
-                            ) : isRecordingFeedback ? (
-                              <div className="flex items-center gap-3">
-                                <span className="text-xs font-mono font-bold text-red-500 animate-pulse">
-                                  جاري التسجيل... ({feedbackDuration} ث)
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={stopFeedbackRecording}
-                                  className="px-3 py-1.5 bg-slate-800 text-white rounded-lg text-xs font-bold flex items-center gap-1"
-                                >
-                                  <Square className="w-3.5 h-3.5" /> إيقاف
-                                </button>
+                            {record.studentNotes && (
+                              <p className="text-xs mt-2 rounded-lg px-3 py-1.5" style={{ color: HQ.MUTED, background: HQ.PAPER, marginBottom: 0 }}>
+                                ملاحظة الطالب: {record.studentNotes}
+                              </p>
+                            )}
+
+                            {record.teacherNotes && (
+                              <p className="text-xs mt-1.5 rounded-lg px-3 py-1.5" style={{ color: '#0F5940', background: '#E2EFE7', marginBottom: 0 }}>
+                                ملاحظة المعلم: {record.teacherNotes}
+                              </p>
+                            )}
+
+                            {record.rating && (
+                              <div className="flex items-center gap-0.5 mt-1.5" role="img" aria-label={`تقييم الطالب ${record.rating} من 5`}>
+                                {[1, 2, 3, 4, 5].map(s => (
+                                  <Star key={s} size={14} aria-hidden color={s <= record.rating ? '#D9A441' : HQ.LINE}
+                                    fill={s <= record.rating ? '#D9A441' : 'none'} />
+                                ))}
                               </div>
-                            ) : (
-                              <div className="flex items-center justify-between gap-3 bg-gray-50 p-2 rounded-lg">
-                                <button
-                                  type="button"
-                                  onClick={togglePlayFeedback}
-                                  className="p-1.5 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-colors"
-                                >
-                                  {isPlayingFeedback ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 mr-0.5" />}
-                                </button>
-                                <span className="text-[10px] text-gray-500">تم تسجيل التعليق الصوتي جاهز للإرسال 🎙️</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setRecordedFeedbackUrl(null);
-                                    setRecordedFeedbackBlob(null);
-                                  }}
-                                  className="p-1.5 bg-rose-50 text-rose-500 rounded-lg hover:bg-rose-100 transition-colors"
-                                  title="إعادة التسجيل"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
+                            )}
+
+                            {/* Review form */}
+                            {isReviewing && (
+                              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.2 }}
+                                className="mt-4 pt-4" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
+                                <div className="flex gap-2 mb-3" role="group" aria-label="قرار المراجعة">
+                                  <button type="button" onClick={() => setReviewForm({ ...reviewForm, status: 'approved' })}
+                                    aria-pressed={reviewForm.status === 'approved'}
+                                    className="text-xs font-bold px-3 flex items-center gap-1"
+                                    style={{
+                                      minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                                      border: `2px solid ${reviewForm.status === 'approved' ? HQ.MENTOR : HQ.LINE}`,
+                                      background: reviewForm.status === 'approved' ? HQ.MENTOR : HQ.SURFACE,
+                                      color: reviewForm.status === 'approved' ? '#fff' : HQ.MUTED,
+                                    }}>
+                                    <Check size={14} aria-hidden /> موافقة
+                                  </button>
+                                  <button type="button" onClick={() => setReviewForm({ ...reviewForm, status: 'needs_review' })}
+                                    aria-pressed={reviewForm.status === 'needs_review'}
+                                    className="text-xs font-bold px-3 flex items-center gap-1"
+                                    style={{
+                                      minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                                      border: `2px solid ${reviewForm.status === 'needs_review' ? '#C2410C' : HQ.LINE}`,
+                                      background: reviewForm.status === 'needs_review' ? '#C2410C' : HQ.SURFACE,
+                                      color: reviewForm.status === 'needs_review' ? '#fff' : HQ.MUTED,
+                                    }}>
+                                    <AlertCircle size={14} aria-hidden /> يحتاج مراجعة
+                                  </button>
+                                </div>
+
+                                <div className="flex items-center gap-2 mb-3">
+                                  <span className="text-xs font-bold" style={{ color: HQ.MUTED }}>التقييم:</span>
+                                  {renderStars(reviewForm.rating, (s) => setReviewForm({ ...reviewForm, rating: s }))}
+                                </div>
+
+                                <textarea value={reviewForm.teacherNotes}
+                                  onChange={(e) => setReviewForm({ ...reviewForm, teacherNotes: e.target.value })}
+                                  aria-label="ملاحظات للطالب"
+                                  className="text-sm mb-3 focus:border-[#177B58] focus:outline-none" rows={2} maxLength={500}
+                                  style={field}
+                                  placeholder="ملاحظات للطالب (اختياري)..." />
+
+                                <div className="flex gap-2">
+                                  <button type="button" onClick={() => handleReview(record._id)} style={{ ...primaryBtn, flex: 1 }}>
+                                    <Check size={15} aria-hidden /> تأكيد المراجعة
+                                  </button>
+                                  <button type="button" onClick={() => setReviewingId(null)} style={ghostBtn}>
+                                    <X size={15} aria-hidden /> إلغاء
+                                  </button>
+                                </div>
+                              </motion.div>
                             )}
                           </div>
 
-                          {/* Rating selector */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-gray-600">تقييم الأداء:</span>
-                            <div className="flex gap-0.5">
-                              {[1,2,3,4,5].map(s => (
-                                <button key={s} type="button" onClick={() => setRecitationForm({ ...recitationForm, rating: s })}>
-                                  <Star className={`w-5 h-5 transition-colors ${s <= recitationForm.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200 hover:text-amber-200'}`} />
-                                </button>
-                              ))}
+                          {record.status === 'pending' && !isReviewing && (
+                            <button type="button" onClick={() => { setReviewingId(record._id); setReviewForm({ status: 'approved', teacherNotes: '', rating: 5 }); }}
+                              style={{ ...outlineBtn, minHeight: 44, fontSize: '0.8125rem', flex: 'none' }}>
+                              <MessageSquare size={14} aria-hidden /> مراجعة
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <Pagination
+                  currentPage={recordsPagination.currentPage}
+                  totalPages={recordsPagination.totalPages}
+                  totalItems={recordsPagination.totalItems}
+                  pageSize={recordsPagination.pageSize}
+                  onPageChange={recordsPagination.setCurrentPage}
+                  onPageSizeChange={recordsPagination.setPageSize}
+                  showPageSize={true}
+                  pageSizeOptions={[5, 10, 20, 50]}
+                  itemName="سجل"
+                  className="mt-6"
+                />
+              </div>
+            )
+          ) : (
+            /* Recitations Review */
+            loadingRecitations ? (
+              <div style={emptyBox} aria-label="جارٍ تحميل التسجيلات">
+                <RefreshCw size={30} color={HQ.MENTOR} className="animate-spin" style={{ margin: '0 auto' }} aria-hidden />
+              </div>
+            ) : recitations.length === 0 ? (
+              <div style={emptyBox}>
+                <Mic size={52} color={HQ.LINE} style={{ margin: '0 auto 12px' }} aria-hidden />
+                <p className="font-bold" style={{ color: HQ.MUTED, margin: 0 }}>لا توجد تسجيلات تلاوة {recitationStatusFilter !== 'all' ? RECITATION_TONE[recitationStatusFilter]?.label || '' : ''}</p>
+              </div>
+            ) : (
+              <div>
+                <div className="space-y-3">
+                  {recitationsPagination.paginatedItems.map((rec) => {
+                    const tone = RECITATION_TONE[rec.status] || RECITATION_TONE.pending;
+                    const isReviewing = reviewingRecitationId === rec._id;
+
+                    return (
+                      <div key={rec._id} style={panel}>
+                        <div className="flex flex-col md:flex-row md:items-start gap-4">
+                          <span aria-hidden className="avatar-circle"
+                            style={{
+                              width: 40, height: 40, fontSize: 14, flex: 'none', margin: '0 auto',
+                              backgroundColor: getAvatarColor(`${rec.student?.firstName}${rec.student?.lastName}`),
+                            }}>
+                            {getInitials(rec.student?.firstName, rec.student?.lastName)}
+                          </span>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1 justify-center md:justify-start">
+                              <span className="font-bold" style={{ color: HQ.INK }}>{rec.student?.firstName} {rec.student?.lastName}</span>
+                              <span style={{ color: HQ.LINE }} aria-hidden>—</span>
+                              <span className="font-bold" style={{ color: HQ.INK }}>سورة {rec.surahName}</span>
+                              <span className="text-xs px-2 py-0.5" style={{ background: HQ.PAPER, color: HQ.MUTED, borderRadius: 8, fontVariantNumeric: 'tabular-nums' }}>
+                                آية {rec.fromVerse}-{rec.toVerse} ({rec.toVerse - rec.fromVerse + 1} آية)
+                              </span>
                             </div>
+
+                            <div className="flex items-center gap-2 flex-wrap justify-center md:justify-start mb-3">
+                              <span style={statusChip(tone)}>
+                                <span aria-hidden style={{ width: 7, height: 7, borderRadius: 9999, background: tone.dot }} />
+                                {tone.label}
+                              </span>
+                              <span className="text-xs" style={{ color: HQ.MUTED }}>{timeAgoAr(rec.createdAt)}</span>
+                            </div>
+
+                            <div className="flex items-center gap-3 rounded-2xl p-3 mb-3" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
+                              <Volume2 size={15} color={HQ.MENTOR} aria-hidden className="flex-none" />
+                              <audio src={rec.audioUrl} controls className="flex-1" style={{ height: 28 }} />
+                            </div>
+
+                            {rec.status === 'reviewed' && (
+                              <div className="rounded-2xl p-3 space-y-1.5" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
+                                {rec.rating && (
+                                  <div className="flex items-center gap-0.5" role="img" aria-label={`تقييم الطالب ${rec.rating} من 5`}>
+                                    <span className="text-xs ml-1" style={{ color: HQ.MUTED }}>التقييم:</span>
+                                    {[1, 2, 3, 4, 5].map(s => (
+                                      <Star key={s} size={14} aria-hidden color={s <= rec.rating ? '#D9A441' : HQ.LINE}
+                                        fill={s <= rec.rating ? '#D9A441' : 'none'} />
+                                    ))}
+                                  </div>
+                                )}
+                                {rec.teacherNotes && (
+                                  <p className="text-xs" style={{ color: HQ.INK, margin: 0 }}>
+                                    <strong>ملاحظات المقيم:</strong> {rec.teacherNotes}
+                                  </p>
+                                )}
+                                {rec.teacherAudioUrl && (
+                                  <div className="flex items-center gap-2 pt-1" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
+                                    <span style={{ fontSize: '0.8125rem', color: HQ.MUTED, flex: 'none' }}>الرد الصوتي:</span>
+                                    <audio src={rec.teacherAudioUrl} controls className="flex-1" style={{ height: 24 }} />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {isReviewing && (
+                              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} transition={{ duration: 0.2 }}
+                                className="mt-4 rounded-2xl p-4 space-y-4" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
+
+                                <div className="p-3 rounded-xl flex items-center justify-between flex-wrap gap-2"
+                                  style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+                                  <div>
+                                    <span className="text-xs font-bold block" style={{ color: HQ.INK }}>المقارنة بالتلاوة المرجعية</span>
+                                    <span className="block mt-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>استمع لتلاوة الشيخ العفاسي للآيات المحددة</span>
+                                  </div>
+                                  <button type="button"
+                                    onClick={() => playReferenceRecitation(rec)}
+                                    className="px-3 text-xs font-bold flex items-center gap-1.5"
+                                    style={{
+                                      minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                                      border: `1px solid ${playingRefId === rec._id ? HQ.MENTOR : HQ.LINE}`,
+                                      background: playingRefId === rec._id ? HQ.MENTOR : HQ.SURFACE,
+                                      color: playingRefId === rec._id ? '#fff' : HQ.MENTOR,
+                                    }}>
+                                    {refLoadingId === rec._id ? <RefreshCw size={14} className="animate-spin" aria-hidden />
+                                      : playingRefId === rec._id
+                                      ? <><Pause size={14} aria-hidden /><span>إيقاف (آية {rec.fromVerse + refCurrentIdx})</span></>
+                                      : <><Play size={14} aria-hidden /><span>تشغيل المرجع</span></>}
+                                  </button>
+                                </div>
+
+                                <div className="p-3 rounded-xl" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+                                  <span className="text-xs font-bold block mb-2" style={{ color: HQ.INK }}>تسجيل رد صوتي أو توجيه</span>
+                                  {!recordedFeedbackUrl && !isRecordingFeedback ? (
+                                    <button type="button" onClick={startFeedbackRecording}
+                                      className="px-4 text-xs font-bold flex items-center gap-1.5"
+                                      style={{
+                                        minHeight: 44, borderRadius: 12, cursor: 'pointer',
+                                        background: HQ.SURFACE, color: '#C2410C', border: '1px solid #C2410C',
+                                      }}>
+                                      <Mic size={14} aria-hidden /> تسجيل ملاحظة شفهية
+                                    </button>
+                                  ) : isRecordingFeedback ? (
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-bold animate-pulse" style={{ color: '#C2410C', fontVariantNumeric: 'tabular-nums' }}>
+                                        جاري التسجيل... ({feedbackDuration} ث)
+                                      </span>
+                                      <button type="button" onClick={stopFeedbackRecording}
+                                        className="px-3 text-xs font-bold flex items-center gap-1"
+                                        style={{ minHeight: 44, borderRadius: 12, cursor: 'pointer', background: HQ.INK, color: '#fff', border: 'none' }}>
+                                        <Square size={13} aria-hidden /> إيقاف
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center justify-between gap-3 p-2 rounded-lg" style={{ background: HQ.PAPER }}>
+                                      <button type="button" onClick={togglePlayFeedback}
+                                        aria-label={isPlayingFeedback ? 'إيقاف الاستماع' : 'استماع للتعليق'}
+                                        style={{ ...iconBtn, background: '#E2EFE7', color: HQ.MENTOR }}>
+                                        {isPlayingFeedback ? <Pause size={15} aria-hidden /> : <Play size={15} aria-hidden />}
+                                      </button>
+                                      <span style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>تم تسجيل التعليق الصوتي — جاهز للإرسال</span>
+                                      <button type="button" onClick={() => { setRecordedFeedbackUrl(null); setRecordedFeedbackBlob(null); }}
+                                        aria-label="إعادة التسجيل"
+                                        style={{ ...iconBtn, background: HQ.SURFACE, color: '#C2410C', border: '1px solid #C2410C' }}>
+                                        <Trash2 size={15} aria-hidden />
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold" style={{ color: HQ.MUTED }}>تقييم الأداء:</span>
+                                  {renderStars(recitationForm.rating, (s) => setRecitationForm({ ...recitationForm, rating: s }))}
+                                </div>
+
+                                <textarea value={recitationForm.teacherNotes}
+                                  onChange={(e) => setRecitationForm({ ...recitationForm, teacherNotes: e.target.value })}
+                                  aria-label="ملاحظات التجويد أو التوجيهات"
+                                  className="text-sm focus:border-[#177B58] focus:outline-none" rows={2} maxLength={1000}
+                                  style={field}
+                                  placeholder="اكتب ملاحظات التجويد أو التوجيهات هنا..." />
+
+                                <div className="flex gap-2">
+                                  <button type="button" onClick={() => handleReviewRecitation(rec._id)} style={{ ...primaryBtn, flex: 1 }}>
+                                    <Check size={15} aria-hidden /> حفظ وإرسال التقييم
+                                  </button>
+                                  <button type="button" onClick={() => {
+                                    setReviewingRecitationId(null);
+                                    setRecordedFeedbackUrl(null);
+                                    setRecordedFeedbackBlob(null);
+                                  }} style={ghostBtn}>
+                                    <X size={15} aria-hidden /> إلغاء
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )}
                           </div>
 
-                          {/* Text Notes */}
-                          <textarea value={recitationForm.teacherNotes}
-                            onChange={(e) => setRecitationForm({ ...recitationForm, teacherNotes: e.target.value })}
-                            className="input-base text-sm" rows={2} maxLength={1000}
-                            placeholder="اكتب ملاحظات التجويد أو التوجيهات هنا..." />
-
-                          <div className="flex gap-2">
-                            <button onClick={() => handleReviewRecitation(rec._id)} className="btn-primary text-sm py-2 flex-1 shadow-sm"
-                              style={{ backgroundColor: '#D97706' }}>
-                              <Check className="w-4 h-4" /> حفظ وإرسال التقييم
-                            </button>
-                            <button onClick={() => {
-                              setReviewingRecitationId(null);
+                          {rec.status === 'pending' && !isReviewing && (
+                            <button type="button" onClick={() => {
+                              setReviewingRecitationId(rec._id);
+                              setRecitationForm({ rating: 5, teacherNotes: '' });
                               setRecordedFeedbackUrl(null);
                               setRecordedFeedbackBlob(null);
-                            }} className="btn-ghost text-sm py-2">
-                              <X className="w-4 h-4" /> إلغاء
+                            }}
+                              style={{ ...outlineBtn, minHeight: 44, fontSize: '0.8125rem', flex: 'none', alignSelf: 'center' }}>
+                              <MessageSquare size={14} aria-hidden /> تقييم
                             </button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-                    {/* Review button trigger */}
-                    {rec.status === 'pending' && !isReviewing && (
-                      <button onClick={() => {
-                        setReviewingRecitationId(rec._id);
-                        setRecitationForm({ rating: 5, teacherNotes: '' });
-                        setRecordedFeedbackUrl(null);
-                        setRecordedFeedbackBlob(null);
-                      }}
-                        className="btn-outline text-xs py-2 px-3 flex-shrink-0 self-center md:self-start"
-                        style={{ borderColor: '#D97706', color: '#D97706' }}>
-                        <MessageSquare className="w-3.5 h-3.5" /> تقييم
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          <Pagination
-            currentPage={recitationsPagination.currentPage}
-            totalPages={recitationsPagination.totalPages}
-            totalItems={recitationsPagination.totalItems}
-            pageSize={recitationsPagination.pageSize}
-            onPageChange={recitationsPagination.setCurrentPage}
-            onPageSizeChange={recitationsPagination.setPageSize}
-            showPageSize={true}
-            pageSizeOptions={[5, 10, 20, 50]}
-            itemName="تلاوة"
-            className="mt-6"
-          />
+                <Pagination
+                  currentPage={recitationsPagination.currentPage}
+                  totalPages={recitationsPagination.totalPages}
+                  totalItems={recitationsPagination.totalItems}
+                  pageSize={recitationsPagination.pageSize}
+                  onPageChange={recitationsPagination.setCurrentPage}
+                  onPageSizeChange={recitationsPagination.setPageSize}
+                  showPageSize={true}
+                  pageSizeOptions={[5, 10, 20, 50]}
+                  itemName="تلاوة"
+                  className="mt-6"
+                />
+              </div>
+            )
+          )}
         </div>
-      )
-      )}
-    </PageLayout>
+      </PageLayout>
+    </MotionConfig>
   );
 }

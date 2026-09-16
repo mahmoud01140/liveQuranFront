@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
 import useExamStore from '../../store/examStore';
@@ -8,6 +8,7 @@ import { SURVEY_QUESTIONS } from '../../utils/constants';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import './Onboarding.css';
 
 export default function SurveyPage() {
   const { user } = useAuthStore();
@@ -64,82 +65,78 @@ export default function SurveyPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-white">
-        <LoadingSpinner size="lg" text="جارٍ تجهيز الاستبيان..." />
+      <div className="onb" dir="rtl">
+        <div className="onb-center">
+          <LoadingSpinner size="lg" text="جارٍ تجهيز الاستبيان..." />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-white p-4 py-12">
-      {/* Progress */}
-      <div className="max-w-2xl mx-auto mb-8">
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
-          <span className="badge-green">الخطوة 3 من 6 — الاستبيان</span>
-          <span>السؤال {currentQ + 1} من {questions.length}</span>
-        </div>
-        <div className="progress-bar">
-          <div className="progress-fill transition-all duration-500" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
-
-      <div className="max-w-2xl mx-auto">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentQ}
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -30 }}
-            transition={{ duration: 0.25 }}
-          >
-            <div className="card-base p-8">
-              {/* Question number */}
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-quran text-white rounded-xl flex items-center justify-center font-black text-lg">
-                  {currentQ + 1}
-                </div>
-                <h2 className="text-xl font-black text-gray-900">{question.text}</h2>
-              </div>
-
-              {/* Options */}
-              <div className="space-y-3">
-                {question.options.map((opt, i) => (
-                  <motion.button
-                    key={i}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    onClick={() => handleSelect(i)}
-                    className={`w-full text-right px-5 py-4 rounded-2xl border-2 transition-all duration-200 font-medium ${
-                      selectedOption === i
-                        ? 'border-primary-400 bg-primary-50 text-primary-700 shadow-sm'
-                        : 'border-gray-200 text-gray-700 hover:border-primary-200 hover:bg-primary-50/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 transition-all ${
-                        selectedOption === i ? 'border-primary-400 bg-primary-400' : 'border-gray-300'
-                      }`} />
-                      {opt}
-                    </div>
-                  </motion.button>
-                ))}
-              </div>
+    <MotionConfig reducedMotion="user">
+      <div className="onb" dir="rtl">
+        <div className="max-w-2xl mx-auto px-4 py-12">
+          {/* Progress */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between text-sm mb-2">
+              <span className="onb-badge">الخطوة 3 من 6 — الاستبيان</span>
+              <span style={{ color: '#756E85' }}>السؤال {currentQ + 1} من {questions.length}</span>
             </div>
-          </motion.div>
-        </AnimatePresence>
+            <div className="onb-progress" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="تقدم الاستبيان">
+              <span style={{ width: `${progress}%` }} />
+            </div>
+          </div>
 
-        <div className="flex items-center justify-between mt-6">
-          <button onClick={handlePrev} disabled={currentQ === 0}
-            className="btn-ghost disabled:opacity-30">
-            <ChevronRight className="w-4 h-4" />
-            السابق
-          </button>
-          <button onClick={handleNext} className="btn-primary px-8">
-            {isLast ? 'انتقل للامتحان التحريري' : 'التالي'}
-            <ChevronLeft className="w-4 h-4" />
-          </button>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentQ}
+              initial={{ opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -24 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="onb-card">
+                {/* Question number */}
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="onb-num" aria-hidden>{currentQ + 1}</span>
+                  <h2 className="font-extrabold" style={{ fontSize: '1.25rem', color: '#2A2438' }}>{question.text}</h2>
+                </div>
+
+                {/* Options */}
+                <div className="space-y-3" role="group" aria-label={question.text}>
+                  {question.options.map((opt, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleSelect(i)}
+                      aria-pressed={selectedOption === i}
+                      className="onb-opt"
+                    >
+                      <span className="flex items-center gap-3">
+                        <span aria-hidden className={`onb-radio${selectedOption === i ? ' on' : ''}`} />
+                        {opt}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="flex items-center justify-between mt-6">
+            <button onClick={handlePrev} disabled={currentQ === 0}
+              className="onb-ghost">
+              <ChevronRight className="w-4 h-4" aria-hidden />
+              السابق
+            </button>
+            <button onClick={handleNext} className="onb-btn">
+              {isLast ? 'انتقل للامتحان التحريري' : 'التالي'}
+              <ChevronLeft className="w-4 h-4" aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </MotionConfig>
   );
 }

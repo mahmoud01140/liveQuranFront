@@ -2,9 +2,11 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard, BookOpen, Video, FileText, TrendingUp,
-  Users, ClipboardList, MessageCircle, BarChart2, BookMarked
+  Users, ClipboardList, MessageCircle, BarChart2, BookMarked,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
 
 const studentNavItems = [
   { to: '/student', icon: LayoutDashboard, label: 'المطلوب اليوم', end: true },
@@ -50,7 +52,11 @@ export default function MobileBottomNav() {
   return (
     <nav
       aria-label="شريط التنقل السفلي للهاتف"
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-gray-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 px-2"
+      className="halaqa lg:hidden fixed bottom-0 left-0 right-0 z-40"
+      style={{
+        background: HQ.SURFACE, borderTop: `1px solid ${HQ.LINE}`,
+        paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom))', paddingTop: 6, paddingLeft: 8, paddingRight: 8,
+      }}
     >
       <div className="flex items-center justify-around max-w-lg mx-auto">
         {items.map((item) => {
@@ -66,32 +72,23 @@ export default function MobileBottomNav() {
               key={item.to}
               to={item.to}
               className="relative flex-1 flex flex-col items-center justify-center py-1 px-1 group select-none"
+              style={{ minHeight: 56 }}
             >
               <motion.div
-                whileTap={{ scale: 0.88 }}
-                className={`relative flex flex-col items-center justify-center w-full py-1 rounded-2xl transition-colors duration-200 ${
-                  isItemActive ? 'text-primary-600 font-bold' : 'text-gray-500 hover:text-gray-800'
-                }`}
+                whileTap={{ scale: 0.94 }}
+                className="relative flex flex-col items-center justify-center w-full py-1 rounded-2xl"
+                style={{
+                  color: isItemActive ? HQ.MENTOR : HQ.MUTED,
+                  fontWeight: isItemActive ? 800 : 500,
+                  background: isItemActive ? '#E2EFE7' : 'transparent',
+                }}
               >
-                {/* Active Indicator Background Glow/Pill */}
-                {isItemActive && (
-                  <motion.div
-                    layoutId="mobileNavActivePill"
-                    className="absolute inset-0 bg-primary-50 rounded-2xl -z-10"
-                    transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-                  />
-                )}
-
                 <div className="relative">
-                  <Icon className={`w-5 h-5 transition-transform duration-200 ${isItemActive ? 'scale-110 text-primary-500' : ''}`} />
-                  
-                  {/* Live dot for live session */}
-                  {item.isLiveBadge && (
-                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white animate-pulse" />
-                  )}
+                  <Icon size={20} aria-hidden />
                 </div>
 
-                <span className={`text-[10px] tracking-tight mt-0.5 leading-tight ${isItemActive ? 'font-black text-primary-600' : 'font-medium'}`}>
+                <span className="tracking-tight mt-0.5 leading-tight"
+                  style={{ fontSize: '0.8125rem', fontWeight: isItemActive ? 800 : 500 }}>
                   {item.label}
                 </span>
               </motion.div>

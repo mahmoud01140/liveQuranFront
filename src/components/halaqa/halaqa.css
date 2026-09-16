@@ -24,7 +24,7 @@
   --hq-warning: #B45309;
   --hq-error: #C2410C;
   --hq-info: #3B5BFD;
-  font-family: 'Tajawal', 'Cairo', 'Noto Sans Arabic', sans-serif;
+  font-family: 'Tajawal', 'Noto Sans Arabic', sans-serif;
   color: var(--hq-ink);
   direction: rtl;
 }

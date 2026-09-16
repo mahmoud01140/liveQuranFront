@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Lock, Eye, EyeOff, BookOpen, ArrowLeft, CheckCircle } from 'lucide-react';
+import { motion, MotionConfig } from 'framer-motion';
+import { Lock, Eye, EyeOff, BookOpen, ArrowRight, CircleCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import './Auth.css';
 
 export default function ResetPasswordPage() {
   const { token } = useParams();
@@ -40,104 +41,104 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50 flex items-center justify-center p-4">
-      <div className="absolute top-20 right-10 w-72 h-72 bg-primary-100 rounded-full blur-3xl opacity-40 pointer-events-none" />
+    <MotionConfig reducedMotion="user">
+      <div className="auth" dir="rtl">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          className="w-full max-w-md"
+        >
+          <div className="text-center mb-8">
+            <Link to="/" className="inline-flex items-center gap-2 mb-6 min-h-[44px]">
+              <span
+                aria-hidden
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: '#177B58' }}
+              >
+                <BookOpen className="w-5 h-5 text-white" />
+              </span>
+              <span className="font-bold text-lg" style={{ color: '#2A2438' }}>الحلقة</span>
+            </Link>
+            <h1 className="text-2xl font-extrabold" style={{ color: '#2A2438' }}>إعادة تعيين كلمة المرور</h1>
+            <p className="mt-1" style={{ color: '#756E85' }}>أدخل كلمة المرور الجديدة</p>
+          </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="w-full max-w-md relative z-10"
-      >
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6 group">
-            <div className="w-10 h-10 bg-gradient-quran rounded-xl flex items-center justify-center shadow-md group-hover:shadow-green transition-shadow duration-300">
-              <BookOpen className="w-5 h-5 text-white" />
+          {isSuccess ? (
+            <div className="auth-card text-center">
+              <span
+                aria-hidden
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                style={{ background: '#E2EFE7' }}
+              >
+                <CircleCheck className="w-8 h-8" style={{ color: '#177B58' }} />
+              </span>
+              <h2 className="text-lg font-extrabold mb-2" style={{ color: '#2A2438' }}>تم التغيير بنجاح!</h2>
+              <p className="text-sm mb-6" style={{ color: '#756E85' }}>يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.</p>
+              <button
+                onClick={() => navigate('/login')}
+                className="auth-btn auth-btn-auto px-6"
+              >
+                تسجيل الدخول
+              </button>
             </div>
-            <span className="font-bold text-gray-900 group-hover:text-primary-500 transition-colors">منصة تحفيظ القرآن</span>
-          </Link>
-          <h1 className="text-2xl font-black text-gray-900">إعادة تعيين كلمة المرور</h1>
-          <p className="text-gray-500 mt-1">أدخل كلمة المرور الجديدة</p>
-        </div>
-
-        {isSuccess ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="card-base p-8 text-center"
-          >
-            <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-500" />
-            </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">تم التغيير بنجاح!</h2>
-            <p className="text-gray-500 text-sm mb-6">يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.</p>
-            <button
-              onClick={() => navigate('/login')}
-              className="btn-primary inline-flex items-center gap-2 px-6 py-2.5"
-            >
-              تسجيل الدخول
-            </button>
-          </motion.div>
-        ) : (
-          <form onSubmit={handleSubmit} className="card-base p-8 space-y-5">
-            <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1.5 block">كلمة المرور الجديدة</label>
-              <div className="relative rounded-xl">
-                <Lock className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
-                <input
-                  type={showPass ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="input-base pr-10 pl-10"
-                  placeholder="••••••••"
-                  dir="ltr"
-                  id="reset-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  className="absolute left-3 top-3.5 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+          ) : (
+            <form onSubmit={handleSubmit} className="auth-card space-y-5">
+              <div>
+                <label htmlFor="reset-password" className="auth-label">كلمة المرور الجديدة</label>
+                <div className="relative">
+                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#756E85]" aria-hidden />
+                  <input
+                    type={showPass ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="auth-input pr-10 pl-12"
+                    style={{ direction: 'ltr', textAlign: 'left' }}
+                    placeholder="••••••••"
+                    id="reset-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(!showPass)}
+                    className="auth-iconbtn"
+                    aria-label={showPass ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                    aria-pressed={showPass}
+                  >
+                    {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="text-sm font-semibold text-gray-700 mb-1.5 block">تأكيد كلمة المرور</label>
-              <div className="relative rounded-xl">
-                <Lock className="absolute right-3 top-3.5 w-4 h-4 text-gray-400" />
-                <input
-                  type={showPass ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="input-base pr-10"
-                  placeholder="••••••••"
-                  dir="ltr"
-                  id="reset-confirm-password"
-                />
+              <div>
+                <label htmlFor="reset-confirm-password" className="auth-label">تأكيد كلمة المرور</label>
+                <div className="relative">
+                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#756E85]" aria-hidden />
+                  <input
+                    type={showPass ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="auth-input pr-10"
+                    style={{ direction: 'ltr', textAlign: 'left' }}
+                    placeholder="••••••••"
+                    id="reset-confirm-password"
+                  />
+                </div>
               </div>
-            </div>
 
-            <motion.button
-              type="submit"
-              disabled={isLoading}
-              whileHover={{ scale: isLoading ? 1 : 1.01 }}
-              whileTap={{ scale: isLoading ? 1 : 0.99 }}
-              className="btn-primary w-full py-3.5 text-base"
-            >
-              {isLoading ? <LoadingSpinner size="sm" color="white" /> : 'تغيير كلمة المرور'}
-            </motion.button>
-          </form>
-        )}
+              <button type="submit" disabled={isLoading} className="auth-btn">
+                {isLoading ? <LoadingSpinner size="sm" color="white" /> : 'تغيير كلمة المرور'}
+              </button>
+            </form>
+          )}
 
-        <div className="text-center mt-5">
-          <Link to="/login" className="text-xs text-gray-400 hover:text-primary-400 transition-colors inline-flex items-center gap-1">
-            <ArrowLeft className="w-3 h-3" />
-            العودة لتسجيل الدخول
-          </Link>
-        </div>
-      </motion.div>
-    </div>
+          <div className="text-center mt-5">
+            <Link to="/login" className="auth-link-quiet">
+              <ArrowRight className="w-3 h-3" aria-hidden />
+              العودة لتسجيل الدخول
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    </MotionConfig>
   );
 }

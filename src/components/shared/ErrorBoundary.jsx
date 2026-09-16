@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { BookOpen, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -26,26 +26,41 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50 flex items-center justify-center p-4" dir="rtl">
-          <div className="card-base p-8 max-w-md w-full text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="w-8 h-8 text-red-500" />
-            </div>
-            <h1 className="text-xl font-bold text-gray-900 mb-2">حدث خطأ غير متوقع</h1>
-            <p className="text-gray-500 text-sm mb-6">
+        <div className="min-h-screen flex items-center justify-center p-4" dir="rtl"
+          style={{ background: '#FBF7EE', fontFamily: "'Tajawal', sans-serif" }}>
+          <div className="p-8 max-w-md w-full text-center"
+            style={{ background: '#FFFFFF', border: '1px solid #E8E2D4', borderRadius: 18 }}>
+            <span aria-hidden style={{
+              width: 64, height: 64, borderRadius: 18, background: '#FBF7EE', color: '#C2410C',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+            }}>
+              <AlertCircle size={30} />
+            </span>
+            <h1 className="font-extrabold mb-2" style={{ fontSize: '1.5rem', color: '#2A2438', marginTop: 0 }}>حدث خطأ غير متوقع</h1>
+            <p className="text-sm mb-6" style={{ color: '#756E85' }}>
               نعتذر عن هذا الخطأ. يرجى إعادة تحميل الصفحة أو العودة للرئيسية.
             </p>
             <div className="flex gap-3 justify-center">
               <button
+                type="button"
                 onClick={this.handleReload}
-                className="btn-primary px-5 py-2.5 text-sm inline-flex items-center gap-2"
+                className="px-5 text-sm inline-flex items-center gap-2"
+                style={{
+                  minHeight: 48, borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: '#177B58', color: '#fff', fontWeight: 800,
+                }}
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw size={15} aria-hidden />
                 إعادة التحميل
               </button>
               <button
+                type="button"
                 onClick={this.handleGoHome}
-                className="px-5 py-2.5 text-sm rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                className="px-5 text-sm"
+                style={{
+                  minHeight: 48, borderRadius: 12, cursor: 'pointer',
+                  border: '1px solid #E8E2D4', background: '#FFFFFF', color: '#2A2438', fontWeight: 800,
+                }}
               >
                 الرئيسية
               </button>

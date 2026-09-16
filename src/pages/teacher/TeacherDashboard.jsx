@@ -18,7 +18,7 @@ import { HQ, HqBadge } from '../../components/halaqa/primitives';
 const LEVEL_TONE = {
   foundation: 'mentor',
   memorization: 'guide',
-  teacher_prep: 'gold',
+  teacher_prep: 'guide',
   senior: 'neutral',
 };
 
@@ -70,7 +70,7 @@ export default function TeacherDashboard() {
     <PageLayout>
       <div className="halaqa" style={{ maxWidth: 860, margin: '0 auto' }}>
         <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>يومك التعليمي</p>
-        <h1 style={{ margin: '2px 0 16px', fontSize: 26, fontWeight: 900, color: HQ.INK }}>
+        <h1 style={{ margin: '2px 0 16px', fontSize: 32, fontWeight: 800, color: HQ.INK }}>
           أهلًا {user?.firstName || 'أستاذنا'}
         </h1>
 

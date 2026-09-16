@@ -48,36 +48,36 @@ export default function Navbar({ onMenuClick }) {
     : user?.role === 'parent' ? 'ولي أمر' : 'طالب';
 
   return (
-    <nav className={`fixed top-0 right-0 left-0 z-40 h-16 transition-all duration-300 ${
-      scrolled 
-        ? 'glass-nav shadow-md' 
-        : 'glass-nav'
+    <nav className={`fixed top-0 right-0 left-0 z-40 h-16 bg-white border-b border-[#E8E2D4] transition-shadow duration-200 ${
+      scrolled
+        ? 'shadow-md'
+        : ''
     }`}>
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between relative">
         {/* Logo and Sidebar Toggle */}
         <div className="flex items-center gap-2 sm:gap-3">
           {onMenuClick && (
-            <button onClick={onMenuClick} className="lg:hidden p-2 -mr-2 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors" title="فتح القائمة">
+            <button onClick={onMenuClick} className="lg:hidden p-2 -mr-2 text-[#756E85] hover:bg-[#FBF7EE] rounded-xl transition-colors" title="فتح القائمة">
               <Menu className="w-5 h-5" />
             </button>
           )}
           <Link to={user ? dashboardPath : '/'} className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 bg-gradient-quran rounded-xl flex items-center justify-center shadow-md group-hover:shadow-green transition-shadow duration-300">
+            <div className="w-9 h-9 bg-[#177B58] rounded-xl flex items-center justify-center group-hover:bg-[#0F5940] transition-colors duration-200">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <div className="hidden sm:block">
-              <div className="text-base font-bold text-gray-900 leading-tight group-hover:text-primary-500 transition-colors">منصة تحفيظ القرآن</div>
-              <div className="text-xs text-primary-400 font-medium">الكريم</div>
+              <div className="text-base font-bold text-[#2A2438] leading-tight group-hover:text-[#177B58] transition-colors">منصة الحلقة</div>
+              <div className="text-xs text-[#177B58] font-medium">لتحفيظ القرآن الكريم</div>
             </div>
           </Link>
         </div>
 
         {/* Landing nav links (Desktop) */}
         {isLanding && !user && (
-          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
-            <a href="#how-it-works" className="hover:text-primary-400 transition-colors relative nav-link-hover">كيف يعمل</a>
-            <a href="#pricing" className="hover:text-primary-400 transition-colors relative nav-link-hover">الأسعار</a>
-            <a href="#testimonials" className="hover:text-primary-400 transition-colors relative nav-link-hover">آراء الطلاب</a>
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-[#756E85]">
+            <a href="#journey" className="hover:text-[#177B58] transition-colors relative nav-link-hover">كيف تسير الرحلة</a>
+            <a href="#benefits" className="hover:text-[#177B58] transition-colors relative nav-link-hover">ماذا يحصل عليه الطالب</a>
+            <a href="#live" className="hover:text-[#177B58] transition-colors relative nav-link-hover">المجلس الحي</a>
           </div>
         )}
 
@@ -91,10 +91,10 @@ export default function Navbar({ onMenuClick }) {
               <div className="relative profile-dropdown">
                 <button 
                   onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center gap-2 py-1.5 px-2 sm:px-3 rounded-xl hover:bg-gray-50 transition-all duration-200"
+                  className="flex items-center gap-2 py-1.5 px-2 sm:px-3 rounded-xl hover:bg-[#FBF7EE] transition-all duration-200"
                 >
                   {user.avatar ? (
-                    <img src={user.avatar} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-primary-200" />
+                    <img src={user.avatar} alt="" className="w-8 h-8 rounded-full object-cover border-2 border-[#E8E2D4]" />
                   ) : (
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm"
@@ -104,12 +104,12 @@ export default function Navbar({ onMenuClick }) {
                     </div>
                   )}
                   <div className="hidden md:block text-right">
-                    <span className="text-sm font-semibold text-gray-700 block leading-tight">
+                    <span className="text-sm font-semibold text-[#2A2438] block leading-tight">
                       {user.firstName}
                     </span>
-                    <span className="text-xs text-gray-400">{roleLabel}</span>
+                    <span className="text-xs text-[#756E85]">{roleLabel}</span>
                   </div>
-                  <ChevronDown className={`w-3.5 h-3.5 text-gray-400 hidden sm:block transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3.5 h-3.5 text-[#756E85] hidden sm:block transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 <AnimatePresence>
@@ -119,27 +119,27 @@ export default function Navbar({ onMenuClick }) {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -8, scale: 0.96 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute left-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden"
+                      className="absolute left-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#E8E2D4] z-50 overflow-hidden"
                     >
                       {/* Profile header */}
-                      <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-                        <p className="font-bold text-gray-900 text-sm">{user.firstName} {user.lastName}</p>
-                        <p className="text-xs text-gray-400 mt-0.5 truncate">{user.email}</p>
+                      <div className="p-4 border-b border-[#E8E2D4] bg-[#FBF7EE]">
+                        <p className="font-bold text-[#2A2438] text-sm">{user.firstName} {user.lastName}</p>
+                        <p className="text-xs text-[#756E85] mt-0.5 truncate">{user.email}</p>
                       </div>
 
                       {/* Menu items */}
                       <div className="p-2">
                         <button
                           onClick={() => { setProfileOpen(false); navigate(dashboardPath); }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-[#2A2438] hover:bg-[#FBF7EE] transition-colors"
                         >
-                          <User className="w-4 h-4 text-gray-400" />
+                          <User className="w-4 h-4 text-[#756E85]" />
                           لوحة التحكم
                         </button>
                       </div>
 
                       {/* Logout */}
-                      <div className="p-2 border-t border-gray-100">
+                      <div className="p-2 border-t border-[#E8E2D4]">
                         <button
                           onClick={() => { setProfileOpen(false); handleLogout(); }}
                           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-500 hover:bg-red-50 transition-colors"
@@ -162,7 +162,7 @@ export default function Navbar({ onMenuClick }) {
               {isLanding && (
                 <button 
                   onClick={() => setMenuOpen(!menuOpen)} 
-                  className="md:hidden p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-xl"
+                  className="md:hidden p-2 -ml-2 text-[#2A2438] hover:bg-[#FBF7EE] rounded-xl"
                 >
                   {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                 </button>
@@ -176,12 +176,12 @@ export default function Navbar({ onMenuClick }) {
       {isLanding && !user && menuOpen && (
         <motion.div 
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="md:hidden absolute top-16 left-0 right-0 bg-white/95 backdrop-blur-lg border-b border-gray-100 shadow-lg py-4 px-4 flex flex-col gap-4"
+          className="md:hidden absolute top-16 left-0 right-0 bg-white border-b border-[#E8E2D4] shadow-lg py-4 px-4 flex flex-col gap-4"
         >
-          <a href="#how-it-works" onClick={() => setMenuOpen(false)} className="text-gray-700 font-semibold hover:text-primary-500 transition-colors py-1">كيف يعمل</a>
-          <a href="#pricing" onClick={() => setMenuOpen(false)} className="text-gray-700 font-semibold hover:text-primary-500 transition-colors py-1">الأسعار</a>
-          <a href="#testimonials" onClick={() => setMenuOpen(false)} className="text-gray-700 font-semibold hover:text-primary-500 transition-colors py-1">آراء الطلاب</a>
-          <Link to="/login" onClick={() => setMenuOpen(false)} className="text-gray-700 font-semibold hover:text-primary-500 transition-colors py-1 sm:hidden">تسجيل الدخول</Link>
+          <a href="#journey" onClick={() => setMenuOpen(false)} className="text-[#2A2438] font-semibold hover:text-[#177B58] transition-colors py-1">كيف تسير الرحلة</a>
+          <a href="#benefits" onClick={() => setMenuOpen(false)} className="text-[#2A2438] font-semibold hover:text-[#177B58] transition-colors py-1">ماذا يحصل عليه الطالب</a>
+          <a href="#live" onClick={() => setMenuOpen(false)} className="text-[#2A2438] font-semibold hover:text-[#177B58] transition-colors py-1">المجلس الحي</a>
+          <Link to="/login" onClick={() => setMenuOpen(false)} className="text-[#2A2438] font-semibold hover:text-[#177B58] transition-colors py-1 sm:hidden">تسجيل الدخول</Link>
         </motion.div>
       )}
 

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Volume2, Star, Clock, CheckCircle, RefreshCw, MessageSquare, Award
+  X, Volume2, Star, Clock, CheckCircle, RefreshCw, MessageSquare, Award,
 } from 'lucide-react';
 import api from '../../services/api';
 import { timeAgoAr } from '../../utils/helpers';
 import LoadingSpinner from './LoadingSpinner';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
 
 export default function RecitationHistory({ onClose }) {
   const [recitations, setRecitations] = useState([]);
@@ -27,36 +29,54 @@ export default function RecitationHistory({ onClose }) {
     }
   };
 
+  const iconBtn = {
+    minWidth: 44, minHeight: 44, borderRadius: 12, border: 'none', background: 'transparent',
+    color: HQ.MUTED, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm text-right"
+      transition={{ duration: 0.2 }}
+      className="halaqa fixed inset-0 z-50 flex items-center justify-center p-4 text-right"
+      style={{ background: 'rgba(42,36,56,0.55)' }}
       dir="rtl"
     >
       <motion.div
-        initial={{ scale: 0.9, y: 15 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 15 }}
-        className="bg-white rounded-3xl p-6 w-full max-w-lg border border-gray-100 shadow-2xl relative flex flex-col max-h-[85vh]"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 12 }}
+        transition={{ duration: 0.2 }}
+        className="w-full max-w-lg relative flex flex-col"
+        style={{
+          background: HQ.SURFACE, borderRadius: 18, padding: 24,
+          border: `1px solid ${HQ.LINE}`, maxHeight: '85vh',
+        }}
       >
         {/* Close button */}
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-4 left-4 p-2 bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-700 rounded-full transition-colors"
+          aria-label="إغلاق سجل التلاوات"
+          className="absolute top-4 left-4"
+          style={iconBtn}
         >
-          <X className="w-5 h-5" />
+          <X size={19} aria-hidden />
         </button>
 
         {/* Header */}
-        <div className="flex items-center gap-2 mb-6 border-b border-gray-100 pb-3 flex-shrink-0">
-          <div className="w-10 h-10 bg-primary-50 rounded-2xl flex items-center justify-center text-primary-500 shadow-sm">
-            <Award className="w-5 h-5" />
-          </div>
+        <div className="flex items-center gap-2 mb-6 pb-3 flex-none" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
+          <span aria-hidden style={{
+            width: 40, height: 40, borderRadius: 14, background: '#E2EFE7', color: HQ.MENTOR,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+          }}>
+            <Award size={19} />
+          </span>
           <div>
-            <h2 className="font-black text-gray-900 text-lg">سجل تلاواتي 🎙️</h2>
-            <p className="text-xs text-gray-400 mt-0.5">شاهد تقييمات المعلم وملاحظاته على تلاواتك السابقة</p>
+            <h2 className="font-black" style={{ fontSize: '1.25rem', color: HQ.INK, margin: 0 }}>سجل تلاواتي</h2>
+            <p className="text-xs mt-0.5" style={{ color: HQ.MUTED, marginBottom: 0 }}>شاهد تقييمات المعلم وملاحظاته على تلاواتك السابقة</p>
           </div>
         </div>
 
@@ -67,39 +87,42 @@ export default function RecitationHistory({ onClose }) {
               <LoadingSpinner size="md" />
             </div>
           ) : recitations.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">
-              <Volume2 className="w-12 h-12 mx-auto mb-3 text-gray-200" />
-              <p className="font-bold text-sm">لم تقم بإرسال أي تلاوات بعد</p>
-              <p className="text-xs text-gray-400 mt-1">تصفح المصحف، اختر الآيات، وابدأ التسجيل الآن 🌟</p>
+            <div className="text-center py-12" style={{ color: HQ.MUTED }}>
+              <Volume2 size={46} color={HQ.LINE} style={{ margin: '0 auto 12px' }} aria-hidden />
+              <p className="font-bold text-sm" style={{ margin: '0 0 4px' }}>لم تقم بإرسال أي تلاوات بعد</p>
+              <p className="text-xs" style={{ margin: 0 }}>تصفح المصحف، اختر الآيات، وابدأ التسجيل الآن</p>
             </div>
           ) : (
             recitations.map((rec) => (
               <div
                 key={rec._id}
-                className="bg-gray-50 rounded-2xl p-4 border border-gray-100 shadow-sm hover:border-gray-200 transition-all space-y-3"
+                className="rounded-2xl p-4 space-y-3"
+                style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}
               >
                 {/* Header surah info */}
                 <div className="flex justify-between items-start flex-wrap gap-2">
                   <div>
-                    <h4 className="font-black text-gray-900 text-sm">سورة {rec.surahName}</h4>
-                    <span className="text-[10px] text-gray-400 block mt-0.5">
+                    <h4 className="font-black text-sm" style={{ color: HQ.INK, margin: 0 }}>سورة {rec.surahName}</h4>
+                    <span className="block mt-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED, fontVariantNumeric: 'tabular-nums' }}>
                       الآيات: {rec.fromVerse} - {rec.toVerse} ({rec.toVerse - rec.fromVerse + 1} آية) · {timeAgoAr(rec.createdAt)}
                     </span>
                   </div>
 
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                    rec.status === 'reviewed'
-                      ? 'bg-green-50 text-green-600 border border-green-100'
-                      : 'bg-amber-50 text-amber-600 border border-amber-100'
-                  }`}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    fontSize: '0.8125rem', fontWeight: 800, padding: '4px 12px', borderRadius: 9999,
+                    background: rec.status === 'reviewed' ? '#E2EFE7' : HQ.SURFACE,
+                    color: rec.status === 'reviewed' ? '#0F5940' : '#B45309',
+                    border: `1px solid ${rec.status === 'reviewed' ? '#E2EFE7' : '#B45309'}`,
+                  }}>
                     {rec.status === 'reviewed' ? (
                       <>
-                        <CheckCircle className="w-3 h-3" />
+                        <CheckCircle size={13} aria-hidden />
                         تم التقييم
                       </>
                     ) : (
                       <>
-                        <Clock className="w-3 h-3" />
+                        <Clock size={13} aria-hidden />
                         قيد المراجعة
                       </>
                     )}
@@ -107,24 +130,25 @@ export default function RecitationHistory({ onClose }) {
                 </div>
 
                 {/* Audio Player for student recitation */}
-                <div className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-gray-100/50 shadow-sm">
-                  <Volume2 className="w-4 h-4 text-primary-400 flex-shrink-0" />
-                  <audio src={rec.audioUrl} controls className="flex-1 h-6" />
+                <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+                  <Volume2 size={15} color={HQ.MENTOR} aria-hidden className="flex-none" />
+                  <audio src={rec.audioUrl} controls className="flex-1" style={{ height: 24 }} />
                 </div>
 
                 {/* Evaluation Feedback block */}
                 {rec.status === 'reviewed' && (
-                  <div className="bg-white rounded-2xl p-3 border border-gray-100 space-y-2.5 shadow-sm">
+                  <div className="rounded-2xl p-3 space-y-2.5" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
                     {/* Rating stars */}
                     {rec.rating && (
-                      <div className="flex items-center gap-0.5">
-                        <span className="text-[10px] text-gray-400 ml-1">تقييم المعلم:</span>
+                      <div className="flex items-center gap-0.5" role="img" aria-label={`تقييم المعلم ${rec.rating} من 5`}>
+                        <span className="ml-1" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>تقييم المعلم:</span>
                         {[1, 2, 3, 4, 5].map((s) => (
                           <Star
                             key={s}
-                            className={`w-3.5 h-3.5 ${
-                              s <= rec.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'
-                            }`}
+                            size={14}
+                            aria-hidden
+                            color={s <= rec.rating ? '#D9A441' : HQ.LINE}
+                            fill={s <= rec.rating ? '#D9A441' : 'none'}
                           />
                         ))}
                       </div>
@@ -132,16 +156,16 @@ export default function RecitationHistory({ onClose }) {
 
                     {/* Text Notes */}
                     {rec.teacherNotes && (
-                      <p className="text-xs text-primary-700 leading-relaxed bg-primary-50/20 px-3 py-1.5 rounded-xl border border-primary-50">
-                        👨‍🏫 <strong>ملاحظات المعلم:</strong> {rec.teacherNotes}
+                      <p className="text-xs px-3 py-1.5 rounded-xl" style={{ color: HQ.INK, background: HQ.PAPER, margin: 0 }}>
+                        <strong>ملاحظات المعلم:</strong> {rec.teacherNotes}
                       </p>
                     )}
 
                     {/* Teacher Audio feedback */}
                     {rec.teacherAudioUrl && (
-                      <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-                        <span className="text-[10px] text-gray-400 flex-shrink-0">🎙️ الرد الصوتي:</span>
-                        <audio src={rec.teacherAudioUrl} controls className="flex-1 h-6" />
+                      <div className="flex items-center gap-2 pt-2" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
+                        <span className="flex-none" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>الرد الصوتي:</span>
+                        <audio src={rec.teacherAudioUrl} controls className="flex-1" style={{ height: 24 }} />
                       </div>
                     )}
                   </div>

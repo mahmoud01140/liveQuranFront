@@ -33,7 +33,7 @@ export default {
         },
       },
       fontFamily: {
-        arabic: ['Noto Sans Arabic', 'Cairo', 'sans-serif'],
+        arabic: ['Tajawal', 'Noto Sans Arabic', 'sans-serif'],
         quran: ['Amiri', 'Scheherazade New', 'serif'],
       },
       animation: {

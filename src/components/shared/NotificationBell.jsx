@@ -1,11 +1,25 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Check, CheckCheck, Trash2, X } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, X, Radio, FileText, ClipboardList, Users, BookOpen, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useNotificationStore from '../../store/notificationStore';
 import useAuthStore from '../../store/authStore';
-import { NOTIFICATION_TYPES } from '../../utils/constants';
 import { timeAgoAr } from '../../utils/helpers';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
+
+/* Notification center — same fetch, read, delete and routing logic.
+   Type icons are Lucide here (the constants' emoji are not rendered). */
+
+const TYPE_ICON = {
+  live_starting: Radio,
+  exam_scheduled: FileText,
+  result_ready: ClipboardList,
+  group_assigned: Users,
+  plan_updated: BookOpen,
+  message: MessageCircle,
+  general: Bell,
+};
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
@@ -63,16 +77,29 @@ export default function NotificationBell() {
     }
   };
 
+  const iconBtn = {
+    minWidth: 44, minHeight: 44, borderRadius: 12, border: 'none', background: 'transparent',
+    color: HQ.MUTED, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  };
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="halaqa relative" ref={dropdownRef}>
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl hover:bg-primary-50 transition-colors text-gray-600"
-        aria-label="الإشعارات"
+        className="relative rounded-xl"
+        style={{ ...iconBtn, position: 'relative', color: HQ.INK }}
+        aria-label={unreadCount > 0 ? `الإشعارات (${unreadCount} غير مقروءة)` : 'الإشعارات'}
+        aria-expanded={isOpen}
       >
-        <Bell className="w-5 h-5" />
+        <Bell size={19} aria-hidden />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+          <span style={{
+            position: 'absolute', top: 4, right: 4, minWidth: 18, height: 18, padding: '0 4px',
+            background: '#C2410C', color: '#fff', fontSize: '0.8125rem', fontWeight: 800,
+            borderRadius: 9999, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -81,62 +108,80 @@ export default function NotificationBell() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.15 }}
-            className="absolute left-0 mt-2 w-80 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden"
+            className="absolute left-0 mt-2 w-80 overflow-hidden"
+            style={{
+              maxWidth: 'calc(100vw - 1.5rem)', background: HQ.SURFACE, borderRadius: 18,
+              boxShadow: '0 12px 32px rgba(42,36,56,0.16)', border: `1px solid ${HQ.LINE}`, zIndex: 50,
+            }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-              <h3 className="font-bold text-gray-900">الإشعارات</h3>
+            <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
+              <h3 className="font-bold" style={{ color: HQ.INK, margin: 0 }}>الإشعارات</h3>
               <div className="flex items-center gap-2">
                 {unreadCount > 0 && (
                   <button
+                    type="button"
                     onClick={markAllAsRead}
-                    className="text-xs text-primary-400 hover:text-primary-500 flex items-center gap-1"
+                    className="text-xs flex items-center gap-1"
+                    style={{ color: HQ.MENTOR, background: 'none', border: 'none', cursor: 'pointer', minHeight: 44, fontWeight: 800 }}
                   >
-                    <CheckCheck className="w-3.5 h-3.5" />
+                    <CheckCheck size={14} aria-hidden />
                     قراءة الكل
                   </button>
                 )}
-                <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-gray-100 rounded-lg">
-                  <X className="w-4 h-4 text-gray-400" />
+                <button type="button" onClick={() => setIsOpen(false)} aria-label="إغلاق الإشعارات" style={{ ...iconBtn, minWidth: 40, minHeight: 40 }}>
+                  <X size={16} aria-hidden />
                 </button>
               </div>
             </div>
 
             {/* Notifications list */}
-            <div className="max-h-80 overflow-y-auto">
+            <div className="overflow-y-auto" style={{ maxHeight: 320 }}>
               {notifications.length === 0 ? (
                 <div className="py-10 text-center">
-                  <Bell className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-                  <p className="text-gray-400 text-sm">لا توجد إشعارات</p>
+                  <Bell size={38} color={HQ.LINE} style={{ margin: '0 auto 8px' }} aria-hidden />
+                  <p className="text-sm" style={{ color: HQ.MUTED, margin: 0 }}>لا توجد إشعارات</p>
                 </div>
               ) : (
                 notifications.map((notif) => {
-                  const typeInfo = NOTIFICATION_TYPES[notif.type] || NOTIFICATION_TYPES.general;
+                  const Icon = TYPE_ICON[notif.type] || Bell;
                   return (
                     <div
                       key={notif._id}
                       onClick={() => handleNotificationClick(notif)}
-                      className={`flex gap-3 px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${
-                        !notif.isRead ? 'bg-primary-50/40' : ''
-                      }`}
+                      role="button" tabIndex={0}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNotificationClick(notif); } }}
+                      className="flex gap-3 px-4 py-3 cursor-pointer"
+                      style={{
+                        borderBottom: `1px solid ${HQ.LINE}`,
+                        background: !notif.isRead ? HQ.PAPER : HQ.SURFACE,
+                      }}
                     >
-                      <span className="text-lg mt-0.5 flex-shrink-0">{typeInfo.icon}</span>
+                      <span aria-hidden style={{
+                        width: 36, height: 36, borderRadius: 12, flex: 'none',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        background: '#E2EFE7', color: HQ.MENTOR,
+                      }}>
+                        <Icon size={17} />
+                      </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{notif.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.body}</p>
-                        <p className="text-xs text-gray-400 mt-1">{timeAgoAr(notif.sentAt)}</p>
+                        <p className="text-sm font-bold truncate" style={{ color: HQ.INK, margin: 0 }}>{notif.title}</p>
+                        <p className="text-xs mt-0.5" style={{ color: HQ.MUTED, marginBottom: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{notif.body}</p>
+                        <p className="text-xs mt-1" style={{ color: HQ.MUTED, marginBottom: 0 }}>{timeAgoAr(notif.sentAt)}</p>
                       </div>
                       <div className="flex flex-col items-center gap-1">
-                        {!notif.isRead && <div className="w-2 h-2 bg-primary-400 rounded-full" />}
+                        {!notif.isRead && <span aria-hidden style={{ width: 8, height: 8, borderRadius: 9999, background: HQ.MENTOR }} />}
                         <button
+                          type="button"
                           onClick={(e) => { e.stopPropagation(); deleteNotification(notif._id); }}
-                          className="p-1 hover:bg-red-50 hover:text-red-400 rounded-lg transition-colors text-gray-300"
+                          aria-label="حذف الإشعار"
+                          style={{ ...iconBtn, minWidth: 36, minHeight: 36, color: '#C2410C' }}
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 size={13} aria-hidden />
                         </button>
                       </div>
                     </div>

@@ -1,368 +1,496 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { BookOpen, Users, Award, Video, ChevronLeft, Star, Check, Play, Headphones, GraduationCap, BarChart3, Smartphone, Building2, ShieldCheck, LayoutDashboard } from 'lucide-react';
+import { motion, MotionConfig } from 'framer-motion';
+import {
+  BookOpen, Users, Video, Mic, Hand, ClipboardList, BarChart3,
+  Star, Flag, Award, BookmarkCheck, CalendarCheck,
+  ChevronDown, ChevronLeft, LogIn, UserPlus, Route, ArrowLeft,
+  LayoutDashboard,
+} from 'lucide-react';
 import Navbar from '../components/shared/Navbar';
 import useAuthStore from '../store/authStore';
+import '../components/halaqa/halaqa.css';
+import { HqBadge } from '../components/halaqa/primitives';
 
-const features = [
-  { title: 'بث مباشر تفاعلي', desc: 'جلسات حية مع المعلم وجهاً لوجه', icon: Video },
-  { title: 'منهج منظم', desc: 'مناهج متدرجة حسب مستواك', icon: BookOpen },
-  { title: 'متابعة مستمرة', desc: 'تتبع تقدمك وأدائك بالتفصيل', icon: BarChart3 },
-  { title: 'شهادات معتمدة', desc: 'احصل على شهادة عند إتمام المنهج', icon: GraduationCap },
+/* ── Landing / Home — Al-Halaqa identity, marketing page only ────────────
+   Paper canvas, ink text, mentor actions, violet for the teacher voice.
+   No gradients, no glass, no dark panels, no emoji, Lucide only. */
+
+const INK = '#2A2438';
+const MUTED = '#756E85';
+const LINE = '#E8E2D4';
+const PAPER = '#FBF7EE';
+const SURFACE = '#FFFFFF';
+const MENTOR = '#177B58';
+const MENTOR_DEEP = '#0F5940';
+const MENTOR_WASH = '#E2EFE7';
+const GUIDE = '#4A3F6B';
+const GUIDE_WASH = '#ECE9F4';
+
+const journeySteps = [
+  { title: 'التسجيل', proof: 'أنشئ حسابك وفعّل بريدك الإلكتروني.' },
+  { title: 'التقييم', proof: 'اختبار قصير لتحديد مستواك بدقة.' },
+  { title: 'المستوى', proof: 'منهج مناسب لمستواك وهدفك.' },
+  { title: 'الحلقة', proof: 'مجموعة صغيرة مع معلّم يتابعك.' },
+  { title: 'الدرس', proof: 'دروس متدرجة في الحفظ والتجويد.' },
+  { title: 'المجلس الحي', proof: 'تسميع مباشر أمام المعلّم.' },
+  { title: 'المتابعة', proof: 'واجبات واختبارات وتقدّم يومي.' },
+  { title: 'الختمة', proof: 'إتمام الحفظ، والإجازة عند تحقق شروطها.' },
 ];
 
-const steps = [
-  { step: '١', title: 'سجّل حسابك', desc: 'أنشئ حسابك في دقيقتين وتحقق من بريدك الإلكتروني.' },
-  { step: '٢', title: 'اجتز امتحان التحديد', desc: 'امتحان قصير لتحديد مستواك وتخصيص منهج مناسب لك.' },
-  { step: '٣', title: 'انضم لمجموعتك', desc: 'يعيّنك الأدمن في مجموعة دراسية تتلاءم مع مستواك وتوقيتك.' },
-  { step: '٤', title: 'تعلّم وتحفّظ', desc: 'شارك في الجلسات المباشرة، اتبع المنهج، وتابع تقدّمك يومياً.' },
+const benefits = [
+  { icon: BookmarkCheck, title: 'متابعة الحفظ', desc: 'ورد يومي من الحفظ الجديد والمراجعة.' },
+  { icon: BookOpen, title: 'الدروس', desc: 'منهج متدرج حسب مستواك.' },
+  { icon: Video, title: 'المجلس الحي', desc: 'تسميع مباشر مع المعلّم وزملائك.' },
+  { icon: ClipboardList, title: 'الواجبات والاختبارات', desc: 'تدريب مستمر وقياس لمستواك.' },
+  { icon: BarChart3, title: 'متابعة التقدم', desc: 'تعرف أين وصلت وما خطوتك التالية.' },
+  { icon: Star, title: 'تقييم المعلّم', desc: 'ملاحظات على تلاوتك وتجويدك.' },
+  { icon: Flag, title: 'الختمة', desc: 'رحلة متدرجة حتى إتمام الحفظ.' },
+  { icon: Award, title: 'الإجازة', desc: 'عند تحقق شروطها المعتمدة.' },
 ];
 
-const testimonials = [
-  { name: 'أم عبدالرحمن', country: 'السعودية', text: 'تعلّم أطفالي القرآن مع أفضل المعلمين من المنزل. المنصة رائعة جداً وسهلة الاستخدام!', level: 'التأسيس', rating: 5 },
-  { name: 'محمد الكريم', country: 'مصر', text: 'ختمت القرآن الكريم في أقل من عام بفضل خطة الختم المنظمة والجلسات التفاعلية.', level: 'التحفيظ', rating: 5 },
-  { name: 'الحاجة فاطمة', country: 'المغرب', text: 'كنت أعتقد أن تعلم القراءة في عمري صعب، لكن هذه المنصة جعلتني أقرأ القرآن باتقان.', level: 'كبار السن', rating: 5 },
+const liveRoles = [
+  { icon: Users, tone: 'guide', title: 'المعلّم', desc: 'يدير المجلس، يستمع للتسميع ويقيّم.' },
+  { icon: Mic, tone: 'mentor', title: 'الطالب الذي يقرأ', desc: 'يُسمّع ورده ويتلقى ملاحظات المعلّم.' },
+  { icon: Hand, tone: 'mentor', title: 'دورك في الانتظار', desc: 'تعرف ترتيبك في الطابور وتستعد لدورك.' },
+  { icon: CalendarCheck, tone: 'mentor', title: 'الحضور', desc: 'يُسجَّل حضورك في كل مجلس.' },
+  { icon: BookOpen, tone: 'mentor', title: 'الورد', desc: 'حفظك ومراجعتك واضحة قبل المجلس.' },
+  { icon: BarChart3, tone: 'mentor', title: 'المتابعة', desc: 'درجتك وملاحظات المعلّم بعد كل تسميع.' },
 ];
 
-const unifiedPlan = {
-  name: 'الاشتراك الشهري في حلقات القرآن الكريم',
-  priceEGP: '250',
-  priceSAR: '49',
-  period: 'شهر',
-  features: [
-    'حضور جميع الجلسات المباشرة التفاعلية مع المعلم في مجموعتك',
-    'خطة متابعة الحفظ والختم ومراجعة المتشابهات والتجويد',
-    'مراجعة وتصحيح التلاوات والتسميع الصوتي المباشر',
-    'الوصول للتسجيلات ومكتبة الشروحات كاملة والمصادر التعليمية',
-    'حل الواجبات اليومية وبنك الاختبارات والتقييمات المستمرة',
-    'شهادة إتمام معتمدة وموثقة عند إنهاء المنهج الدراسي',
-  ],
-};
+const pathPoints = [
+  { icon: Route, title: 'مستواك', desc: 'يُحدَّد بعد التقييم، ويوجَّه منهجك على أساسه.' },
+  { icon: BarChart3, title: 'تقدّمك', desc: 'يُقاس بالدروس والتسميع والاختبارات.' },
+  { icon: Flag, title: 'ختمتك', desc: 'هدف واضح تعمل عليه جزءًا جزءًا.' },
+  { icon: ArrowLeft, title: 'خطوتك التالية', desc: 'دائمًا معروفة — لا دروس متفرقة.' },
+];
+
+function FadeIn({ children, delay = 0 }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.25, delay }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function Chip({ icon: Icon, tone = 'mentor' }) {
+  const tones = {
+    mentor: { bg: MENTOR_WASH, fg: MENTOR },
+    guide: { bg: GUIDE_WASH, fg: GUIDE },
+  };
+  const t = tones[tone] || tones.mentor;
+  return (
+    <span
+      aria-hidden
+      style={{
+        flex: 'none', width: 44, height: 44, borderRadius: 12,
+        background: t.bg, color: t.fg,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <Icon size={20} strokeWidth={2} />
+    </span>
+  );
+}
+
+function SectionHead({ badge, title, sub, id }) {
+  return (
+    <div style={{ textAlign: 'center', marginBottom: 32 }}>
+      <HqBadge tone="mentor">{badge}</HqBadge>
+      <h2 id={id} style={{ margin: '12px 0 0', fontSize: 24, fontWeight: 800, color: INK, lineHeight: 1.5 }}>
+        {title}
+      </h2>
+      {sub && <p style={{ margin: '8px 0 0', fontSize: 16, color: MUTED, lineHeight: 1.8 }}>{sub}</p>}
+    </div>
+  );
+}
 
 export default function LandingPage() {
-  const [currency, setCurrency] = useState('EGP');
   const { user } = useAuthStore();
   const isStudent = user?.role === 'student';
 
   return (
-    <div className="min-h-screen bg-white" dir="rtl">
-      <Navbar />
+    <MotionConfig reducedMotion="user">
+      <div className="halaqa min-h-screen" dir="rtl" style={{ background: PAPER, color: INK }}>
+        <Navbar />
 
-      {/* ─── Hero ─────────────────────────────────────────────── */}
-      <section className="relative min-h-screen flex items-center pt-16 pattern-bg overflow-hidden">
-        {/* Background gradient blobs */}
-        <div className="absolute top-20 right-0 w-96 h-96 bg-primary-100 rounded-full blur-3xl opacity-60" />
-        <div className="absolute bottom-20 left-0 w-72 h-72 bg-primary-50 rounded-full blur-3xl opacity-80" />
-
-        <div className="max-w-7xl mx-auto px-4 py-16 grid lg:grid-cols-2 gap-12 items-center relative z-10">
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <span className="badge-green text-sm mb-4 inline-block">🌙 منصة تعليمية متخصصة</span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-gray-900 leading-tight mb-6">
-              تعلّم القرآن الكريم
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-l from-primary-400 to-primary-600">
-                مع أفضل المعلمين
-              </span>
-            </h1>
-            <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              منصة متكاملة لتحفيظ القرآن الكريم وتعليم أحكام التجويد عبر الإنترنت مع بث مباشر وإدارة مجموعات دراسية منظمة.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              {isStudent ? (
-                <Link to="/student" className="btn-primary text-base px-8 py-3.5 rounded-2xl shadow-green inline-flex items-center gap-2">
-                  <LayoutDashboard className="w-5 h-5" />
-                  لوحة التحكم
-                </Link>
-              ) : (
-                <Link to="/register" className="btn-primary text-base px-8 py-3.5 rounded-2xl shadow-green">
-                  ابدأ رحلتك الآن
-                  <ChevronLeft className="w-5 h-5" />
-                </Link>
-              )}
-              <a href="#how-it-works" className="btn-outline text-base px-8 py-3.5 rounded-2xl">
-                <Play className="w-5 h-5" />
-                كيف يعمل؟
-              </a>
-            </div>
-
-            {/* Trust indicators */}
-            <div className="flex items-center gap-4 mt-10 flex-wrap">
-              <div className="flex items-center gap-2 bg-primary-50 rounded-full px-4 py-2">
-                <Video className="w-4 h-4 text-primary-500" />
-                <span className="text-sm font-semibold text-primary-700">بث مباشر</span>
-              </div>
-              <div className="flex items-center gap-2 bg-primary-50 rounded-full px-4 py-2">
-                <Users className="w-4 h-4 text-primary-500" />
-                <span className="text-sm font-semibold text-primary-700">مجموعات صغيرة</span>
-              </div>
-              <div className="flex items-center gap-2 bg-primary-50 rounded-full px-4 py-2">
-                <BookOpen className="w-4 h-4 text-primary-500" />
-                <span className="text-sm font-semibold text-primary-700">منهج متكامل</span>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Hero visual */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative"
-          >
-            <div className="bg-gradient-quran rounded-3xl p-8 text-white shadow-2xl overflow-hidden relative">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-10 translate-x-10" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-10 -translate-x-5" />
-              
-              <div className="relative z-10 text-center">
-                <div className="font-quran text-3xl mb-6 leading-loose opacity-90">
-                  ﴿ وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا ﴾
-                </div>
-                <p className="text-primary-100 text-sm mb-8">اذكر الله</p>
-
-                {/* Platform features */}
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { label: 'جلسات مباشرة', desc: 'مع معلمين متخصصين', icon: '🎙️' },
-                    { label: 'امتحان تحديد', desc: 'لتحديد مستواك بدقة', icon: '📝' },
-                    { label: 'خطة ختم القرآن', desc: 'مخصصة لك', icon: '📖' },
-                    { label: 'متابعة يومية', desc: 'لتقدمك وأدائك', icon: '📊' },
-                  ].map((s, i) => (
-                    <div key={i} className="bg-white/15 rounded-2xl p-4 text-center backdrop-blur-sm">
-                      <div className="text-2xl mb-1">{s.icon}</div>
-                      <div className="text-sm font-bold">{s.label}</div>
-                      <div className="text-primary-100 text-xs">{s.desc}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ─── Features ──────────────────────────────────────────────── */}
-      <section className="bg-primary-50 py-16">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {features.map((f, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                viewport={{ once: true }}
-                className="text-center"
-              >
-                <div className="w-14 h-14 bg-white rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-sm">
-                  <f.icon className="w-7 h-7 text-primary-400" />
-                </div>
-                <div className="text-base font-black text-gray-900">{f.title}</div>
-                <div className="text-gray-500 text-sm mt-1">{f.desc}</div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── How it works ──────────────────────────────────────── */}
-      <section id="how-it-works" className="py-20 max-w-7xl mx-auto px-4">
-        <div className="text-center mb-14">
-          <span className="badge-green text-sm">✨ عملية بسيطة</span>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mt-3">كيف تبدأ رحلتك؟</h2>
-          <p className="text-gray-500 mt-3 text-lg">أربع خطوات بسيطة تبدأ بها مسيرة تعلم القرآن</p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {steps.map((step, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.12 }}
-              viewport={{ once: true }}
-              className="relative text-center"
+        {/* ─── 1. Hero ─────────────────────────────────────────── */}
+        <section aria-labelledby="hero-title" style={{ paddingTop: 96, paddingBottom: 48 }}>
+          <div style={{ maxWidth: 1152, margin: '0 auto', padding: '0 16px' }}>
+            <div
+              style={{ display: 'grid', gap: 48, alignItems: 'center' }}
+              className="grid-cols-1 lg:grid-cols-2"
             >
-              {i < steps.length - 1 && (
-                <div className="hidden lg:block absolute top-10 left-0 w-full h-0.5 bg-primary-100 z-0 translate-x-1/2" />
-              )}
-              <div className="relative z-10 w-20 h-20 bg-gradient-quran rounded-2xl mx-auto mb-6 flex items-center justify-center text-white text-2xl font-black shadow-green">
-                {step.step}
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">{step.title}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">{step.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ─── Testimonials ─────────────────────────────────────── */}
-      <section id="testimonials" className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-14">
-            <span className="badge-green text-sm">💬 آراء حقيقية</span>
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mt-3">ماذا يقول طلابنا؟</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((t, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                viewport={{ once: true }}
-                className="card-base p-6"
-              >
-                <div className="flex text-yellow-400 mb-4">{'★'.repeat(t.rating)}</div>
-                <p className="text-gray-700 leading-relaxed mb-6">"{t.text}"</p>
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold"
-                    style={{ background: 'linear-gradient(135deg, #1D9E75, #0F5740)' }}
+              <FadeIn>
+                <div>
+                  <HqBadge tone="mentor">حلقة قرآنية حيّة بمتابعة شخصية</HqBadge>
+                  <h1 id="hero-title" style={{ margin: '16px 0 0', fontSize: 32, fontWeight: 800, color: INK, lineHeight: 1.4 }}>
+                    احفظ القرآن الكريم
+                    <br />
+                    <span style={{ color: MENTOR }}>في حلقة حيّة تتابعك</span>
+                  </h1>
+                  <p style={{ margin: '16px 0 0', fontSize: 16, color: MUTED, lineHeight: 1.8, maxWidth: 520 }}>
+                    منصة الحلقة تجمعك بمعلّم ومجموعة صغيرة: دروس منظّمة، ومجلس تسميع حيّ،
+                    ومتابعة يومية لحفظك ومراجعتك حتى الختمة.
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 24 }}>
+                    {isStudent ? (
+                      <Link
+                        to="/student"
+                        className="min-h-[48px] px-6 py-3 rounded-xl bg-[#177B58] text-white font-bold hover:bg-[#0F5940] transition-colors inline-flex items-center justify-center gap-2"
+                      >
+                        <LayoutDashboard size={19} aria-hidden />
+                        لوحة التحكم
+                      </Link>
+                    ) : (
+                      <Link
+                        to="/register"
+                        className="min-h-[48px] px-6 py-3 rounded-xl bg-[#177B58] text-white font-bold hover:bg-[#0F5940] transition-colors inline-flex items-center justify-center gap-2"
+                      >
+                        <UserPlus size={19} aria-hidden />
+                        ابدأ التسجيل
+                      </Link>
+                    )}
+                    {!isStudent && (
+                      <Link
+                        to="/login"
+                        className="min-h-[48px] px-6 py-3 rounded-xl bg-white font-bold transition-colors inline-flex items-center justify-center gap-2"
+                        style={{ color: MENTOR, border: `1.5px solid ${MENTOR}` }}
+                      >
+                        <LogIn size={19} aria-hidden />
+                        تسجيل الدخول
+                      </Link>
+                    )}
+                  </div>
+                  <a
+                    href="#journey"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      marginTop: 16, minHeight: 44, fontSize: 14, fontWeight: 700, color: MENTOR,
+                    }}
                   >
-                    {t.name[0]}
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900">{t.name}</p>
-                    <p className="text-xs text-gray-400">{t.country} · {t.level}</p>
-                  </div>
+                    شاهد كيف تسير الرحلة
+                    <ChevronDown size={17} aria-hidden />
+                  </a>
                 </div>
-              </motion.div>
-            ))}
+              </FadeIn>
+
+              {/* العنصر البصري الوحيد: لمحة عن مجلس الحلقة */}
+              <FadeIn delay={0.1}>
+                <div
+                  role="img"
+                  aria-label="لمحة توضيحية عن مجلس الحلقة: آية قرآنية، ثم المعلّم والقارئ والمنتظر"
+                  style={{ background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 18, padding: 24 }}
+                >
+                  <p className="hq-quran" style={{ margin: 0, fontSize: 24, textAlign: 'center' }}>
+                    ﴿ وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا ﴾
+                  </p>
+                  <div style={{ height: 1, background: LINE, margin: '16px 0' }} aria-hidden />
+                  <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                    <li style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0' }}>
+                      <Chip icon={Users} tone="guide" />
+                      <span style={{ flex: 1 }}>
+                        <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: INK }}>المعلّم</span>
+                        <span style={{ display: 'block', fontSize: 13, color: MUTED }}>يدير المجلس ويقيّم التسميع</span>
+                      </span>
+                      <HqBadge tone="guide">المعلّم</HqBadge>
+                    </li>
+                    <li style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: `1px solid ${LINE}` }}>
+                      <Chip icon={Mic} tone="mentor" />
+                      <span style={{ flex: 1 }}>
+                        <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: INK }}>القارئ الآن</span>
+                        <span style={{ display: 'block', fontSize: 13, color: MUTED }}>يُسمّع ورده أمام الحلقة</span>
+                      </span>
+                      <HqBadge tone="mentor">يُسمّع الآن</HqBadge>
+                    </li>
+                    <li style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: `1px solid ${LINE}` }}>
+                      <Chip icon={Hand} tone="mentor" />
+                      <span style={{ flex: 1 }}>
+                        <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: INK }}>بقية الطلاب</span>
+                        <span style={{ display: 'block', fontSize: 13, color: MUTED }}>يستمعون ويستعدون لأدوارهم</span>
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              </FadeIn>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ─── Pricing ──────────────────────────────────────────── */}
-      <section id="pricing" className="py-20 max-w-5xl mx-auto px-4">
-        <div className="text-center mb-10">
-          <span className="badge-green text-sm">💰 اشتراك شهري ميسر وشامل</span>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mt-3">خطة الاشتراك في الحلقات</h2>
-          <p className="text-gray-500 mt-2">سجّل الآن واحضر أول محاضرة تجريبية مجاناً 🎁 ثم اشترك شهرياً للاستمرار</p>
-
-          {/* Payment Badges */}
-          <div className="flex items-center justify-center gap-3 mt-4 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200/60">
-              <Smartphone className="w-3.5 h-3.5 text-red-600" />
-              متاح الدفع عبر فودافون كاش (Vodafone Cash)
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200/60">
-              <Building2 className="w-3.5 h-3.5 text-purple-600" />
-              متاح الدفع عبر انستاباي اللحظي (InstaPay)
-            </span>
+        {/* ─── 2. كيف تسير الرحلة؟ ─────────────────────────────── */}
+        <section aria-labelledby="journey-title" id="journey" style={{ padding: '48px 0', scrollMarginTop: 72 }}>
+          <div style={{ maxWidth: 768, margin: '0 auto', padding: '0 16px' }}>
+            <FadeIn>
+              <SectionHead
+                badge="خطوة بخطوة"
+                title="كيف تسير الرحلة؟"
+                sub="من التسجيل حتى الختمة، كل مرحلة تمهّد لما بعدها."
+                id="journey-title"
+              />
+            </FadeIn>
+            <ol className="hq-thread" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {journeySteps.map((s, i) => (
+                <li key={s.title} className="hq-node" style={{ display: 'flex', gap: 16, padding: '12px 0' }}>
+                  <span
+                    aria-hidden
+                    style={{
+                      width: 28, height: 28, borderRadius: 9999, flex: 'none', zIndex: 1,
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, fontWeight: 800, background: SURFACE,
+                      border: `2px solid ${LINE}`, color: INK,
+                    }}
+                  >
+                    {i + 1}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: INK }}>
+                      {s.title}
+                      {i === 0 && (
+                        <span style={{ marginInlineStart: 8, verticalAlign: 'middle' }}>
+                          <HqBadge tone="mentor">تبدأ من هنا</HqBadge>
+                        </span>
+                      )}
+                    </h3>
+                    <p style={{ margin: '4px 0 0', fontSize: 14, color: MUTED }}>{s.proof}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
           </div>
+        </section>
 
-          {/* Currency Toggle */}
-          <div className="inline-flex items-center bg-gray-100 p-1 rounded-2xl mt-6 text-xs font-bold">
-            <button
-              onClick={() => setCurrency('EGP')}
-              className={`px-4 py-2 rounded-xl transition-all ${
-                currency === 'EGP' ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              🇪🇬 بالجنيه المصري (EGP)
-            </button>
-            <button
-              onClick={() => setCurrency('SAR')}
-              className={`px-4 py-2 rounded-xl transition-all ${
-                currency === 'SAR' ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              🇸🇦 بالريال السعودي (SAR)
-            </button>
-          </div>
-        </div>
-
-        {/* Single Plan Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="bg-gradient-quran text-white rounded-3xl p-8 sm:p-12 shadow-2xl shadow-green relative overflow-hidden"
-        >
-          <div className="absolute top-4 left-6 bg-amber-400 text-amber-950 text-xs font-black px-4 py-1.5 rounded-full shadow-md">
-            أول محاضرة تجريبية مجاناً 🎁
-          </div>
-
-          <div className="grid lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-7 space-y-4">
-              <h3 className="text-2xl sm:text-3xl font-black text-white">
-                {unifiedPlan.name}
-              </h3>
-              <p className="text-emerald-100 text-sm leading-relaxed">
-                خطة متكاملة وميسرة تتيح لك الحضور مع مجموعتك الدراسية ومتابعة المنهج القرآني الشامل مع معلمين مجازين بالسند المتصل.
-              </p>
-              <ul className="space-y-3 pt-2">
-                {unifiedPlan.features.map((f, j) => (
-                  <li key={j} className="flex items-center gap-2.5 text-sm">
-                    <Check className="w-4 h-4 text-yellow-300 flex-shrink-0" />
-                    <span className="text-emerald-50">{f}</span>
+        {/* ─── 3. ماذا يحصل عليه الطالب؟ ───────────────────────── */}
+        <section aria-labelledby="benefits-title" id="benefits" style={{ padding: '48px 0', scrollMarginTop: 72 }}>
+          <div style={{ maxWidth: 1152, margin: '0 auto', padding: '0 16px' }}>
+            <FadeIn>
+              <SectionHead
+                badge="داخل المنصة"
+                title="ماذا يحصل عليه الطالب؟"
+                sub="كل ما تحتاجه رحلة الحفظ في مكان واحد."
+                id="benefits-title"
+              />
+            </FadeIn>
+            <FadeIn>
+              <ul
+                style={{
+                  listStyle: 'none', margin: 0, padding: 0,
+                  background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 18,
+                }}
+              >
+                {benefits.map((b, i) => (
+                  <li
+                    key={b.title}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 12, padding: 16,
+                      borderTop: i === 0 ? 'none' : `1px solid ${LINE}`,
+                    }}
+                  >
+                    <Chip icon={b.icon} tone="mentor" />
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontWeight: 800, fontSize: 16, color: INK }}>{b.title}</span>
+                      <span style={{ display: 'block', fontSize: 14, color: MUTED, marginTop: 2 }}>{b.desc}</span>
+                    </span>
                   </li>
                 ))}
               </ul>
-            </div>
+            </FadeIn>
+          </div>
+        </section>
 
-            <div className="lg:col-span-5 bg-white text-gray-900 rounded-3xl p-8 text-center flex flex-col justify-between shadow-xl">
-              <div>
-                <span className="text-xs font-bold text-gray-400 block mb-1">رسوم الاشتراك الشهري</span>
-                <div className="flex items-baseline justify-center gap-1 mb-2">
-                  <span className="text-5xl font-black text-gray-900">
-                    {currency === 'EGP' ? unifiedPlan.priceEGP : unifiedPlan.priceSAR}
-                  </span>
-                  <span className="text-base font-bold text-gray-500">
-                    {currency === 'EGP' ? 'ج.م' : 'ر.س'} / شهر
-                  </span>
+        {/* ─── 4. الحلقة والمجلس الحي ──────────────────────────── */}
+        <section aria-labelledby="live-title" id="live" style={{ padding: '48px 0', scrollMarginTop: 72 }}>
+          <div style={{ maxWidth: 1152, margin: '0 auto', padding: '0 16px' }}>
+            <FadeIn>
+              <SectionHead
+                badge="التجربة الحيّة"
+                title="الحلقة والمجلس الحي"
+                sub="معلّم حقيقي، وطابور تسميع واضح، ومتابعة لكل طالب."
+                id="live-title"
+              />
+            </FadeIn>
+            <div
+              style={{ display: 'grid', gap: 24, alignItems: 'start' }}
+              className="grid-cols-1 lg:grid-cols-2"
+            >
+              <FadeIn>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                  {liveRoles.map((r, i) => (
+                    <li
+                      key={r.title}
+                      style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 0',
+                        borderTop: i === 0 ? 'none' : `1px solid ${LINE}`,
+                      }}
+                    >
+                      <Chip icon={r.icon} tone={r.tone} />
+                      <span style={{ minWidth: 0 }}>
+                        <span style={{ display: 'block', fontWeight: 800, fontSize: 16, color: INK }}>
+                          {r.title}
+                          {r.tone === 'guide' && (
+                            <span style={{ marginInlineStart: 8, verticalAlign: 'middle' }}>
+                              <HqBadge tone="guide">المعلّم</HqBadge>
+                            </span>
+                          )}
+                        </span>
+                        <span style={{ display: 'block', fontSize: 14, color: MUTED, marginTop: 2 }}>{r.desc}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </FadeIn>
+              <FadeIn delay={0.1}>
+                <div
+                  role="img"
+                  aria-label="مثال توضيحي لطابور التسميع: القارئ الآن، ثم التالي، ثم المعلّم، مع الحضور والورد"
+                  style={{ background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 18, padding: 16 }}
+                >
+                  <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: MUTED }}>مثال توضيحي لطابور التسميع</p>
+                  <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                    <li style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, padding: '10px 4px', borderBottom: `1px solid ${LINE}` }}>
+                      <span aria-hidden style={{ flex: 'none', width: 32, height: 32, borderRadius: 9999, background: MENTOR, color: '#fff', border: `1px solid ${MENTOR}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>1</span>
+                      <span style={{ flex: 1 }}>
+                        <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: INK }}>القارئ الآن</span>
+                        <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: MENTOR }}>يُسمّع الآن</span>
+                      </span>
+                      <Mic size={17} color={MENTOR} aria-hidden />
+                    </li>
+                    <li style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, padding: '10px 4px', borderBottom: `1px solid ${LINE}` }}>
+                      <span aria-hidden style={{ flex: 'none', width: 32, height: 32, borderRadius: 9999, background: PAPER, color: MUTED, border: `1px solid ${LINE}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>2</span>
+                      <span style={{ flex: 1 }}>
+                        <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: INK }}>التالي في الدور</span>
+                        <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: MUTED }}>يستعد للتسميع</span>
+                      </span>
+                      <Hand size={17} color={MUTED} aria-hidden />
+                    </li>
+                    <li style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, padding: '10px 4px' }}>
+                      <span aria-hidden style={{ flex: 'none', width: 32, height: 32, borderRadius: 9999, background: GUIDE_WASH, color: GUIDE, border: `1px solid ${GUIDE_WASH}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14 }}>
+                        <Users size={16} />
+                      </span>
+                      <span style={{ flex: 1 }}>
+                        <span style={{ display: 'block', fontWeight: 800, fontSize: 15, color: INK }}>المعلّم</span>
+                        <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: MUTED }}>يستمع ويقيّم</span>
+                      </span>
+                      <HqBadge tone="guide">المعلّم</HqBadge>
+                    </li>
+                  </ol>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: PAPER, border: `1px solid ${LINE}`, borderRadius: 9999, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: INK }}>
+                      <CalendarCheck size={15} color={MENTOR} aria-hidden />
+                      الحضور يُسجَّل في كل مجلس
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: PAPER, border: `1px solid ${LINE}`, borderRadius: 9999, padding: '8px 14px', fontSize: 13, fontWeight: 700, color: INK }}>
+                      <BookOpen size={15} color={MENTOR} aria-hidden />
+                      الورد واضح قبل المجلس
+                    </span>
+                  </div>
                 </div>
-                <p className="text-xs text-emerald-600 font-bold mb-6">
-                  ✨ بدون أي التزام مسبق — احضر أول محاضرة مجاناً
-                </p>
-              </div>
-
-              <Link
-                to="/register"
-                className="w-full py-4 rounded-2xl bg-gradient-quran text-white font-bold text-base shadow-green hover:shadow-lg transition-all flex items-center justify-center gap-2"
-              >
-                سجّل وابدأ محاضرتك التجريبية مجاناً
-              </Link>
+              </FadeIn>
             </div>
           </div>
-        </motion.div>
-      </section>
+        </section>
 
-      {/* ─── CTA ──────────────────────────────────────────────── */}
-      <section className="py-20 bg-gradient-quran">
-        <div className="max-w-3xl mx-auto px-4 text-center text-white">
-          <div className="font-quran text-4xl mb-6 opacity-90">
-            ﴿ اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ ﴾
+        {/* ─── 5. رحلة الطالب ─────────────────────────────────── */}
+        <section aria-labelledby="path-title" id="path" style={{ padding: '48px 0', scrollMarginTop: 72 }}>
+          <div style={{ maxWidth: 768, margin: '0 auto', padding: '0 16px' }}>
+            <FadeIn>
+              <SectionHead
+                badge="رحلة متدرجة"
+                title="رحلة الطالب"
+                sub="لا دروس متفرقة، بل طريق واحد واضح من مستواك الحالي حتى الختمة."
+                id="path-title"
+              />
+            </FadeIn>
+            <FadeIn>
+              <ul
+                style={{
+                  listStyle: 'none', margin: 0, padding: 0,
+                  background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 18,
+                }}
+              >
+                {pathPoints.map((p, i) => (
+                  <li
+                    key={p.title}
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 12, padding: 16,
+                      borderTop: i === 0 ? 'none' : `1px solid ${LINE}`,
+                    }}
+                  >
+                    <Chip icon={p.icon} tone="mentor" />
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontWeight: 800, fontSize: 16, color: INK }}>{p.title}</span>
+                      <span style={{ display: 'block', fontSize: 14, color: MUTED, marginTop: 2 }}>{p.desc}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </FadeIn>
           </div>
-          <h2 className="text-3xl font-black mb-4">ابدأ رحلتك مع القرآن اليوم</h2>
-          <p className="text-primary-100 mb-8 text-lg">
-            انضم لآلاف الطلاب الذين يتعلمون القرآن الكريم مع أفضل المعلمين
-          </p>
-          <Link
-            to="/register"
-            className="inline-flex items-center gap-2 bg-white text-primary-500 font-bold px-10 py-4 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all"
-          >
-            سجّل الآن مجاناً
-            <ChevronLeft className="w-5 h-5" />
-          </Link>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-10">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <BookOpen className="w-6 h-6 text-primary-400" />
-            <span className="text-white font-bold text-lg">منصة تحفيظ القرآن الكريم</span>
+        {/* ─── 6. CTA نهائي ───────────────────────────────────── */}
+        <section aria-labelledby="cta-title" style={{ padding: '48px 0 64px' }}>
+          <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 16px', textAlign: 'center' }}>
+            <FadeIn>
+              <h2 id="cta-title" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: INK, lineHeight: 1.5 }}>
+                ابدأ رحلتك مع القرآن اليوم
+              </h2>
+              <p style={{ margin: '8px 0 0', fontSize: 16, color: MUTED, lineHeight: 1.8 }}>
+                سجّل حسابك، واجتز التقييم، وانضم إلى حلقتك.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginTop: 24 }}>
+                {isStudent ? (
+                  <Link
+                    to="/student"
+                    className="min-h-[48px] px-10 py-3 rounded-xl bg-[#177B58] text-white font-bold hover:bg-[#0F5940] transition-colors inline-flex items-center justify-center gap-2 w-full sm:w-auto"
+                  >
+                    <LayoutDashboard size={19} aria-hidden />
+                    الذهاب إلى لوحة التحكم
+                  </Link>
+                ) : (
+                  <Link
+                    to="/register"
+                    className="min-h-[48px] px-10 py-3 rounded-xl bg-[#177B58] text-white font-bold hover:bg-[#0F5940] transition-colors inline-flex items-center justify-center gap-2 w-full sm:w-auto"
+                  >
+                    ابدأ التسجيل
+                    <ChevronLeft size={19} aria-hidden />
+                  </Link>
+                )}
+                {!isStudent && (
+                  <Link
+                    to="/login"
+                    style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, fontSize: 14, fontWeight: 700, color: MENTOR }}
+                  >
+                    لديك حساب بالفعل؟ سجّل الدخول
+                  </Link>
+                )}
+              </div>
+            </FadeIn>
           </div>
-          <p className="text-sm">© {new Date().getFullYear()} جميع الحقوق محفوظة — نور القرآن في كل بيت</p>
-        </div>
-      </footer>
-    </div>
+        </section>
+
+        {/* Footer */}
+        <footer style={{ background: SURFACE, borderTop: `1px solid ${LINE}`, padding: '32px 0' }}>
+          <div style={{ maxWidth: 1152, margin: '0 auto', padding: '0 16px', textAlign: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+              <span
+                aria-hidden
+                style={{
+                  width: 36, height: 36, borderRadius: 12, background: MENTOR, color: '#fff',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <BookOpen size={19} />
+              </span>
+              <span style={{ color: INK, fontWeight: 800, fontSize: 17 }}>منصة الحلقة لتحفيظ القرآن الكريم</span>
+            </div>
+            <p style={{ margin: 0, fontSize: 13, color: MUTED }}>© {new Date().getFullYear()} جميع الحقوق محفوظة</p>
+          </div>
+        </footer>
+      </div>
+    </MotionConfig>
   );
 }

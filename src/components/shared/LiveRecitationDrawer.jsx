@@ -2,20 +2,29 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic, Users, CheckCircle2, Clock, Hand, SkipForward, RotateCcw,
-  Star, AlertCircle, X, Search, Sparkles, BookOpen, Edit3,
-  Check, ChevronLeft, Volume2, Award, ChevronDown, ChevronUp
+  Star, AlertCircle, X, Search, BookOpen, Edit3,
+  Check, ChevronLeft, Volume2, Award, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { getAvatarColor, getInitials } from '../../utils/helpers';
 import QURAN_SURAHS from '../../utils/quranData';
+import '../../components/halaqa/halaqa.css';
+import { HQ } from '../../components/halaqa/primitives';
 
 const QUICK_TAGS = [
-  'ما شاء الله تلاوة متقنة ومثبتة 🌟',
-  'انتبه لمخارج الحروف وأحكام الراء 👍',
-  'احرص على أزمنة الغنن والمدود 🎯',
-  'حفظ جيد مع وجود بعض التردد ⏳',
-  'يحتاج إلى إعادة وتثبيت الماضي أولاً ⚠️',
+  'ما شاء الله تلاوة متقنة ومثبتة',
+  'انتبه لمخارج الحروف وأحكام الراء',
+  'احرص على أزمنة الغنن والمدود',
+  'حفظ جيد مع وجود بعض التردد',
+  'يحتاج إلى إعادة وتثبيت الماضي أولاً',
+];
+
+const FILTERS = [
+  { key: 'all', label: 'الكل' },
+  { key: 'hands', label: 'طلب دور' },
+  { key: 'waiting', label: 'لم يُسمّع' },
+  { key: 'completed', label: 'تم التسميع' },
 ];
 
 export default function LiveRecitationDrawer({
@@ -137,7 +146,7 @@ export default function LiveRecitationDrawer({
     setSelectedStudent(student);
     try {
       await api.post(`/live/${sessionId}/queue/start-turn`, { studentId: sId });
-      toast.success(`🎙️ بدأ دور التسميع للطالب ${student.firstName || ''}`);
+      toast.success(`بدأ دور التسميع للطالب ${student.firstName || ''}`);
       setQueue(prev => prev.map(q => {
         const id = q.student?._id || q.student;
         if (id === sId) return { ...q, status: 'reciting' };
@@ -146,12 +155,11 @@ export default function LiveRecitationDrawer({
       }));
       setCurrentSpeaker(student);
 
-      // تحسين 2: تثبيت الطالب المُسمّع تلقائياً في Jitsi
       if (jitsiApi?.pinParticipantByName) {
         const studentName = `${student.firstName || ''} ${student.lastName || ''}`.trim();
         const pinned = jitsiApi.pinParticipantByName(studentName);
         if (pinned) {
-          toast.success(`📌 تم تثبيت ${student.firstName} في الشاشة الرئيسية`);
+          toast.success(`تم تثبيت ${student.firstName} في الشاشة الرئيسية`);
         }
       }
     } catch {
@@ -163,7 +171,7 @@ export default function LiveRecitationDrawer({
     const sId = student._id || student;
     try {
       await api.post(`/live/${sessionId}/queue/skip-turn`, { studentId: sId });
-      toast('تم تخطي الطالب وتأجيل دوره', { icon: '⏭️' });
+      toast('تم تخطي الطالب وتأجيل دوره');
       setQueue(prev => prev.map(q => ((q.student?._id || q.student) === sId ? { ...q, status: 'skipped' } : q)));
       if (currentSpeaker?._id === sId) setCurrentSpeaker(null);
     } catch {
@@ -196,7 +204,7 @@ export default function LiveRecitationDrawer({
         updateDailyTask: true,
       });
 
-      toast.success(`⭐ تم رصد التقييم للطالب ${selectedStudent.firstName} بنجاح!`);
+      toast.success(`تم رصد التقييم للطالب ${selectedStudent.firstName} بنجاح!`);
 
       // Optimistic update
       setQueue(prev => prev.map(q => {
@@ -258,7 +266,7 @@ export default function LiveRecitationDrawer({
           : undefined,
       });
 
-      toast.success('تم تحديث وتخصيص الورد اليومي للطالب ✨');
+      toast.success('تم تحديث وتخصيص الورد اليومي للطالب');
       setShowWirdEditor(false);
       fetchQueueData({ silent: true });
     } catch {
@@ -286,16 +294,30 @@ export default function LiveRecitationDrawer({
 
   if (!isOpen) return null;
 
+  const field = {
+    width: '100%', minHeight: 44, background: HQ.SURFACE, color: HQ.INK,
+    border: `1px solid ${HQ.LINE}`, borderRadius: 8, padding: '8px 12px',
+    fontSize: '0.8125rem', fontFamily: 'inherit',
+  };
+  const iconBtn = {
+    minWidth: 44, minHeight: 44, borderRadius: 12, border: 'none', background: 'transparent',
+    color: HQ.MUTED, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  };
+
+  const filterCount = (key) => key === 'all' ? queue.length : key === 'hands' ? handsCount : key === 'completed' ? completedCount : null;
+
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
+      <div className="halaqa fixed inset-0 z-50 overflow-hidden flex justify-end" dir="rtl">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
           onClick={onClose}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0"
+          style={{ background: 'rgba(42,36,56,0.55)' }}
         />
 
         {/* Drawer panel */}
@@ -303,105 +325,102 @@ export default function LiveRecitationDrawer({
           initial={{ x: '100%' }}
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
-          transition={{ type: 'spring', damping: 26, stiffness: 240 }}
-          className="relative w-full max-w-4xl bg-gray-900 text-gray-100 h-full flex flex-col shadow-2xl z-10 border-r border-gray-800"
-          dir="rtl"
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+          className="relative w-full h-full flex flex-col"
+          style={{ maxWidth: 1024, background: HQ.PAPER }}
+          role="dialog" aria-modal="true" aria-label="إدارة طابور التسميع"
         >
           {/* Header */}
-          <div className="px-6 py-4 bg-gray-800/90 border-b border-gray-700/80 flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: '#177B58' }}>
-                <Mic className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-white">إدارة طابور التسميع والأوراد الفردية</h2>
-                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
-                    Vercel Polling ⚡
-                  </span>
-                </div>
-                <p className="text-xs text-gray-400">
+          <div className="px-6 py-4 flex items-center justify-between flex-none"
+            style={{ background: HQ.SURFACE, borderBottom: `1px solid ${HQ.LINE}` }}>
+            <div className="flex items-center gap-3 min-w-0">
+              <span aria-hidden style={{
+                width: 40, height: 40, borderRadius: 14, background: HQ.MENTOR, color: '#fff',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+              }}>
+                <Mic size={19} />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-base font-bold" style={{ color: HQ.INK, margin: 0 }}>إدارة طابور التسميع والأوراد الفردية</h2>
+                <p className="text-xs" style={{ color: HQ.MUTED, margin: 0 }}>
                   {groupName} • {sessionTitle}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400 hidden sm:inline">
+            <div className="flex items-center gap-2 flex-none">
+              <span className="text-xs hidden sm:inline" style={{ color: HQ.MUTED, fontVariantNumeric: 'tabular-nums' }}>
                 المجموع: {queue.length} | المسمّعون: {completedCount} | طلب دور: {handsCount}
               </span>
               <button
+                type="button"
                 onClick={onClose}
-                className="w-9 h-9 rounded-xl bg-gray-700/50 hover:bg-gray-700 text-gray-400 hover:text-white flex items-center justify-center transition-colors"
+                aria-label="إغلاق طابور التسميع"
+                style={iconBtn}
               >
-                <X className="w-5 h-5" />
+                <X size={19} aria-hidden />
               </button>
             </div>
           </div>
 
           {/* Body: Split View (Queue List + Active Recitation/Wird Panel) */}
-          <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12">
-            {/* Left side on desktop (cols 5): Recitation Queue */}
-            <div className="lg:col-span-5 border-b lg:border-b-0 lg:border-l border-gray-800 flex flex-col h-full bg-gray-900/95 overflow-hidden">
+          <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0">
+            {/* Queue side */}
+            <div className="lg:col-span-5 flex flex-col h-full overflow-hidden"
+              style={{ borderBottom: `1px solid ${HQ.LINE}`, background: HQ.SURFACE }}>
               {/* Filter & Search */}
-              <div className="p-3 border-b border-gray-800 space-y-2 flex-shrink-0">
+              <div className="p-3 space-y-2 flex-none" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
                 <div className="relative">
-                  <Search className="w-4 h-4 text-gray-400 absolute right-3 top-2.5" />
+                  <Search size={15} color={HQ.MUTED} aria-hidden className="absolute right-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
+                    aria-label="بحث باسم الطالب"
                     placeholder="بحث باسم الطالب..."
-                    className="w-full bg-gray-800/90 border border-gray-700 rounded-xl pr-9 pl-3 py-2 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500"
+                    className="w-full text-xs pr-10 focus:border-[#177B58] focus:outline-none"
+                    style={{
+                      minHeight: 44, background: HQ.SURFACE, color: HQ.INK,
+                      border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '8px 40px 8px 12px',
+                    }}
                   />
                 </div>
 
-                <div className="flex items-center gap-1 overflow-x-auto pb-1 text-xs">
-                  <button
-                    onClick={() => setFilter('all')}
-                    className={`px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap ${
-                      filter === 'all' ? 'bg-emerald-600 text-white font-bold' : 'bg-gray-800 text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    الكل ({queue.length})
-                  </button>
-                  <button
-                    onClick={() => setFilter('hands')}
-                    className={`px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 whitespace-nowrap ${
-                      filter === 'hands' ? 'bg-amber-600 text-white font-bold' : 'bg-gray-800 text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    <Hand className="w-3 h-3 text-amber-300" />
-                    <span>طلب دور ({handsCount})</span>
-                  </button>
-                  <button
-                    onClick={() => setFilter('waiting')}
-                    className={`px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap ${
-                      filter === 'waiting' ? 'bg-blue-600 text-white font-bold' : 'bg-gray-800 text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    لم يُسمّع
-                  </button>
-                  <button
-                    onClick={() => setFilter('completed')}
-                    className={`px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap ${
-                      filter === 'completed' ? 'bg-green-600 text-white font-bold' : 'bg-gray-800 text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    تم التسميع ({completedCount})
-                  </button>
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 text-xs" role="group" aria-label="تصفية الطابور">
+                  {FILTERS.map(f => {
+                    const on = filter === f.key;
+                    const c = filterCount(f.key);
+                    return (
+                      <button
+                        key={f.key}
+                        type="button"
+                        onClick={() => setFilter(f.key)}
+                        aria-pressed={on}
+                        className="whitespace-nowrap font-bold"
+                        style={{
+                          minHeight: 40, padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
+                          border: `1px solid ${on ? HQ.MENTOR : HQ.LINE}`,
+                          background: on ? HQ.MENTOR : HQ.SURFACE,
+                          color: on ? '#fff' : HQ.MUTED, fontVariantNumeric: 'tabular-nums',
+                        }}
+                      >
+                        {f.key === 'hands' ? <Hand size={12} aria-hidden className="inline ml-1" /> : null}
+                        {f.label}{c !== null ? ` (${c})` : ''}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Queue List */}
               <div className="flex-1 overflow-y-auto p-3 space-y-2">
                 {loading ? (
-                  <div className="py-12 text-center text-gray-400 text-xs">
-                    <span className="w-6 h-6 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin inline-block mb-2" />
-                    <p>جارٍ تحميل بيانات الطابور...</p>
+                  <div className="py-12 text-center text-xs" style={{ color: HQ.MUTED }}>
+                    <RefreshCw size={22} color={HQ.MENTOR} className="animate-spin" style={{ margin: '0 auto 8px' }} aria-hidden />
+                    <p style={{ margin: 0 }}>جارٍ تحميل بيانات الطابور...</p>
                   </div>
                 ) : filteredQueue.length === 0 ? (
-                  <div className="py-12 text-center text-gray-500 text-xs">
+                  <div className="py-12 text-center text-xs" style={{ color: HQ.MUTED }}>
                     لا يوجد طلاب في هذا التبويب
                   </div>
                 ) : (
@@ -418,88 +437,109 @@ export default function LiveRecitationDrawer({
                       <div
                         key={student._id || idx}
                         onClick={() => setSelectedStudent(student)}
-                        className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-2 ${
-                          isCurrentReciter
-                            ? 'bg-emerald-950/50 border-emerald-500 shadow-md shadow-emerald-950'
-                            : isSelected
-                            ? 'bg-gray-800/90 border-gray-600 ring-1 ring-emerald-500/40'
-                            : hasHandRaised
-                            ? 'bg-amber-950/30 border-amber-500/40 animate-pulse'
-                            : 'bg-gray-800/40 border-gray-800 hover:bg-gray-800/70'
-                        }`}
+                        role="button" tabIndex={0}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedStudent(student); } }}
+                        aria-label={`${student.firstName} ${student.lastName} — ${isCurrentReciter ? 'يُسمّع الآن' : hasHandRaised ? 'طلب دور' : isCompleted ? 'أتم التسميع' : isSkipped ? 'تم التخطي' : 'في الانتظار'}`}
+                        className="p-3 rounded-xl cursor-pointer flex flex-col gap-2"
+                        style={{
+                          border: `1.5px solid ${isCurrentReciter ? HQ.MENTOR : isSelected ? HQ.MENTOR : hasHandRaised ? '#B45309' : HQ.LINE}`,
+                          background: isCurrentReciter ? '#E2EFE7' : HQ.SURFACE,
+                        }}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <div
-                              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${getAvatarColor(
-                                student.firstName
-                              )}`}
-                            >
+                            <span aria-hidden className="avatar-circle"
+                              style={{
+                                width: 32, height: 32, fontSize: 12, flex: 'none',
+                                backgroundColor: getAvatarColor(student.firstName),
+                              }}>
                               {getInitials(student.firstName, student.lastName)}
-                            </div>
+                            </span>
                             <div className="min-w-0">
-                              <p className="text-xs font-bold text-white truncate">
+                              <p className="text-xs font-bold truncate" style={{ color: HQ.INK, margin: 0 }}>
                                 {student.firstName} {student.lastName}
                               </p>
-                              <div className="flex items-center gap-1.5 mt-0.5">
+                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                 {isCurrentReciter && (
-                                  <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-bold bg-emerald-500/20 px-1.5 py-0.5 rounded">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                                    يُسمّع الآن 🎙️
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                    fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 9999,
+                                    background: HQ.MENTOR, color: '#fff',
+                                  }}>
+                                    <span aria-hidden style={{ width: 6, height: 6, borderRadius: 9999, background: '#fff' }} />
+                                    يُسمّع الآن
                                   </span>
                                 )}
                                 {hasHandRaised && (
-                                  <span className="flex items-center gap-1 text-[10px] text-amber-300 font-bold bg-amber-500/20 px-1.5 py-0.5 rounded">
-                                    <Hand className="w-2.5 h-2.5" />
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                    fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 9999,
+                                    background: HQ.PAPER, color: '#B45309', border: '1px solid #B45309',
+                                  }}>
+                                    <Hand size={10} aria-hidden />
                                     طلب دور
                                   </span>
                                 )}
                                 {isCompleted && (
-                                  <span className="flex items-center gap-1 text-[10px] text-green-400 font-bold bg-green-500/20 px-1.5 py-0.5 rounded">
-                                    <CheckCircle2 className="w-2.5 h-2.5" />
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                    fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 9999,
+                                    background: '#E2EFE7', color: '#0F5940', fontVariantNumeric: 'tabular-nums',
+                                  }}>
+                                    <CheckCircle2 size={10} aria-hidden />
                                     تم ({item.evaluation?.score || 100}%)
                                   </span>
                                 )}
                                 {isSkipped && (
-                                  <span className="text-[10px] text-gray-400 bg-gray-700/50 px-1.5 py-0.5 rounded">
+                                  <span style={{ fontSize: 10, color: HQ.MUTED, background: HQ.PAPER, padding: '2px 8px', borderRadius: 9999 }}>
                                     تم التخطي
                                   </span>
                                 )}
                                 {item.status === 'waiting' && !hasHandRaised && (
-                                  <span className="text-[10px] text-gray-400">في الانتظار ⏳</span>
+                                  <span style={{ fontSize: 10, color: HQ.MUTED }}>في الانتظار</span>
                                 )}
                               </div>
                             </div>
                           </div>
 
                           {/* Quick Action Buttons */}
-                          <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                          <div className="flex items-center gap-1 flex-none" onClick={e => e.stopPropagation()}>
                             {!isCurrentReciter && !isCompleted && (
                               <button
+                                type="button"
                                 onClick={() => handleStartTurn(student)}
-                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition-colors flex items-center gap-1 shadow-sm"
+                                className="font-bold"
+                                style={{
+                                  minHeight: 40, padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
+                                  background: HQ.MENTOR, color: '#fff', border: 'none', fontSize: 11,
+                                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                                }}
                                 title="بدء دور التسميع لهذا الطالب"
                               >
-                                <Mic className="w-3 h-3" />
+                                <Mic size={12} aria-hidden />
                                 <span>ابدأ</span>
                               </button>
                             )}
                             {isCurrentReciter && (
                               <button
+                                type="button"
                                 onClick={() => handleSkipTurn(student)}
-                                className="px-2 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 text-[11px] transition-colors"
+                                aria-label="تخطي"
+                                style={{ ...iconBtn, minWidth: 40, minHeight: 40 }}
                                 title="تخطي"
                               >
-                                <SkipForward className="w-3 h-3" />
+                                <SkipForward size={13} aria-hidden />
                               </button>
                             )}
                             {(isCompleted || isSkipped) && (
                               <button
+                                type="button"
                                 onClick={() => handleResetTurn(student)}
-                                className="px-2 py-1 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 text-[11px] transition-colors"
+                                aria-label="إعادة للطابور"
+                                style={{ ...iconBtn, minWidth: 40, minHeight: 40 }}
                                 title="إعادة للطابور"
                               >
-                                <RotateCcw className="w-3 h-3" />
+                                <RotateCcw size={13} aria-hidden />
                               </button>
                             )}
                           </div>
@@ -511,119 +551,134 @@ export default function LiveRecitationDrawer({
               </div>
             </div>
 
-            {/* Right side on desktop (cols 7): Active Student Recitation & Wird Panel */}
-            <div className="lg:col-span-7 flex flex-col h-full bg-gray-900 overflow-y-auto p-5 space-y-4">
+            {/* Active Student Panel */}
+            <div className="lg:col-span-7 flex flex-col h-full overflow-y-auto p-5 space-y-4" style={{ background: HQ.PAPER }}>
               {selectedStudent ? (
                 <>
                   {/* Selected Student Banner */}
-                  <div className="bg-gray-800/80 rounded-2xl p-4 border border-gray-700 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold text-white shadow-md ${getAvatarColor(
-                          selectedStudent.firstName
-                        )}`}
-                      >
+                  <div className="rounded-2xl p-4 flex items-center justify-between"
+                    style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span aria-hidden className="avatar-circle"
+                        style={{
+                          width: 48, height: 48, fontSize: 15, flex: 'none',
+                          backgroundColor: getAvatarColor(selectedStudent.firstName),
+                        }}>
                         {getInitials(selectedStudent.firstName, selectedStudent.lastName)}
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-black text-white">
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-black truncate" style={{ color: HQ.INK, margin: 0 }}>
                           {selectedStudent.firstName} {selectedStudent.lastName}
                         </h3>
-                        <p className="text-xs text-gray-400">{selectedStudent.email}</p>
+                        <p className="text-xs truncate" style={{ color: HQ.MUTED, margin: 0 }}>{selectedStudent.email}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-none">
                       {currentSpeaker?._id === selectedStudent._id ? (
-                        <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 animate-pulse">
-                          <Mic className="w-3.5 h-3.5" />
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          background: '#E2EFE7', color: '#0F5940', padding: '8px 14px', borderRadius: 12,
+                          fontSize: '0.8125rem', fontWeight: 800,
+                        }}>
+                          <Mic size={14} aria-hidden />
                           المتحدث النشط
                         </span>
                       ) : (
                         <button
+                          type="button"
                           onClick={() => handleStartTurn(selectedStudent)}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-700/20 transition-colors"
+                          className="font-bold"
+                          style={{
+                            minHeight: 44, padding: '8px 14px', borderRadius: 12, cursor: 'pointer',
+                            background: HQ.MENTOR, color: '#fff', border: 'none', fontSize: '0.8125rem',
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                          }}
                         >
-                          <Mic className="w-3.5 h-3.5" />
+                          <Mic size={14} aria-hidden />
                           تفعيل دور التسميع
                         </button>
                       )}
                     </div>
                   </div>
 
-                  {/* Individual Daily Wird Card (الورد اليومي الفردي) */}
-                  <div className="bg-gradient-to-br from-gray-800/90 to-gray-800/40 rounded-2xl p-4 border border-gray-700/80 space-y-3">
-                    <div className="flex items-center justify-between border-b border-gray-700/60 pb-2">
+                  {/* Individual Daily Wird Card */}
+                  <div className="rounded-2xl p-4 space-y-3" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+                    <div className="flex items-center justify-between pb-2" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
                       <div className="flex items-center gap-2">
-                        <BookOpen className="w-4 h-4 text-emerald-400" />
-                        <span className="text-xs font-bold text-white">
+                        <BookOpen size={15} color={HQ.MENTOR} aria-hidden />
+                        <span className="text-xs font-bold" style={{ color: HQ.INK }}>
                           الورد اليومي المخصص لهذا الطالب
                         </span>
                       </div>
                       <button
+                        type="button"
                         onClick={() => setShowWirdEditor(!showWirdEditor)}
-                        className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold transition-colors"
+                        aria-expanded={showWirdEditor}
+                        className="font-bold"
+                        style={{
+                          minHeight: 40, padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
+                          background: 'none', border: 'none', color: HQ.MENTOR, fontSize: 11,
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                        }}
                       >
-                        <Edit3 className="w-3 h-3" />
+                        <Edit3 size={12} aria-hidden />
                         <span>تعديل ورد اليوم</span>
                       </button>
                     </div>
 
                     {/* Wird Breakdown */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                      {/* New Hifz */}
-                      <div className="bg-gray-900/70 p-3 rounded-xl border border-emerald-500/20">
-                        <span className="text-[10px] font-bold text-emerald-400 block mb-1">
-                          📖 الحفظ الجديد (السبق)
+                      <div className="p-3 rounded-xl" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
+                        <span className="font-bold block mb-1" style={{ fontSize: '0.8125rem', color: HQ.INK }}>
+                          الحفظ الجديد (السبق)
                         </span>
                         {activeTask?.newHifz?.surahName ? (
-                          <div className="font-bold text-white text-xs">
+                          <div className="font-bold text-xs" style={{ color: HQ.INK }}>
                             سورة {activeTask.newHifz.surahName}
-                            <p className="text-[11px] text-gray-300 font-normal">
+                            <p className="font-normal" style={{ fontSize: '0.8125rem', color: HQ.MUTED, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
                               الآيات ({activeTask.newHifz.fromVerse} إلى {activeTask.newHifz.toVerse})
                             </p>
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-[11px]">لم يُحدد بعد</span>
+                          <span style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>لم يُحدد بعد</span>
                         )}
                       </div>
 
-                      {/* Near Revision */}
-                      <div className="bg-gray-900/70 p-3 rounded-xl border border-blue-500/20">
-                        <span className="text-[10px] font-bold text-blue-400 block mb-1">
-                          🔄 الماضي القريب (السبقي)
+                      <div className="p-3 rounded-xl" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
+                        <span className="font-bold block mb-1" style={{ fontSize: '0.8125rem', color: HQ.INK }}>
+                          الماضي القريب (السبقي)
                         </span>
                         {activeTask?.nearRevision?.surahName ? (
-                          <div className="font-bold text-white text-xs">
+                          <div className="font-bold text-xs" style={{ color: HQ.INK }}>
                             سورة {activeTask.nearRevision.surahName}
-                            <p className="text-[11px] text-gray-300 font-normal">
+                            <p className="font-normal" style={{ fontSize: '0.8125rem', color: HQ.MUTED, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
                               الآيات ({activeTask.nearRevision.fromVerse} إلى {activeTask.nearRevision.toVerse})
                             </p>
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-[11px]">مراجعة الأوجه السابقة</span>
+                          <span style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>مراجعة الأوجه السابقة</span>
                         )}
                       </div>
 
-                      {/* Cumulative Revision */}
-                      <div className="bg-gray-900/70 p-3 rounded-xl border border-purple-500/20">
-                        <span className="text-[10px] font-bold text-purple-400 block mb-1">
-                          🏛️ الماضي البعيد (التمكين)
+                      <div className="p-3 rounded-xl" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
+                        <span className="font-bold block mb-1" style={{ fontSize: '0.8125rem', color: HQ.INK }}>
+                          الماضي البعيد (التمكين)
                         </span>
                         {activeTask?.cumulativeRevision?.surahName ? (
-                          <div className="font-bold text-white text-xs">
+                          <div className="font-bold text-xs" style={{ color: HQ.INK }}>
                             {activeTask.cumulativeRevision.surahName}
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-[11px]">الورد القرآني الثابت</span>
+                          <span style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>الورد القرآني الثابت</span>
                         )}
                       </div>
                     </div>
 
                     {/* Additional Exercise */}
                     {activeTask?.additionalExercise?.details && (
-                      <div className="bg-amber-950/20 border border-amber-500/20 p-2.5 rounded-xl text-xs text-amber-200">
-                        🎯 <span className="font-bold">تدريب إضافي:</span> {activeTask.additionalExercise.details}
+                      <div className="p-2.5 rounded-xl text-xs" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK }}>
+                        <span className="font-bold">تدريب إضافي:</span> {activeTask.additionalExercise.details}
                       </div>
                     )}
 
@@ -632,21 +687,24 @@ export default function LiveRecitationDrawer({
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="p-3 bg-gray-900 rounded-xl border border-emerald-600/40 space-y-3 mt-2"
+                        transition={{ duration: 0.2 }}
+                        className="p-3 rounded-xl space-y-3 mt-2"
+                        style={{ background: HQ.PAPER, border: `1px solid ${HQ.MENTOR}` }}
                       >
-                        <h4 className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-                          <Edit3 className="w-3.5 h-3.5" /> تخصيص ورد الحفظ الآن
+                        <h4 className="text-xs font-bold flex items-center gap-1.5" style={{ color: '#0F5940', margin: 0 }}>
+                          <Edit3 size={13} aria-hidden /> تخصيص ورد الحفظ الآن
                         </h4>
-                        <div className="border-b border-gray-800 pb-2.5">
-                          <span className="text-[10px] font-bold text-emerald-400 block mb-1">📖 الحفظ الجديد (السبق):</span>
+                        <div className="pb-2.5" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
+                          <span className="font-bold block mb-1" style={{ fontSize: '0.8125rem', color: HQ.INK }}>الحفظ الجديد (السبق):</span>
                           <div className="grid grid-cols-3 gap-2">
                             <div>
-                              <label className="text-[10px] text-gray-400 block mb-0.5">السورة</label>
+                              <label htmlFor="w-surah" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>السورة</label>
                               <select
+                                id="w-surah"
                                 value={editWirdForm.surahNumber}
                                 onChange={e => setEditWirdForm({ ...editWirdForm, surahNumber: e.target.value })}
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
+                                className="w-full text-xs focus:border-[#177B58] focus:outline-none"
+                                style={{ minHeight: 44, background: HQ.SURFACE, color: HQ.INK, border: `1px solid ${HQ.LINE}`, borderRadius: 8, padding: '8px' }}
                               >
                                 {QURAN_SURAHS.map(s => (
                                   <option key={s.number} value={s.number}>
@@ -656,37 +714,43 @@ export default function LiveRecitationDrawer({
                               </select>
                             </div>
                             <div>
-                              <label className="text-[10px] text-gray-400 block mb-0.5">من آية</label>
+                              <label htmlFor="w-from" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>من آية</label>
                               <input
+                                id="w-from"
                                 type="number"
                                 value={editWirdForm.fromVerse}
                                 onChange={e => setEditWirdForm({ ...editWirdForm, fromVerse: e.target.value })}
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
+                                className="w-full text-xs focus:border-[#177B58] focus:outline-none"
+                                style={{ minHeight: 44, background: HQ.SURFACE, color: HQ.INK, border: `1px solid ${HQ.LINE}`, borderRadius: 8, padding: '8px', fontVariantNumeric: 'tabular-nums' }}
                                 min="1"
                               />
                             </div>
                             <div>
-                              <label className="text-[10px] text-gray-400 block mb-0.5">إلى آية</label>
+                              <label htmlFor="w-to" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>إلى آية</label>
                               <input
+                                id="w-to"
                                 type="number"
                                 value={editWirdForm.toVerse}
                                 onChange={e => setEditWirdForm({ ...editWirdForm, toVerse: e.target.value })}
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
+                                className="w-full text-xs focus:border-[#177B58] focus:outline-none"
+                                style={{ minHeight: 44, background: HQ.SURFACE, color: HQ.INK, border: `1px solid ${HQ.LINE}`, borderRadius: 8, padding: '8px', fontVariantNumeric: 'tabular-nums' }}
                                 min="1"
                               />
                             </div>
                           </div>
                         </div>
 
-                        <div className="border-b border-gray-800 pb-2.5">
-                          <span className="text-[10px] font-bold text-blue-400 block mb-1">🔄 الماضي القريب (السبقي):</span>
+                        <div className="pb-2.5" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
+                          <span className="font-bold block mb-1" style={{ fontSize: '0.8125rem', color: HQ.INK }}>الماضي القريب (السبقي):</span>
                           <div className="grid grid-cols-3 gap-2">
                             <div>
-                              <label className="text-[10px] text-gray-400 block mb-0.5">السورة</label>
+                              <label htmlFor="w-near-surah" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>السورة</label>
                               <select
+                                id="w-near-surah"
                                 value={editWirdForm.nearSurahNumber}
                                 onChange={e => setEditWirdForm({ ...editWirdForm, nearSurahNumber: e.target.value })}
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
+                                className="w-full text-xs focus:border-[#177B58] focus:outline-none"
+                                style={{ minHeight: 44, background: HQ.SURFACE, color: HQ.INK, border: `1px solid ${HQ.LINE}`, borderRadius: 8, padding: '8px' }}
                               >
                                 {QURAN_SURAHS.map(s => (
                                   <option key={s.number} value={s.number}>
@@ -696,22 +760,26 @@ export default function LiveRecitationDrawer({
                               </select>
                             </div>
                             <div>
-                              <label className="text-[10px] text-gray-400 block mb-0.5">من آية</label>
+                              <label htmlFor="w-near-from" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>من آية</label>
                               <input
+                                id="w-near-from"
                                 type="number"
                                 value={editWirdForm.nearFromVerse}
                                 onChange={e => setEditWirdForm({ ...editWirdForm, nearFromVerse: e.target.value })}
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
+                                className="w-full text-xs focus:border-[#177B58] focus:outline-none"
+                                style={{ minHeight: 44, background: HQ.SURFACE, color: HQ.INK, border: `1px solid ${HQ.LINE}`, borderRadius: 8, padding: '8px', fontVariantNumeric: 'tabular-nums' }}
                                 min="1"
                               />
                             </div>
                             <div>
-                              <label className="text-[10px] text-gray-400 block mb-0.5">إلى آية</label>
+                              <label htmlFor="w-near-to" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>إلى آية</label>
                               <input
+                                id="w-near-to"
                                 type="number"
                                 value={editWirdForm.nearToVerse}
                                 onChange={e => setEditWirdForm({ ...editWirdForm, nearToVerse: e.target.value })}
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white"
+                                className="w-full text-xs focus:border-[#177B58] focus:outline-none"
+                                style={{ minHeight: 44, background: HQ.SURFACE, color: HQ.INK, border: `1px solid ${HQ.LINE}`, borderRadius: 8, padding: '8px', fontVariantNumeric: 'tabular-nums' }}
                                 min="1"
                               />
                             </div>
@@ -719,27 +787,36 @@ export default function LiveRecitationDrawer({
                         </div>
 
                         <div>
-                          <label className="text-[10px] text-gray-400 block mb-0.5">تدريب أو ملاحظة إضافية</label>
+                          <label htmlFor="w-extra" className="block mb-0.5" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>تدريب أو ملاحظة إضافية</label>
                           <input
+                            id="w-extra"
                             type="text"
                             value={editWirdForm.additionalExercise}
                             onChange={e => setEditWirdForm({ ...editWirdForm, additionalExercise: e.target.value })}
                             placeholder="مثال: تطبيق أحكام الميم الساكنة"
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1 text-xs text-white placeholder-gray-500"
+                            className="w-full text-xs focus:border-[#177B58] focus:outline-none"
+                            style={{ minHeight: 44, background: HQ.SURFACE, color: HQ.INK, border: `1px solid ${HQ.LINE}`, borderRadius: 8, padding: '8px 12px' }}
                           />
                         </div>
 
                         <div className="flex justify-end gap-2 pt-1">
                           <button
+                            type="button"
                             onClick={() => setShowWirdEditor(false)}
-                            className="px-3 py-1 rounded-lg text-xs text-gray-400 hover:text-white"
+                            className="text-xs"
+                            style={{ minHeight: 44, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', background: 'none', border: 'none', color: HQ.MUTED, fontWeight: 700 }}
                           >
                             إلغاء
                           </button>
                           <button
+                            type="button"
                             onClick={handleSaveWird}
                             disabled={savingWird}
-                            className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors disabled:opacity-50"
+                            className="text-xs font-bold"
+                            style={{
+                              minHeight: 44, padding: '8px 14px', borderRadius: 8, cursor: 'pointer',
+                              background: HQ.MENTOR, color: '#fff', border: 'none', opacity: savingWird ? 0.6 : 1,
+                            }}
                           >
                             {savingWird ? 'جارٍ الحفظ...' : 'حفظ الورد'}
                           </button>
@@ -748,19 +825,21 @@ export default function LiveRecitationDrawer({
                     )}
                   </div>
 
-                  {/* Live Evaluation Panel (رصد الدرجة اللحظية) */}
-                  <div className="bg-gray-800/90 rounded-2xl p-4 border border-gray-700/80 space-y-4">
-                    <div className="flex items-center justify-between border-b border-gray-700 pb-2">
+                  {/* Live Evaluation Panel */}
+                  <div className="rounded-2xl p-4 space-y-4" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+                    <div className="flex items-center justify-between pb-2" style={{ borderBottom: `1px solid ${HQ.LINE}` }}>
                       <div className="flex items-center gap-2">
-                        <Award className="w-4 h-4 text-amber-400" />
-                        <span className="text-xs font-bold text-white">تقييم تلاوة الطالب في الحصة</span>
+                        <Award size={15} color="#B45309" aria-hidden />
+                        <span className="text-xs font-bold" style={{ color: HQ.INK }}>تقييم تلاوة الطالب في الحصة</span>
                       </div>
                       <div className="flex items-center gap-1 text-xs">
-                        <span className="text-gray-400">النوع المُسمّع:</span>
+                        <span style={{ color: HQ.MUTED }}>النوع المُسمّع:</span>
                         <select
                           value={portionType}
                           onChange={e => setPortionType(e.target.value)}
-                          className="bg-gray-700 text-white border border-gray-600 rounded-lg px-2 py-0.5 text-xs font-semibold"
+                          aria-label="النوع المُسمّع"
+                          className="text-xs font-bold focus:border-[#177B58] focus:outline-none"
+                          style={{ background: HQ.PAPER, color: HQ.INK, border: `1px solid ${HQ.LINE}`, borderRadius: 8, padding: '8px', minHeight: 40 }}
                         >
                           <option value="newHifz">الحفظ الجديد</option>
                           <option value="nearRevision">الماضي القريب</option>
@@ -773,32 +852,36 @@ export default function LiveRecitationDrawer({
                     {/* Mistakes Counter & Score */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {/* Mistakes counter */}
-                      <div className="bg-gray-900/60 rounded-xl p-3 border border-gray-700/60 flex items-center justify-between">
+                      <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
                         <div>
-                          <span className="text-xs font-bold text-gray-300 block">عداد الأخطاء والتنبيهات</span>
-                          <span className="text-[10px] text-gray-500">لحن جلي أو خفي</span>
+                          <span className="text-xs font-bold block" style={{ color: HQ.INK }}>عداد الأخطاء والتنبيهات</span>
+                          <span style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>لحن جلي أو خفي</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
+                            type="button"
                             onClick={() => {
                               const next = Math.max(0, mistakesCount - 1);
                               setMistakesCount(next);
                               setScore(Math.min(100, 100 - next * 5));
                             }}
-                            className="w-7 h-7 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 flex items-center justify-center font-bold text-sm"
+                            aria-label="إنقاص الأخطاء"
+                            style={{ width: 40, height: 40, borderRadius: 8, background: HQ.SURFACE, color: HQ.INK, border: `1px solid ${HQ.LINE}`, cursor: 'pointer', fontWeight: 800, fontSize: 16 }}
                           >
                             -
                           </button>
-                          <span className="text-base font-black text-amber-400 w-6 text-center">
+                          <span className="text-base font-black w-6 text-center" style={{ color: '#B45309', fontVariantNumeric: 'tabular-nums' }}>
                             {mistakesCount}
                           </span>
                           <button
+                            type="button"
                             onClick={() => {
                               const next = mistakesCount + 1;
                               setMistakesCount(next);
                               setScore(Math.max(0, 100 - next * 5));
                             }}
-                            className="w-7 h-7 rounded-lg bg-red-900/50 text-red-300 hover:bg-red-800 flex items-center justify-center font-bold text-sm"
+                            aria-label="زيادة الأخطاء"
+                            style={{ width: 40, height: 40, borderRadius: 8, background: HQ.SURFACE, color: '#C2410C', border: '1px solid #C2410C', cursor: 'pointer', fontWeight: 800, fontSize: 16 }}
                           >
                             +
                           </button>
@@ -806,10 +889,10 @@ export default function LiveRecitationDrawer({
                       </div>
 
                       {/* Score Input */}
-                      <div className="bg-gray-900/60 rounded-xl p-3 border border-gray-700/60 flex items-center justify-between">
+                      <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
                         <div>
-                          <span className="text-xs font-bold text-gray-300 block">الدرجة المئوية</span>
-                          <span className="text-[10px] text-gray-500">تُحسب تلقائياً ويمكن تعديلها</span>
+                          <span className="text-xs font-bold block" style={{ color: HQ.INK }}>الدرجة المئوية</span>
+                          <span style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>تُحسب تلقائياً ويمكن تعديلها</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <input
@@ -817,29 +900,36 @@ export default function LiveRecitationDrawer({
                             min="0"
                             max="100"
                             value={score}
+                            aria-label="الدرجة المئوية"
                             onChange={e => setScore(Number(e.target.value))}
-                            className="w-16 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-center font-black text-emerald-400 text-sm focus:outline-none focus:border-emerald-500"
+                            className="text-center font-black text-sm focus:border-[#177B58] focus:outline-none"
+                            style={{
+                              width: 64, minHeight: 44, background: HQ.SURFACE, color: HQ.MENTOR,
+                              border: `1px solid ${HQ.LINE}`, borderRadius: 8, padding: '8px', fontVariantNumeric: 'tabular-nums',
+                            }}
                           />
-                          <span className="text-gray-400 text-xs font-bold">%</span>
+                          <span className="text-xs font-bold" style={{ color: HQ.MUTED }}>%</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Star Rating */}
-                    <div className="flex items-center justify-between bg-gray-900/60 rounded-xl p-3 border border-gray-700/60">
-                      <span className="text-xs font-bold text-gray-300">التقييم العام:</span>
-                      <div className="flex items-center gap-1.5">
+                    <div className="flex items-center justify-between rounded-xl p-3" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}` }}>
+                      <span className="text-xs font-bold" style={{ color: HQ.INK }}>التقييم العام:</span>
+                      <div className="flex items-center gap-1.5" role="radiogroup" aria-label="التقييم العام من 5">
                         {[1, 2, 3, 4, 5].map(star => (
                           <button
                             key={star}
                             type="button"
+                            role="radio" aria-checked={star === rating} aria-label={`${star} من 5`}
                             onClick={() => setRating(star)}
-                            className="p-1 text-amber-400 hover:scale-125 transition-transform"
+                            style={{ minWidth: 40, minHeight: 40, border: 'none', background: 'none', cursor: 'pointer', padding: 6 }}
                           >
                             <Star
-                              className={`w-6 h-6 ${
-                                star <= rating ? 'fill-amber-400 text-amber-400' : 'text-gray-600'
-                              }`}
+                              size={22}
+                              aria-hidden
+                              color={star <= rating ? '#D9A441' : HQ.LINE}
+                              fill={star <= rating ? '#D9A441' : 'none'}
                             />
                           </button>
                         ))}
@@ -848,14 +938,18 @@ export default function LiveRecitationDrawer({
 
                     {/* Quick Feedback Tags */}
                     <div>
-                      <span className="text-[11px] text-gray-400 block mb-1">عبارات توجيهية سريعة:</span>
+                      <span className="block mb-1" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>عبارات توجيهية سريعة:</span>
                       <div className="flex flex-wrap gap-1.5">
                         {QUICK_TAGS.map((tag, i) => (
                           <button
                             key={i}
                             type="button"
                             onClick={() => setNotes(prev => (prev ? `${prev} • ${tag}` : tag))}
-                            className="text-[10px] bg-gray-700/60 hover:bg-gray-700 text-gray-300 px-2 py-1 rounded-lg transition-colors border border-gray-600/50"
+                            style={{
+                              fontSize: '0.8125rem', background: HQ.PAPER, color: HQ.INK,
+                              border: `1px solid ${HQ.LINE}`, padding: '8px 12px', borderRadius: 8,
+                              cursor: 'pointer', minHeight: 40,
+                            }}
                           >
                             {tag}
                           </button>
@@ -868,41 +962,63 @@ export default function LiveRecitationDrawer({
                       <textarea
                         value={notes}
                         onChange={e => setNotes(e.target.value)}
+                        aria-label="ملاحظات المعلم وتوجيهات التجويد"
                         placeholder="ملاحظات المعلم وتوجيهات التجويد للطالب..."
-                        className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white placeholder-gray-500 resize-none h-16 focus:outline-none focus:border-emerald-500"
+                        className="w-full text-xs focus:border-[#177B58] focus:outline-none"
+                        style={{
+                          minHeight: 64, background: HQ.SURFACE, color: HQ.INK,
+                          border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: 12,
+                        }}
                       />
                     </div>
 
                     {/* Submit Actions */}
                     <div className="flex items-center gap-2 pt-1">
                       <button
+                        type="button"
                         onClick={() => handleSaveEvaluation(false)}
                         disabled={savingEvaluation}
-                        className="flex-1 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        className="font-bold"
+                        style={{
+                          flex: 1, minHeight: 48, borderRadius: 12, cursor: 'pointer',
+                          background: HQ.SURFACE, color: HQ.INK, border: `1.5px solid ${HQ.MENTOR}`,
+                          fontSize: '0.8125rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                          opacity: savingEvaluation ? 0.6 : 1,
+                        }}
                       >
-                        <Check className="w-4 h-4 text-emerald-400" />
+                        <Check size={15} color={HQ.MENTOR} aria-hidden />
                         <span>اعتماد التقييم لهذا الطالب</span>
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => handleSaveEvaluation(true)}
                         disabled={savingEvaluation}
-                        className="flex-1 py-2.5 rounded-xl text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50" style={{ background: '#177B58' }}
+                        className="font-bold"
+                        style={{
+                          flex: 1, minHeight: 48, borderRadius: 12, cursor: 'pointer',
+                          background: HQ.MENTOR, color: '#fff', border: 'none',
+                          fontSize: '0.8125rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                          opacity: savingEvaluation ? 0.6 : 1,
+                        }}
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>اعتماد والانتقال للتالي ⏭️</span>
+                        <CheckCircle2 size={15} aria-hidden />
+                        <span>اعتماد والانتقال للتالي</span>
                       </button>
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center p-8 text-gray-500 space-y-3">
-                  <div className="w-16 h-16 rounded-2xl bg-gray-800/80 flex items-center justify-center text-gray-400 border border-gray-700">
-                    <Mic className="w-8 h-8 text-gray-400" />
-                  </div>
+                <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3">
+                  <span aria-hidden style={{
+                    width: 64, height: 64, borderRadius: 18, background: HQ.SURFACE,
+                    border: `1px solid ${HQ.LINE}`, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Mic size={30} color={HQ.MUTED} />
+                  </span>
                   <div>
-                    <h4 className="text-sm font-bold text-gray-300">لم يتم اختيار أي طالب</h4>
-                    <p className="text-xs text-gray-500 mt-1 max-w-sm">
+                    <h4 className="text-sm font-bold" style={{ color: HQ.INK, margin: '0 0 4px' }}>لم يتم اختيار أي طالب</h4>
+                    <p className="text-xs mt-1 max-w-sm" style={{ color: HQ.MUTED, margin: 0 }}>
                       اختر طالباً من قائمة الطابور لبدء دور التسميع، مراجعة ورده اليومي المخصص، ورصد التقييم المباشر له.
                     </p>
                   </div>
