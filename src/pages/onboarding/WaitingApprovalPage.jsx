@@ -6,15 +6,19 @@ import useAuthStore from '../../store/authStore';
 import './Onboarding.css';
 
 export default function WaitingApprovalPage() {
-  const { user, checkAuth, logout } = useAuthStore();
+  const { user, checkAuth, refreshUser, logout } = useAuthStore();
   const navigate = useNavigate();
 
-  // Poll for updates every 30 seconds
+  // Poll for updates every 30 seconds — always read the FRESH store value
   useEffect(() => {
-    const interval = setInterval(() => {
-      checkAuth();
+    const interval = setInterval(async () => {
+      const fresh = await refreshUser();
+      if (fresh?.assignedLevel) {
+        navigate('/student', { replace: true });
+      }
     }, 30000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // If user now has an assigned level, redirect to dashboard
@@ -22,11 +26,14 @@ export default function WaitingApprovalPage() {
     if (user?.assignedLevel) {
       navigate('/student', { replace: true });
     }
-  }, [user?.assignedLevel]);
+  }, [user?.assignedLevel, navigate]);
 
   const handleRefresh = async () => {
+    const fresh = await refreshUser();
     await checkAuth();
-    if (user?.assignedLevel) {
+    const current = fresh?.assignedLevel
+      || useAuthStore.getState().user?.assignedLevel;
+    if (current) {
       navigate('/student', { replace: true });
     }
   };
@@ -101,7 +108,8 @@ export default function WaitingApprovalPage() {
                 <div>
                   <p className="text-sm font-bold" style={{ color: '#2A2438' }}>الوقت المتوقع</p>
                   <p className="text-sm" style={{ color: '#756E85' }}>
-                    ستصلك رسالة إشعار خلال <strong>24 ساعة</strong> عند اكتمال المراجعة.
+                    مراجعة التسجيلات الشفهية خلال <strong>24 ساعة</strong>، ثم تسكينك في مجموعة تناسب مستواك.
+                    ستصلك رسالة إشعار عند كل خطوة.
                   </p>
                 </div>
               </div>
@@ -115,7 +123,16 @@ export default function WaitingApprovalPage() {
 
               {/* Actions */}
               <div className="flex flex-col gap-3">
-                <button onClick={handleRefresh} className="onb-btn onb-btn-block">
+                {!user?.isVerified && (
+                  <button onClick={() => navigate('/verify-email')} className="onb-btn onb-btn-block">
+                    فعّل بريدك أولاً — لن تظهر للإدارة قبل التفعيل
+                  </button>
+                )}
+                <button onClick={() => navigate('/student/quran')} className="onb-ghost w-full justify-center">
+                  <BookOpen className="w-4 h-4" aria-hidden />
+                  افتح المصحف ريثما تتم المراجعة
+                </button>
+                <button onClick={handleRefresh} className="onb-ghost w-full justify-center">
                   <RefreshCw className="w-4 h-4" aria-hidden />
                   تحديث الحالة
                 </button>

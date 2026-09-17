@@ -114,3 +114,28 @@ export const getLevelLabel = (level) => {
   };
   return map[level] || level;
 };
+
+// ── Subscription access (single source of truth, evaluated by the server) ──
+// Shape comes from GET /payments/my-history → subscription (evaluateUserSubscription):
+// { status, isExpired, isTrial, trialSessionsAttended, trialSessionsAllowed, canAccessLiveSession }
+export const isSubscriptionBlocked = (sub) => {
+  if (!sub) return false; // fail-open: never lock the student out on network/config errors
+  if (sub.isExpired) return true;
+  const attended = sub.trialSessionsAttended || 0;
+  const allowed = sub.trialSessionsAllowed || 1;
+  const trialUsed = attended >= allowed;
+  const active = sub.status === 'active' && !sub.isExpired;
+  if (trialUsed && !active) return true;
+  if (sub.canAccessLiveSession === false && !active) return true;
+  return false;
+};
+
+export const getSubscriptionBlockReason = (sub) => {
+  if (!sub) return '';
+  if (sub.isExpired) return 'expired';
+  return 'trial_used';
+};
+
+// ── Unified "no group yet" copy — same expectation on every student screen ──
+export const NO_GROUP_TITLE = 'لم تُعيَّن في مجموعة بعد';
+export const NO_GROUP_HINT = 'الإدارة تسكّنك في مجموعة تناسب مستواك — ريثما يتم ذلك تابع المصحف ووردك اليومي.';

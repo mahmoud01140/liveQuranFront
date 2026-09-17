@@ -18,7 +18,21 @@ export default function SurveyPage() {
   const [loading, setLoading] = useState(true);
 
   const regType = user?.registrationType || 'student';
+  const storageKey = `survey_answers_${user?._id || 'guest'}_${regType}`;
   const [questions, setQuestions] = useState(SURVEY_QUESTIONS[regType] || SURVEY_QUESTIONS.student);
+
+  // Restore answers saved on this device so a refresh never wipes the survey
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      if (Array.isArray(saved)) {
+        saved.forEach((opt, idx) => {
+          if (opt !== undefined && opt !== null) setSurveyAnswer(idx, opt);
+        });
+      }
+    } catch (_) {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
 
   useEffect(() => {
     const fetchSurvey = async () => {
@@ -43,6 +57,11 @@ export default function SurveyPage() {
 
   const handleSelect = (index) => {
     setSurveyAnswer(currentQ, index);
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      saved[currentQ] = index;
+      localStorage.setItem(storageKey, JSON.stringify(saved));
+    } catch (_) {}
   };
 
   const handleNext = () => {

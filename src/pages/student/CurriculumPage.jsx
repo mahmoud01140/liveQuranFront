@@ -13,7 +13,7 @@ import api from '../../services/api';
 import VideoPlayer, { isVideoUrl } from '../../components/shared/VideoPlayer';
 import useLessonProgress, { getRandomMotivation } from '../../hooks/useLessonProgress';
 import { LESSON_TYPES_AR, DAYS_AR, SESSION_TYPES } from '../../utils/constants';
-import { formatTime, getLevelLabel } from '../../utils/helpers';
+import { formatTime, getLevelLabel, NO_GROUP_TITLE, NO_GROUP_HINT } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 import '../../components/halaqa/halaqa.css';
 import { HQ, HqAvatar, HqBadge } from '../../components/halaqa/primitives';
@@ -119,8 +119,12 @@ export default function CurriculumPage() {
     return isUnlocked(i) && !lessonDone(l, lid) && !(allDone(lid, getStepsForLesson(l)));
   });
 
-  /* ── Step toggle handler (logic unchanged, calmer feedback) ── */
+  /* ── Step toggle handler: the exam step is quiz-gated (see LessonPage) ── */
   const handleToggleStep = (lessonId, step, lessonIndex) => {
+    if (step.key === 'exam' && !isStepDone(lessonId, 'exam')) {
+      toast.error('خطوة الاختبار تُفتح فقط باجتياز اختبار الدرس (4 من 5) داخل صفحة الدرس');
+      return;
+    }
     const wasDone = isStepDone(lessonId, step.key);
     toggleStep(lessonId, step.key);
 
@@ -243,8 +247,9 @@ export default function CurriculumPage() {
             !group ? (
               <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 48, textAlign: 'center' }}>
                 <Users size={44} color={HQ.LINE} style={{ margin: '0 auto 12px' }} />
-                <h2 style={h2}>لم تُعيَّن في مجموعة بعد</h2>
-                <p style={{ color: HQ.MUTED, fontSize: 14 }}>سيتم تعيينك في مجموعة من قِبَل الإدارة قريبًا</p>
+                <h2 style={h2}>{NO_GROUP_TITLE}</h2>
+                <p style={{ color: HQ.MUTED, fontSize: 14, margin: '0 0 20px' }}>{NO_GROUP_HINT}</p>
+                <HqActionLink to="/student/quran">افتح المصحف ريثما يتم تعيينك</HqActionLink>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -315,8 +320,9 @@ export default function CurriculumPage() {
               {!hasContent ? (
                 <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 48, textAlign: 'center' }}>
                   <BookOpen size={44} color={HQ.LINE} style={{ margin: '0 auto 12px' }} />
-                  <h2 style={h2}>لم يُعيَّن منهج بعد</h2>
-                  <p style={{ color: HQ.MUTED, fontSize: 14 }}>سيقوم المعلم أو الإدارة بتعيين منهجك الدراسي قريبًا</p>
+                  <h2 style={h2}>{!group ? NO_GROUP_TITLE : 'لم يُعيَّن منهج بعد'}</h2>
+                  <p style={{ color: HQ.MUTED, fontSize: 14, margin: '0 0 20px' }}>{!group ? NO_GROUP_HINT : 'سيقوم المعلم أو الإدارة بتعيين منهجك الدراسي قريبًا'}</p>
+                  {!group && <HqActionLink to="/student/quran">افتح المصحف ريثما يتم تعيينك</HqActionLink>}
                 </div>
               ) : (
                 <>
@@ -431,8 +437,10 @@ export default function CurriculumPage() {
                                 {steps.map((step) => {
                                   const sDone = isStepDone(lid, step.key);
                                   const Icon = step.icon;
+                                  const quizGated = step.key === 'exam' && !sDone;
                                   return (
                                     <button key={step.key} type="button" aria-pressed={sDone}
+                                      title={quizGated ? 'تُفتح باجتياز اختبار الدرس داخل صفحة الدرس' : step.label}
                                       onClick={() => handleToggleStep(lid, step, i)}
                                       style={{
                                         flex: 1, minWidth: 0, minHeight: 64, cursor: 'pointer',
@@ -450,7 +458,7 @@ export default function CurriculumPage() {
                                         {sDone ? <CheckCircle size={15} /> : <Icon size={15} />}
                                       </span>
                                       <span style={{ fontSize: 12, fontWeight: 700, color: sDone ? HQ.MENTOR : HQ.MUTED, textAlign: 'center', lineHeight: 1.5 }}>
-                                        {step.label}
+                                        {step.label}{quizGated ? ' (بالاختبار)' : ''}
                                       </span>
                                     </button>
                                   );

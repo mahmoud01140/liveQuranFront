@@ -155,7 +155,10 @@ export default function LessonPage() {
         { key: 'exercises' },
         { key: 'exam' }
       ];
-      const prevDone = user?.completedLessons?.includes(prev._id) || allDone(prev._id, prevSteps);
+      const prevIdStr = prev._id?.toString();
+      const prevDone = (user?.completedLessons || []).some(id => id?.toString() === prevIdStr)
+        || prev.status === 'completed'
+        || allDone(prev._id, prevSteps) || allDone(prevIdStr, prevSteps);
       unlocked = prevDone;
     }
 
@@ -263,6 +266,13 @@ export default function LessonPage() {
     { key: 'exam', label: 'اجتزت الاختبار', icon: Award }
   ];
   const stepsDone = steps.filter(s => isStepDone(lessonId, s.key)).length;
+  // Next-lesson gate: the CURRENT lesson must be done (backend or all steps),
+  // not merely unlocked.
+  const currentDone =
+    (user?.completedLessons || []).some(id => id?.toString() === currentLesson._id?.toString()) ||
+    currentLesson.status === 'completed' ||
+    allDone(lessonId, steps);
+  const canGoNext = isUnlocked && currentDone;
 
   return shell(
     <>
@@ -280,7 +290,7 @@ export default function LessonPage() {
           <Lock size={18} color="#B45309" style={{ flex: 'none', marginTop: 2 }} />
           <div>
             <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: HQ.INK }}>هذا الدرس سيُتاح بعد إتمام الدرس السابق</p>
-            <p style={{ margin: '2px 0 0', fontSize: 13, color: HQ.MUTED }}>يمكنك القراءة والمشاهدة، وسيُسجَّل تقدمك عند فتح الدرس.</p>
+            <p style={{ margin: '2px 0 0', fontSize: 13, color: HQ.MUTED }}>أتمم مراحل الدرس السابق واجتز اختباره لفتح هذا الدرس.</p>
           </div>
         </div>
       )}
@@ -294,14 +304,21 @@ export default function LessonPage() {
         {` · ${stepsDone}/${steps.length} مراحل`}
       </p>
 
-      {/* Steps: the clear primary mechanism */}
+      {/* Steps: the clear primary mechanism (exam is quiz-gated) */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }} role="group" aria-label="مراحل إكمال الدرس">
         {steps.map(s => {
           const done = isStepDone(lessonId, s.key);
           const Icon = s.icon;
+          const quizGated = s.key === 'exam' && !done;
           return (
             <button key={s.key} type="button" aria-pressed={done} disabled={!isUnlocked}
+              title={quizGated ? 'تُفتح باجتياز الاختبار السريع أدناه (4 من 5)' : s.label}
               onClick={() => {
+                if (s.key === 'exam' && !isStepDone(lessonId, 'exam')) {
+                  toast.error('اجتز الاختبار السريع أدناه (4 من 5) لفتح هذه الخطوة');
+                  document.getElementById('lesson-quiz')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  return;
+                }
                 const wasDone = done;
                 toggleStep(lessonId, s.key);
                 if (!wasDone) {
@@ -349,10 +366,13 @@ export default function LessonPage() {
       </div>
 
       {/* Quiz — same bank, scoring, and pass rule */}
-      <section aria-label="الاختبار السريع للدرس" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 16, marginBottom: 20 }}>
+      <section id="lesson-quiz" aria-label="الاختبار السريع للدرس" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 16, marginBottom: 20 }}>
         <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800, color: HQ.INK, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Award size={18} color={HQ.MENTOR} /> اختبر نفسك
         </h2>
+        <p style={{ fontSize: 13, color: HQ.MUTED, margin: '0 0 12px' }}>
+          أسئلة مراجعة عامة على نوع هذا الدرس — النجاح من 4 يفتح خطوة الاختبار أعلاه.
+        </p>
         {!quizStarted ? (
           <div>
             <p style={{ fontSize: 14, color: HQ.MUTED, margin: '0 0 12px' }}>
@@ -441,6 +461,9 @@ export default function LessonPage() {
         <h2 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 800, color: HQ.INK, display: 'flex', alignItems: 'center', gap: 8 }}>
           <FileText size={18} color={HQ.MENTOR} /> ملاحظاتي
         </h2>
+        <p style={{ fontSize: 12, color: HQ.MUTED, margin: '0 0 12px' }}>
+          ملاحظاتك محفوظة على هذا الجهاز فقط ولا يراها المعلم.
+        </p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <input type="text" placeholder="فائدة سريعة من الدرس..." value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
@@ -487,17 +510,17 @@ export default function LessonPage() {
           </button>
         ) : <span style={{ flex: 1 }} />}
         {nextLesson ? (
-          <button type="button" onClick={() => isUnlocked && navigate(`/student/lessons/${nextLesson._id}`)} disabled={!isUnlocked}
+          <button type="button" onClick={() => canGoNext && navigate(`/student/lessons/${nextLesson._id}`)} disabled={!canGoNext}
             style={{
-              flex: 1, minHeight: 60, borderRadius: 14, cursor: isUnlocked ? 'pointer' : 'not-allowed',
+              flex: 1, minHeight: 60, borderRadius: 14, cursor: canGoNext ? 'pointer' : 'not-allowed',
               display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', textAlign: 'right',
-              background: isUnlocked ? HQ.MENTOR : HQ.PAPER,
-              border: isUnlocked ? 'none' : `1px solid ${HQ.LINE}`,
-              color: isUnlocked ? '#fff' : HQ.MUTED, opacity: isUnlocked ? 1 : 0.7,
+              background: canGoNext ? HQ.MENTOR : HQ.PAPER,
+              border: canGoNext ? 'none' : `1px solid ${HQ.LINE}`,
+              color: canGoNext ? '#fff' : HQ.MUTED, opacity: canGoNext ? 1 : 0.7,
             }}>
             <span style={{ minWidth: 0, flex: 1 }}>
               <span style={{ display: 'block', fontSize: 12, fontWeight: 700, opacity: 0.85 }}>
-                {isUnlocked ? 'التالي' : 'التالي — سيُتاح بعد إتمام هذا الدرس'}
+                {canGoNext ? 'التالي' : 'التالي — سيُتاح بعد إتمام هذا الدرس'}
               </span>
               <span style={{ display: 'block', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nextLesson.title}</span>
             </span>

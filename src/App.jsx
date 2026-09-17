@@ -14,6 +14,7 @@ const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
+const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 
 // Onboarding
 const RegistrationTypePage = lazy(() => import('./pages/onboarding/RegistrationTypePage'));
@@ -93,7 +94,13 @@ export default function App() {
             <Route path="/login" element={user ? <Navigate to={getDashboardPath(user)} /> : <LoginPage />} />
             <Route path="/register" element={user ? <Navigate to={getDashboardPath(user)} /> : <RegisterPage />} />
             <Route path="/forgot-password" element={user ? <Navigate to={getDashboardPath(user)} /> : <ForgotPasswordPage />} />
-            <Route path="/reset-password/:token" element={user ? <Navigate to={getDashboardPath(user)} /> : <ResetPasswordPage />} />
+            {/* Reset link must always render — the user is typically logged in when clicking it */}
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+            <Route path="/verify-email" element={
+              <ProtectedRoute>
+                <VerifyEmailPage />
+              </ProtectedRoute>
+            } />
 
             {/* Waiting approval — user took exam but awaiting review */}
             <Route path="/waiting-approval" element={
@@ -134,6 +141,7 @@ export default function App() {
             <Route path="/teacher/recordings" element={<ProtectedRoute role="teacher"><Navigate to="/teacher/review" replace /></ProtectedRoute>} />
             <Route path="/teacher/create-exam" element={<ProtectedRoute role="teacher"><CreateExamPage /></ProtectedRoute>} />
             <Route path="/teacher/discussion" element={<ProtectedRoute role="teacher"><DiscussionPage /></ProtectedRoute>} />
+            <Route path="/teacher/resources" element={<ProtectedRoute role="teacher"><StudentResourcesPage /></ProtectedRoute>} />
             <Route path="/teacher/daily-review" element={<ProtectedRoute role="teacher"><TeacherDailyReviewPage /></ProtectedRoute>} />
 
             {/* Admin routes */}

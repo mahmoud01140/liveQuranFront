@@ -54,17 +54,29 @@ const useAuthStore = create(
       checkAuth: async () => {
         set({ isCheckingAuth: true });
         try {
-          const storedState = JSON.parse(localStorage.getItem('auth-storage') || '{}');
-          const token = storedState?.state?.token;
-          if (!token) return set({ isCheckingAuth: false });
+          const token = get().token;
+          if (!token) return set({ user: null, isCheckingAuth: false });
           const res = await api.get('/auth/me');
           set({ user: res.data.user, token, isCheckingAuth: false });
           connectSocket(token);
           // Auto-join group room for live broadcasts
           const gId = res.data.user.group?._id || res.data.user.group;
           if (gId) setTimeout(() => joinGroupRoom(gId), 500);
+          return res.data.user;
         } catch (_) {
           set({ user: null, token: null, isCheckingAuth: false });
+          return null;
+        }
+      },
+
+      // Re-fetch the user and return the FRESH value (avoids stale-closure redirects)
+      refreshUser: async () => {
+        try {
+          const res = await api.get('/auth/me');
+          set({ user: res.data.user });
+          return res.data.user;
+        } catch (_) {
+          return get().user;
         }
       },
 

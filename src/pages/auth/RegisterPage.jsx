@@ -42,11 +42,12 @@ export default function RegisterPage() {
     try {
       const { firstName, lastName, email, password, phone, country, dateOfBirth, gender, role } = form;
       await register({ firstName, lastName, email, password, phone, country, dateOfBirth, gender, role });
-      toast.success('تم إنشاء الحساب بنجاح!');
       if (role === 'parent') {
+        toast.success('تم إنشاء الحساب بنجاح!');
         navigate('/parent');
       } else {
-        navigate('/onboarding/type');
+        toast.success('تم إنشاء الحساب! فعّل بريدك بالرمز المرسل إليك.');
+        navigate('/verify-email');
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || 'خطأ في التسجيل');

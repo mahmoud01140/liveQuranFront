@@ -27,8 +27,9 @@ export default function ProgressPage() {
   const [ijazah, setIjazah] = useState(null);
   const [nextSession, setNextSession] = useState(null);
   const [liveNow, setLiveNow] = useState(false);
-  const [pendingHomework, setPendingHomework] = useState(0);
-  const [pendingExams, setPendingExams] = useState(0);
+  const [hasAttendedLive, setHasAttendedLive] = useState(false);
+  const [pendingHomework, setPendingHomework] = useState(null);
+  const [pendingExams, setPendingExams] = useState(null);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
   const [juzOpen, setJuzOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -72,11 +73,22 @@ export default function ProgressPage() {
             .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt))[0];
           setNextSession(upcoming || null);
         } else setNextSession(live);
+        // Real attendance: my id in attendees or in present/late records
+        if (myId) {
+          const attended = sessions.some(s => {
+            const inAttendees = (s.attendees || []).some(a => ((a.student?._id || a.student)?.toString()) === myId);
+            const inRecords = (s.attendanceRecords || []).some(r =>
+              ((r.student?._id || r.student)?.toString()) === myId && (r.status === 'present' || r.status === 'late'));
+            return inAttendees || inRecords;
+          });
+          setHasAttendedLive(attended);
+        }
       }),
       settle(async () => {
         const res = await api.get('/exams/student/assigned');
         const list = res.data.exams || res.data.assignedExams || res.data || [];
-        setPendingExams(Array.isArray(list) ? list.length : 0);
+        const arr = Array.isArray(list) ? list : [];
+        setPendingExams(arr.filter(e => !e.isCompleted).length);
       }),
       settle(async () => {
         if (!groupId || !myId) return;
@@ -113,8 +125,11 @@ export default function ProgressPage() {
   const curriculumPct = totalLessons ? Math.round((completedLessons / totalLessons) * 100) : 0;
   const openWeak = weakPoints.filter(w => w.status !== 'mastered');
   const latestFeedback = myFeedbacks?.[0];
-  const groupName = user?.group?.name || (typeof user?.group === 'string' ? '' : user?.group?.name);
+  const groupName = typeof user?.group === 'object' ? (user.group?.name || '') : '';
   const awarded = ijazah?.status === 'awarded';
+  // Tasks counts are only trustworthy once BOTH fetches resolved —
+  // a 0 from a failed request must never read as "done".
+  const tasksKnown = pendingHomework !== null && pendingExams !== null;
 
   /* Sequential status: the first non-completed node is current */
   const done = {
@@ -123,8 +138,8 @@ export default function ProgressPage() {
     level: Boolean(user?.assignedLevel),
     group: Boolean(groupId),
     curriculum: totalLessons > 0 && completedLessons >= totalLessons,
-    live: false,
-    tasks: pendingHomework === 0 && pendingExams === 0 && (groupId ? true : false),
+    live: hasAttendedLive,
+    tasks: Boolean(groupId) && tasksKnown && pendingHomework === 0 && pendingExams === 0,
     khatm: juzPct >= 100,
     ijazah: awarded,
   };
@@ -262,7 +277,9 @@ export default function ProgressPage() {
 
               {/* 6. Live */}
               <JourneyNode index={6} title="الحصة المباشرة" status={liveNow ? 'current' : st('live')}
-                proof={liveNow ? 'حلقة جارية الآن — معلمك بانتظارك' : nextSession?.scheduledAt ? `الحصة القادمة: ${getSmartDateLabel(nextSession.scheduledAt)}` : 'تُعلن الحصة القادمة في مجموعتك'}
+                proof={hasAttendedLive
+                  ? 'حضرت حصصاً مباشرة — واصل الحضور'
+                  : liveNow ? 'حلقة جارية الآن — معلمك بانتظارك' : nextSession?.scheduledAt ? `الحصة القادمة: ${getSmartDateLabel(nextSession.scheduledAt)}` : 'تُعلن الحصة القادمة في مجموعتك — تُحتسب بعد أول حضور لك'}
                 action={(liveNow || nextSession) && (
                   <HqActionLink to="/student/live" primary={liveNow}>
                     {liveNow ? 'انضم الآن' : 'صفحة الحصة'}
@@ -270,14 +287,16 @@ export default function ProgressPage() {
                 )} />
 
               {/* 7. Homework / Exams */}
-              <JourneyNode index={7} title="الواجبات والاختبارات" status={st('tasks')}
-                proof={(pendingHomework + pendingExams) > 0
+              <JourneyNode index={7} title="الواجبات والاختبارات" status={tasksKnown ? st('tasks') : 'upcoming'}
+                proof={!tasksKnown
+                  ? 'جارٍ تحميل مهامك...'
+                  : ((pendingHomework || 0) + (pendingExams || 0)) > 0
                   ? `${pendingHomework} واجبًا معلقًا · ${pendingExams} اختبارًا بانتظارك`
                   : 'لا معلّق عليك الآن — أحسنت'}
-                action={(pendingHomework + pendingExams) > 0 && (
+                action={tasksKnown && ((pendingHomework || 0) + (pendingExams || 0)) > 0 && (
                   <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {pendingHomework > 0 && <HqActionLink to="/student/homework">الواجبات</HqActionLink>}
-                    {pendingExams > 0 && <HqActionLink to="/student/exams" primary={pendingHomework === 0}>الاختبارات</HqActionLink>}
+                    {(pendingHomework || 0) > 0 && <HqActionLink to="/student/homework">الواجبات</HqActionLink>}
+                    {(pendingExams || 0) > 0 && <HqActionLink to="/student/exams" primary={pendingHomework === 0}>الاختبارات</HqActionLink>}
                   </span>
                 )} />
 
@@ -318,7 +337,11 @@ export default function ProgressPage() {
 
               {/* 9. Ijazah */}
               <JourneyNode index={9} title="الإجازة" status={st('ijazah')}
-                proof={awarded ? 'مُنحت الإجازة بالسند — مبارك' : 'ستتاح بعد إتمام الختمة والعرض على الشيخ'}
+                proof={awarded
+                  ? 'مُنحت الإجازة بالسند — مبارك'
+                  : ijazah
+                    ? `أجزاء معتمدة للإجازة: ${(ijazah.completedJuz || []).length}/30 — تُمنح بعد إتمام 30 جزءاً والعرض على الشيخ`
+                    : 'تُمنح بعد إتمام الختمة (30/30) والعرض على الشيخ'}
                 action={awarded && (
                   <button type="button" onClick={() => setIsCertificateOpen(true)} className="hq-action"
                     style={{ background: HQ.GOLD, color: HQ.INK, padding: '0 24px', fontSize: 15, fontWeight: 800 }}>

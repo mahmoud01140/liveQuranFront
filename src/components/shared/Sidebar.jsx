@@ -27,10 +27,10 @@ const teacherLinks = [
   { to: '/teacher/groups', icon: Users, label: 'مجموعاتي' },
   { to: '/teacher/daily-review', icon: CalendarCheck, label: 'مراجعة الحفظ' },
   { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والمراجعة' },
-  { to: '/admin/exams', icon: FileText, label: 'بنك وإدارة الامتحانات' },
+  { to: '/teacher/exams', icon: FileText, label: 'بنك وإدارة الامتحانات' },
   { to: '/teacher/create-exam', icon: PlusCircle, label: 'إنشاء امتحان / تقييم' },
   { to: '/teacher/discussion', icon: MessageCircle, label: 'غرفة النقاش' },
-  { to: '/student/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },
+  { to: '/teacher/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },
 ];
 
 /* Grouped by function — same routes, no path changes. `section` renders

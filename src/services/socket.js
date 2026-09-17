@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client';
+import toast from 'react-hot-toast';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
@@ -44,9 +45,21 @@ export const connectSocket = (token) => {
   s.on('disconnect', (reason) => {
     console.log('🔥 Socket disconnected:', reason);
   });
+  // Auth failures (expired/invalid token) will never heal by retrying with
+  // the same token — stop, tell the student, and let login refresh it.
+  const handleAuthFailure = (message) => {
+    const msg = String(message || '');
+    if (/auth|unauthorized|expired|token/i.test(msg)) {
+      try { toast.error('انقطع الاتصال المباشر (انتهت الجلسة). أعد تحميل الصفحة أو سجل الدخول مجدداً.'); } catch (_) {}
+      try { s.disconnect(); } catch (_) {}
+    }
+  };
+  s.off('auth-error');
+  s.on('auth-error', handleAuthFailure);
   s.off('connect_error');
   s.on('connect_error', (err) => {
     console.error('Socket error:', err.message);
+    handleAuthFailure(err.message);
   });
   return s;
 };

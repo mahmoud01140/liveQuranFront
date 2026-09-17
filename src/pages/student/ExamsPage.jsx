@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import PageLayout from '../../components/shared/PageLayout';
 import useAuthStore from '../../store/authStore';
 import useExamStore from '../../store/examStore';
-import { formatDateAr } from '../../utils/helpers';
+import { formatDateAr, NO_GROUP_TITLE, NO_GROUP_HINT } from '../../utils/helpers';
 import Pagination from '../../components/shared/Pagination';
 import usePagination from '../../hooks/usePagination';
 import '../../components/halaqa/halaqa.css';
@@ -32,8 +32,10 @@ export default function ExamsPage() {
   useEffect(() => {
     if (user) {
       fetchMyResults(user._id);
+      // The unified assigned endpoint also serves groupless students
+      // (individual + level-wide exams), so always fetch.
       const groupId = user.group?._id || user.group;
-      if (groupId) fetchAvailableExams(groupId, user._id);
+      fetchAvailableExams(groupId, user._id);
     }
   }, [user]);
 
@@ -72,8 +74,12 @@ export default function ExamsPage() {
           availableExams.length === 0 ? (
             <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 40, textAlign: 'center' }}>
               <FileText size={40} color={HQ.LINE} style={{ margin: '0 auto 12px' }} />
-              <p style={{ margin: '0 0 4px', fontWeight: 800, fontSize: 16, color: HQ.INK }}>لا اختبارات معلقة</p>
-              <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>ستظهر هنا الاختبارات التي يضيفها المعلم لمجموعتك.</p>
+              <p style={{ margin: '0 0 4px', fontWeight: 800, fontSize: 16, color: HQ.INK }}>
+                {!(user?.group?._id || user?.group) ? NO_GROUP_TITLE : 'لا اختبارات معلقة'}
+              </p>
+              <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>
+                {!(user?.group?._id || user?.group) ? NO_GROUP_HINT : 'ستظهر هنا الاختبارات التي يضيفها المعلم لمجموعتك.'}
+              </p>
             </div>
           ) : (
             <>

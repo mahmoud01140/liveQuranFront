@@ -4,7 +4,7 @@ import PageLayout from '../../components/shared/PageLayout';
 import useAuthStore from '../../store/authStore';
 import useDiscussionStore from '../../store/discussionStore';
 import { getSocket } from '../../services/socket';
-import { timeAgoAr } from '../../utils/helpers';
+import { timeAgoAr, NO_GROUP_TITLE, NO_GROUP_HINT } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 import '../../components/halaqa/halaqa.css';
 import { HQ, HqAvatar, HqBadge } from '../../components/halaqa/primitives';
@@ -177,8 +177,8 @@ export default function DiscussionPage() {
       <PageLayout>
         <div className="halaqa" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 48, textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
           <AlertCircle size={40} color={HQ.MUTED} style={{ margin: '0 auto 12px' }} />
-          <p style={{ fontSize: 18, fontWeight: 900, color: HQ.INK, margin: '0 0 4px' }}>لم يتم تعيينك في مجموعة بعد</p>
-          <p style={{ fontSize: 14, color: HQ.MUTED, margin: 0 }}>تواصل مع الإدارة لإضافتك إلى مجموعة</p>
+          <p style={{ fontSize: 18, fontWeight: 900, color: HQ.INK, margin: '0 0 4px' }}>{NO_GROUP_TITLE}</p>
+          <p style={{ fontSize: 14, color: HQ.MUTED, margin: 0 }}>{NO_GROUP_HINT}</p>
         </div>
       </PageLayout>
     );

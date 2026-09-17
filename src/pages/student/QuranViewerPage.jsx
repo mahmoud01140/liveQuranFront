@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  BookOpen, ChevronLeft, ChevronRight, Search, Check, Loader2,
+  BookOpen, ChevronLeft, ChevronRight, ChevronDown, Search, Check, Loader2,
   Eye, EyeOff, Sparkles, Repeat, X, BookMarked, Info
 } from 'lucide-react';
 import PageLayout from '../../components/shared/PageLayout';
@@ -161,9 +161,9 @@ export default function QuranViewerPage() {
           </button>
         </div>
 
-        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+        <div className="hq-quran-layout">
           {/* Surah list */}
-          <div className={showSurahList ? '' : 'hidden lg:block'} style={{ width: 240, flex: 'none' }}>
+          <div className={`hq-surah-panel ${showSurahList ? '' : 'hidden lg:block'}`}>
             <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, overflow: 'hidden', position: 'sticky', top: 80 }}>
               <div style={{ padding: 12, borderBottom: `1px solid ${HQ.LINE}` }}>
                 <div style={{ position: 'relative' }}>
@@ -217,6 +217,13 @@ export default function QuranViewerPage() {
 
           {/* Main reading area */}
           <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Mobile surah picker (the list hides after picking) */}
+            <button type="button" onClick={() => setShowSurahList(v => !v)} aria-expanded={showSurahList}
+              className="hq-action hq-surah-toggle"
+              style={{ width: '100%', background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK, fontSize: 14, marginBottom: 12 }}>
+              <BookOpen size={17} color={HQ.MENTOR} aria-hidden /> سورة {surah?.name}
+              <ChevronDown size={16} color={HQ.MUTED} aria-hidden style={{ marginRight: 'auto', transform: showSurahList ? 'rotate(180deg)' : 'none' }} />
+            </button>
             {/* Toolbar */}
             <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 14, marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', paddingBottom: 12, borderBottom: `1px solid ${HQ.LINE}` }}>
@@ -268,7 +275,7 @@ export default function QuranViewerPage() {
                     <button key={cnt} type="button" onClick={() => handleSetLoop(cnt)}
                       aria-pressed={repeatCount === cnt && playMode === 'repeat'}
                       style={{
-                        minWidth: 44, minHeight: 36, borderRadius: 10, border: 'none', cursor: 'pointer',
+                        minWidth: 48, minHeight: 44, borderRadius: 10, border: 'none', cursor: 'pointer',
                         fontSize: 13, fontWeight: 800,
                         background: repeatCount === cnt && playMode === 'repeat' ? HQ.MENTOR : HQ.PAPER,
                         color: repeatCount === cnt && playMode === 'repeat' ? '#fff' : HQ.MUTED,
@@ -302,7 +309,7 @@ export default function QuranViewerPage() {
                     بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
                   </p>
                 )}
-                <div className="hq-quran" dir="rtl" style={{ fontSize: 24, lineHeight: 2.6, textAlign: 'right' }}>
+                <div className="hq-quran hq-verses" dir="rtl">
                   {verses.map((verse, index) => {
                     const verseNum = verse.numberInSurah;
                     const isMemorized = memorizedSet.has(verseNum);

@@ -54,7 +54,8 @@ export default function LiveBroadcastPage() {
   useEffect(() => {
     if (!location.state?.groupId) {
       toast.error('يجب بدء البث من صفحة منهج المجموعة');
-      navigate('/admin/groups', { replace: true });
+      // Role-aware fallback: teachers cannot open /admin/groups
+      navigate(user?.role === 'teacher' ? '/teacher/groups' : '/admin/groups', { replace: true });
       return;
     }
 

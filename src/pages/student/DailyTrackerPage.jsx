@@ -79,7 +79,7 @@ export default function DailyTrackerPage() {
           <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 40, textAlign: 'center' }}>
             <BookOpen size={40} color={HQ.LINE} style={{ margin: '0 auto 12px' }} />
             <p style={{ margin: '0 0 4px', fontSize: 17, fontWeight: 900, color: HQ.INK }}>لا سجلات بعد</p>
-            <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>يُسجَّل إنجازك تلقائيًا بعد أول حصة تسميع مع المعلم.</p>
+            <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>يعتمد المعلم إنجازك في سجلك بعد أول حصة تسميع — وسجّل وردك اليومي من الرئيسية ريثما يتم ذلك.</p>
           </div>
         ) : (
           <>

@@ -50,6 +50,7 @@ export default function TeacherReviewCenterPage() {
   const [reviewingExamId, setReviewingExamId] = useState(null);
   const [examScores, setExamScores] = useState({});
   const [examNotes, setExamNotes] = useState({});
+  const [examLevels, setExamLevels] = useState({});
   const [submittingExam, setSubmittingExam] = useState(false);
 
   // State for Recordings
@@ -224,6 +225,7 @@ export default function TeacherReviewCenterPage() {
         oralScore: parseInt(oralScore),
         teacherNotes: examNotes[resultId] || '',
         flaggedVerses,
+        ...(examLevels[resultId] ? { assignedLevel: examLevels[resultId] } : {}),
       });
       toast.success('تم الحفظ، وإضافة نقاط الضعف لبنك مراجعة الطالب، وإرسال الإشعار!');
       setReviewingExamId(null);
@@ -589,6 +591,25 @@ export default function TeacherReviewCenterPage() {
                             className="text-sm w-36 focus:border-[#177B58] focus:outline-none"
                             style={{ ...field, fontVariantNumeric: 'tabular-nums' }} placeholder="0-100" />
                         </div>
+                        {(result.exam?.type === 'placement' || result.examType === 'placement') && (
+                          <div>
+                            <label htmlFor={`oral-level-${result._id}`} className="text-xs font-bold mb-1 block" style={{ color: HQ.INK }}>
+                              المستوى النهائي (تأكيد أو تصحيح المستوى المبدئي)
+                            </label>
+                            <select id={`oral-level-${result._id}`}
+                              value={examLevels[result._id] || ''}
+                              onChange={e => setExamLevels(p => ({ ...p, [result._id]: e.target.value }))}
+                              className="text-sm focus:border-[#177B58] focus:outline-none" style={{ ...field, minHeight: 44 }}>
+                              <option value="">إبقاء المستوى الحالي ({result.student?.assignedLevel
+                                ? ({ foundation: 'التأسيس', memorization: 'التحفيظ', teacher_prep: 'إعداد معلم', senior: 'كبار السن' }[result.student.assignedLevel] || result.student.assignedLevel)
+                                : 'غير محدد'})</option>
+                              <option value="foundation">التأسيس</option>
+                              <option value="memorization">التحفيظ</option>
+                              <option value="teacher_prep">إعداد معلم</option>
+                              <option value="senior">كبار السن</option>
+                            </select>
+                          </div>
+                        )}
                         <div>
                           <label htmlFor={`oral-notes-${result._id}`} className="text-xs font-bold mb-1 block" style={{ color: HQ.INK }}>توجيهات وملاحظات للطالب</label>
                           <textarea id={`oral-notes-${result._id}`} value={examNotes[result._id] || ''} onChange={e => setExamNotes(p => ({ ...p, [result._id]: e.target.value }))}

@@ -323,12 +323,12 @@ export default function LiveClassPage() {
               {subscriptionStatus?.isExpired ? 'انتهت فترة الاشتراك الشهري' : 'أتممت المحاضرة التجريبية الأولى بنجاح'}
             </HqBadge>
             <h2 style={{ fontSize: 24, fontWeight: 900, color: HQ.INK, margin: '12px 0' }}>
-              {subscriptionStatus?.isExpired ? 'توقّف حضور الجلسات لانتهاء الاشتراك' : 'الاشتراك مطلوب لمواصلة الحلقات'}
+              {subscriptionStatus?.isExpired ? 'انتهى اشتراكك — المحتوى محجوب بالكامل' : 'الاشتراك مطلوب لمواصلة الحلقات'}
             </h2>
             <p style={{ fontSize: 15, color: HQ.MUTED, lineHeight: 1.8, margin: '0 0 28px' }}>
               {subscriptionStatus?.isExpired
-                ? 'انتهت مدة اشتراكك الشهري. لمواصلة حضور الحلقات المباشرة مع مجموعتك ومتابعة الحفظ، سدد الاشتراك.'
-                : 'استمتعت بجلستك التجريبية المجانية! لمواصلة رحلتك وحضور باقي الحلقات مع المعلم، سدد الاشتراك الشهري.'}
+                ? 'انتهت مدة اشتراكك. سدد الاشتراك لفتح كامل المحتوى — تُراجَع الإيصالات خلال 24 ساعة.'
+                : 'استمتعت بجلستك التجريبية المجانية! سدد الاشتراك لفتح كامل المحتوى ومواصلة الحلقات مع المعلم.'}
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
               <Link to="/student/subscription" className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', padding: '0 32px', fontSize: 15, textDecoration: 'none' }}>

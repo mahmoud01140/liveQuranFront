@@ -17,30 +17,28 @@ const LEVEL_TONES = {
 };
 
 export default function ResultPage() {
-  const { user, checkAuth } = useAuthStore();
-  const { result } = useExamStore();
+  const { user, checkAuth, refreshUser } = useAuthStore();
+  const { result, oralRecordings } = useExamStore();
   const navigate = useNavigate();
 
   useEffect(() => {
     checkAuth(); // Refresh user data with new assignedLevel
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const score = result?.totalPercentage ?? result?.writtenPercentage ?? 0;
   const level = user?.assignedLevel || result?.assignedLevel || 'foundation';
   const tone = LEVEL_TONES[level] || LEVEL_TONES.foundation;
   const { circumference, strokeDashoffset } = getCirclePath(score);
+  const hasOral = (oralRecordings?.length || 0) > 0 || (user?.oralExamRecordings?.length || 0) > 0;
 
-  const curricula = {
-    foundation: ['فتح الرحمن', 'نور البيان', 'كتاب الزاد', 'تهجي جزء النبأ', 'تحفة الأطفال', 'الأذكار', 'الآداب'],
-    memorization: ['تحفة الأطفال كاملاً', 'الفتح الرباني', 'مراجعة فتح الرحمن', 'جزء النبأ تطبيق', 'الأساس في الآداب', 'الجزرية', 'خطة الختم'],
-    teacher_prep: ['كل كتب التأسيس والتحفيظ', 'منهج التدريس المتخصص', 'أساليب التفاعل', 'إدارة الفصل الافتراضي'],
-    senior: ['نور البيان الميسر', 'الأحكام الأساسية المبسطة', 'أذكار الصلاة', 'سور قصيرة', 'خطة مرنة'],
-  };
-
-  const books = curricula[level] || curricula.foundation;
-
-  const handleContinue = () => {
-    if (user?.assignedLevel) {
+  const handleContinue = async () => {
+    // Wait for the fresh user record — a stale store may still lack assignedLevel.
+    let fresh = user;
+    try {
+      fresh = (await refreshUser()) || user;
+    } catch (_) {}
+    if (fresh?.assignedLevel) {
       navigate('/student');
     } else {
       navigate('/waiting-approval');
@@ -103,11 +101,11 @@ export default function ResultPage() {
               style={{ backgroundColor: tone.bg, color: tone.fg }}
             >
               <Star className="w-5 h-5" aria-hidden />
-              مستواك: {getLevelLabel(level)}
+              مستواك المبدئي: {getLevelLabel(level)}
             </div>
 
             <p className="text-sm" style={{ color: '#756E85', lineHeight: 1.8 }}>
-              بناءً على إجاباتك في الاستبيان والامتحان التحريري، تم تحديد مستواك الدراسي.
+              هذا تقييم مبدئي بناءً على الامتحان التحريري — سيؤكد المعلم مستواك النهائي بعد مراجعة تسجيلاتك الشفهية.
             </p>
           </motion.div>
 
@@ -120,11 +118,18 @@ export default function ResultPage() {
           >
             <Clock className="w-6 h-6 flex-none mt-0.5" style={{ color: '#B45309' }} aria-hidden />
             <div>
-              <p className="font-bold mb-1" style={{ color: '#2A2438' }}>مراجعة التسجيلات الشفهية</p>
+              <p className="font-bold mb-1" style={{ color: '#2A2438' }}>مراجعة التسجيلات الشفهية (إجبارية)</p>
               <p className="text-sm" style={{ color: '#756E85' }}>
-                سيتم مراجعة تسجيلاتك الشفهية من قِبَل المعلم المتخصص وتأكيد مستواك النهائي خلال <strong>24 ساعة</strong>.
-                ستصلك رسالة إشعار عند اكتمال المراجعة.
+                {hasOral
+                  ? 'سيتم مراجعة تسجيلاتك الشفهية من قِبَل المعلم المتخصص وتأكيد مستواك النهائي خلال 24 ساعة. ستصلك رسالة إشعار عند اكتمال المراجعة.'
+                  : 'لم نستلم تسجيلاتك الشفهية بعد — الامتحان الشفهي إجباري. ارجع وأكمل التسجيل حتى تُعتمد نتيجتك.'}
               </p>
+              {!hasOral && (
+                <button type="button" onClick={() => navigate('/onboarding/oral-exam')} className="onb-btn mt-3">
+                  إكمال الامتحان الشفهي
+                  <ChevronLeft className="w-4 h-4" aria-hidden />
+                </button>
+              )}
             </div>
           </motion.div>
 
@@ -137,16 +142,29 @@ export default function ResultPage() {
           >
             <h3 className="font-extrabold mb-4 flex items-center gap-2" style={{ fontSize: '1.25rem', color: '#2A2438' }}>
               <BookOpen className="w-5 h-5" style={{ color: '#177B58' }} aria-hidden />
-              منهجك الدراسي المخصص
+              ماذا بعد؟
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {books.map((book, i) => (
+              {[
+                'مراجعة المعلم لتسجيلاتك خلال 24 ساعة',
+                'تسكينك في مجموعة تناسب مستواك',
+                'منهجك الدراسي يظهر داخل مجموعتك',
+                'ابدأ من الآن بتصفح المصحف',
+              ].map((step, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm rounded-xl px-3 py-2" style={{ color: '#2A2438', background: '#FBF7EE' }}>
                   <CheckCircle className="w-4 h-4 flex-none" style={{ color: '#177B58' }} aria-hidden />
-                  {book}
+                  {step}
                 </div>
               ))}
             </div>
+            <button
+              type="button"
+              onClick={() => navigate('/student/quran')}
+              className="onb-ghost mt-4 text-sm"
+            >
+              <BookOpen className="w-4 h-4" aria-hidden />
+              افتح المصحف الآن
+            </button>
           </motion.div>
 
           {/* Actions */}

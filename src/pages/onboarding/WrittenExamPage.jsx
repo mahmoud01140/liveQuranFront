@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Clock, CheckCircle, XCircle, ChevronLeft, Check, X } from 'lucide-react';
+import { Clock, ChevronLeft, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
 import useExamStore from '../../store/examStore';
@@ -13,8 +13,8 @@ export default function WrittenExamPage() {
   const { currentExam, fetchPlacementExam, setAnswer, answers, submitWrittenExam, isLoading, isSubmitting, placementCompleted, placementResult } = useExamStore();
   const navigate = useNavigate();
   const [currentQ, setCurrentQ] = useState(0);
-  const [locked, setLocked] = useState({});
   const [timeLeft, setTimeLeft] = useState(null);
+  const autoSubmittedRef = useRef(false);
 
   const regType = user?.registrationType || 'student';
 
@@ -42,28 +42,51 @@ export default function WrittenExamPage() {
     return () => clearInterval(timer);
   }, [timeLeft]);
 
+  // The correct answer is never revealed during the exam — the student
+  // may freely change their choice until they submit.
   const handleAnswer = (qIdx, aIdx) => {
-    if (locked[qIdx]) return;
     setAnswer(qIdx, aIdx);
-    setLocked((prev) => ({ ...prev, [qIdx]: true }));
   };
 
-  const handleSubmit = async () => {
-    const answeredCount = Object.keys(answers).length;
-    if (answeredCount < (currentExam?.questions?.length || 0)) {
-      if (!window.confirm('لم تجب على جميع الأسئلة. هل تريد التسليم الآن؟')) return;
+  const doSubmit = async () => {
+    const result = await submitWrittenExam(currentExam._id);
+    // Mark placement exam as taken in local state + flag the mandatory oral step
+    updateUser({ placementExamTaken: true });
+    try {
+      localStorage.setItem(`oral_pending_${user?._id}`, '1');
+      // Persist the oral context so a refresh on the oral page never strands the student
+      localStorage.setItem(`oral_context_${user?._id}`, JSON.stringify({ resultId: result._id, examId: currentExam._id }));
+      localStorage.removeItem(`survey_answers_${user?._id}_${regType}`);
+    } catch (_) {}
+    toast.success('تم تسليم الامتحان!');
+    navigate('/onboarding/oral-exam', { state: { resultId: result._id, examId: currentExam._id } });
+  };
+
+  const handleSubmit = async (auto = false) => {
+    if (!auto) {
+      const answeredCount = Object.keys(answers).length;
+      if (answeredCount < (currentExam?.questions?.length || 0)) {
+        if (!window.confirm('لم تجب على جميع الأسئلة. هل تريد التسليم الآن؟')) return;
+      }
     }
     try {
-      const result = await submitWrittenExam(currentExam._id);
-      // Mark placement exam as taken in local state
-      updateUser({ placementExamTaken: true });
-      toast.success('تم تسليم الامتحان!');
-      navigate('/onboarding/oral-exam', { state: { resultId: result._id, examId: currentExam._id } });
+      await doSubmit();
     } catch (err) {
+      autoSubmittedRef.current = false;
       const msg = err?.response?.data?.message || 'خطأ في التسليم. حاول مجدداً.';
       toast.error(msg);
     }
   };
+
+  // Auto-submit exactly once when the timer runs out
+  useEffect(() => {
+    if (timeLeft === 0 && !autoSubmittedRef.current && currentExam && !placementCompleted) {
+      autoSubmittedRef.current = true;
+      toast('انتهى الوقت وتم تسليم الامتحان تلقائياً');
+      handleSubmit(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft]);
 
   if (isLoading) return (
     <div className="onb" dir="rtl">
@@ -78,7 +101,15 @@ export default function WrittenExamPage() {
   if (!currentExam) return (
     <div className="onb" dir="rtl">
       <div className="onb-center">
-        <p style={{ color: '#756E85' }}>الامتحان غير متاح حالياً</p>
+        <p style={{ color: '#756E85', marginBottom: 16 }}>الامتحان غير متاح حالياً</p>
+        <div className="flex gap-3 justify-center">
+          <button type="button" onClick={() => fetchPlacementExam(regType)} className="onb-btn">
+            إعادة المحاولة
+          </button>
+          <button type="button" onClick={() => navigate('/student/quran')} className="onb-ghost">
+            تصفح المصحف ريثما تُحل المشكلة
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -147,28 +178,20 @@ export default function WrittenExamPage() {
                       { value: false, label: 'خطأ', Icon: X },
                     ].map((item) => {
                       const isSelected = answers[currentQ] === item.value;
-                      const isAnswered = locked[currentQ];
-                      const isCorrect = isAnswered && item.value === question.correctAnswerBool;
-                      const isWrong = isAnswered && isSelected && !isCorrect;
 
                       return (
                         <button
                           key={String(item.value)}
                           type="button"
                           onClick={() => handleAnswer(currentQ, item.value)}
-                          disabled={!!locked[currentQ]}
                           aria-pressed={isSelected}
                           className="onb-opt"
                           style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             gap: 12, padding: 24, fontWeight: 700, fontSize: '1.25rem',
-                            ...(isCorrect
-                              ? { borderColor: '#177B58', background: '#E2EFE7', color: '#0F5940' }
-                              : isWrong
-                              ? { borderColor: '#C2410C', background: '#FFFFFF', color: '#C2410C' }
-                              : isSelected
-                              ? { borderColor: '#177B58', background: '#E2EFE7', color: '#0F5940' }
-                              : undefined),
+                            ...(isSelected
+                            ? { borderColor: '#177B58', background: '#E2EFE7', color: '#0F5940' }
+                            : undefined),
                           }}
                         >
                           <item.Icon size={26} strokeWidth={2.5} aria-hidden />
@@ -182,29 +205,20 @@ export default function WrittenExamPage() {
                   <div className="space-y-3" role="group" aria-label="خيارات الإجابة">
                     {(question.options || []).map((opt, i) => {
                       const isSelected = answers[currentQ] === i;
-                      const isAnswered = locked[currentQ];
-                      const isCorrect = isAnswered && i === question.correctAnswer;
-                      const isWrong = isAnswered && isSelected && !isCorrect;
 
                       return (
                         <button
                           key={i}
                           type="button"
                           onClick={() => handleAnswer(currentQ, i)}
-                          disabled={!!locked[currentQ]}
                           aria-pressed={isSelected}
                           className="onb-opt"
-                          style={isCorrect
+                          style={isSelected
                             ? { borderColor: '#177B58', background: '#E2EFE7', color: '#0F5940', fontWeight: 700 }
-                            : isWrong
-                            ? { borderColor: '#C2410C', background: '#FFFFFF', color: '#C2410C', fontWeight: 700 }
                             : undefined}
                         >
                           <span className="flex items-center gap-3">
-                            {isCorrect ? <CheckCircle className="w-5 h-5 flex-none" style={{ color: '#177B58' }} aria-hidden />
-                              : isWrong ? <XCircle className="w-5 h-5 flex-none" style={{ color: '#C2410C' }} aria-hidden />
-                              : <span aria-hidden className={`onb-radio${isSelected ? ' on' : ''}`} />
-                            }
+                            <span aria-hidden className={`onb-radio${isSelected ? ' on' : ''}`} />
                             {opt}
                           </span>
                         </button>
@@ -228,7 +242,7 @@ export default function WrittenExamPage() {
                 <ChevronLeft className="w-4 h-4" aria-hidden />
               </button>
             ) : (
-              <button onClick={handleSubmit} disabled={isSubmitting} className="onb-btn">
+              <button onClick={() => handleSubmit(false)} disabled={isSubmitting} className="onb-btn">
                 {isSubmitting ? <LoadingSpinner size="sm" color="white" /> : (
                   <>
                     تسليم الامتحان

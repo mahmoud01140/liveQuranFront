@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Search, CheckCircle, X, Volume2, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
@@ -71,11 +72,13 @@ export default function UsersManagement() {
     } catch { toast.error('خطأ'); }
   };
 
-  const displayUsers = tab === 'pending' ? pending
+  const displayUsers = (tab === 'pending' ? pending
     : users.filter(u => {
-        const matchSearch = !search || `${u.firstName} ${u.lastName} ${u.email}`.includes(search);
         const matchRole = !roleFilter || u.role === roleFilter;
-        return matchSearch && matchRole;
+        return matchRole;
+      })).filter(u => {
+        const matchSearch = !search || `${u.firstName} ${u.lastName} ${u.email}`.includes(search);
+        return matchSearch;
       });
 
   const {
@@ -114,21 +117,27 @@ export default function UsersManagement() {
         </div>
 
         {/* Search & filter */}
-        {tab === 'all' && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-              <Search size={16} color={HQ.MUTED} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }} />
-              <input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="بحث بالاسم أو البريد..." aria-label="بحث عن مستخدم"
-                style={{ ...selectStyle, width: '100%', paddingRight: 38 }} />
-            </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+            <Search size={16} color={HQ.MUTED} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }} />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="بحث بالاسم أو البريد..." aria-label="بحث عن مستخدم"
+              style={{ ...selectStyle, width: '100%', paddingRight: 38 }} />
+          </div>
+          {tab === 'all' && (
             <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} aria-label="تصفية بالدور" style={{ ...selectStyle, minWidth: 150 }}>
               <option value="">جميع الأدوار</option>
               <option value="student">الطلاب</option>
               <option value="parent">أولياء الأمور</option>
               <option value="admin">المعلم والمدير</option>
             </select>
-          </div>
+          )}
+        </div>
+
+        {tab === 'pending' && pending.length > 0 && (
+          <p style={{ margin: '0 0 16px', fontSize: 13, color: HQ.MUTED }}>
+            بعد القبول سكّن الطالب في مجموعته من <Link to="/admin/groups" style={{ color: HQ.MENTOR, fontWeight: 800 }}>إدارة وتسكين الحلقات</Link>.
+          </p>
         )}
 
         {isLoading ? (

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -31,7 +32,15 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('auth-storage');
-      // Redirect handled by auth store / ProtectedRoute
+      // Tell the student instead of silently wiping the session.
+      // Skip auth pages to avoid redirect loops.
+      const path = typeof window !== 'undefined' ? window.location.pathname : '';
+      if (!path.startsWith('/login') && !path.startsWith('/register')) {
+        try { toast.error('انتهت الجلسة. سجل الدخول مجدداً.'); } catch (_) {}
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+      }
     }
     return Promise.reject(error);
   }

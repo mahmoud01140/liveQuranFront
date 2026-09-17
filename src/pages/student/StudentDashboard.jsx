@@ -5,7 +5,7 @@ import PageLayout from '../../components/shared/PageLayout';
 import useAuthStore from '../../store/authStore';
 import useGroupStore from '../../store/groupStore';
 import useLiveStore from '../../store/liveStore';
-import { getLevelLabel, formatDateAr, formatCountdown, getSmartDateLabel } from '../../utils/helpers';
+import { getLevelLabel, formatDateAr, formatCountdown, getSmartDateLabel, NO_GROUP_TITLE, NO_GROUP_HINT } from '../../utils/helpers';
 import { DAYS_AR } from '../../utils/constants';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -52,11 +52,13 @@ export default function StudentDashboard() {
 
   const [dailyTask, setDailyTask] = useState(null);
   const [assignedExams, setAssignedExams] = useState([]);
+  const [pendingHomework, setPendingHomework] = useState(0);
   const [subscription, setSubscription] = useState(null);
   const [ready, setReady] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
 
   const groupId = user?.group?._id || user?.group;
+  const myId = user?._id?.toString();
 
   useEffect(() => {
     if (groupId) {
@@ -81,6 +83,17 @@ export default function StudentDashboard() {
         setAssignedExams((res.data.exams || []).filter(e => !e.isCompleted));
       }),
       settle(async () => {
+        if (!groupId || !myId) { setPendingHomework(0); return; }
+        const res = await api.get(`/live/group/${groupId}/homework`);
+        const sessions = res.data.sessions || [];
+        const pending = sessions.filter(s => {
+          if (!s.homework && !s.quranHomework) return false;
+          const subs = s.homeworkSubmissions || [];
+          return !subs.some(sub => ((sub.student?._id || sub.student)?.toString()) === myId);
+        }).length;
+        setPendingHomework(pending);
+      }),
+      settle(async () => {
         const res = await api.get('/payments/my-history');
         setSubscription(res.data?.subscription || null);
       }),
@@ -90,7 +103,7 @@ export default function StudentDashboard() {
     });
   };
 
-  useEffect(() => { loadLocal(); }, []);
+  useEffect(() => { loadLocal(); }, [groupId, myId]);
 
   const handleTogglePortion = async (portion) => {
     if (!dailyTask?._id) return;
@@ -123,6 +136,7 @@ export default function StudentDashboard() {
   } else {
     if (liveSession) candidates.push({ kind: 'live', label: 'انضم للحصة الآن', hint: liveSession.title, to: '/student/live', live: true });
     if (assignedExams[0]) candidates.push({ kind: 'exam', label: `ابدأ: ${assignedExams[0].title}`, hint: `${assignedExams[0].questions?.length || 0} أسئلة`, examId: assignedExams[0]._id });
+    if (pendingHomework > 0) candidates.push({ kind: 'homework', label: `سلّم واجبك (${pendingHomework} معلق)`, hint: 'واجب من معلمك بانتظار التسليم', to: '/student/homework' });
     if (pendingPortions.length) candidates.push({ kind: 'wird', label: `أكمل وردك (${pendingPortions.length} متبقٍ)`, hint: portionName(dailyTask[pendingPortions[0].key]), scroll: true });
     if (upcomingSession && upcomingSession.status === 'scheduled') candidates.push({ kind: 'upcoming', label: 'الحصة القادمة', hint: getSmartDateLabel(upcomingSession.scheduledAt), to: '/student/live' });
     candidates.push({ kind: 'curriculum', label: 'تابع منهجك', hint: 'دروسك ومواد مجموعتك', to: '/student/curriculum' });
@@ -185,14 +199,14 @@ export default function StudentDashboard() {
                 <span style={{ width: 34, height: 34, borderRadius: 10, background: HQ.PAPER, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
                   <Lock size={17} color="#C2410C" />
                 </span>
-                <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>توقّف حضور الجلسات لانتهاء الاشتراك.</span>
+                <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>انتهى اشتراكك — المحتوى محجوب بالكامل حتى السداد.</span>
                 <Link to="/student/subscription" style={{ fontSize: 14, fontWeight: 800, color: '#C2410C', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}><CreditCard size={15} /> السداد</Link>
               </div>
             )}
             {!groupId && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
                 <BookOpen size={18} color={HQ.MENTOR} style={{ flex: 'none' }} />
-                <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>الإدارة تسكّنك في مجموعتك — ابدأ بالمصحف والورد.</span>
+                <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>{NO_GROUP_TITLE} — {NO_GROUP_HINT}</span>
                 <Link to="/student/quran" style={{ fontSize: 14, fontWeight: 800, color: HQ.MENTOR, whiteSpace: 'nowrap' }}>المصحف</Link>
               </div>
             )}
@@ -224,6 +238,9 @@ export default function StudentDashboard() {
             {/* D. Today's tasks — list first, never cards */}
             <section id="today-tasks" aria-label="مهمتي اليوم" style={{ marginBottom: 24 }}>
               <h2 style={h2}>مهمتي اليوم</h2>
+              <p style={{ fontSize: 13, color: HQ.MUTED, margin: '4px 0 0' }}>
+                وردك تعلّمه بنفسك هنا · واجبك يسلَّم للمعلم في صفحة الواجبات · وسجلك يعتمده المعلم بعد التسميع في سجل إنجازي.
+              </p>
               {(!dailyTask && assignedExams.length === 0) ? (
                 <p style={{ fontSize: 15, color: HQ.MUTED, margin: '8px 0 0' }}>
                   يومك خفيف — لا مهام معلّقة. {groupId ? 'معلمك يحدد وردك أثناء الحصة.' : 'تصفح المصحف ريثما تُسكَّن في مجموعة.'}

@@ -8,7 +8,7 @@ import useGroupStore from '../../store/groupStore';
 import useSocket from '../../hooks/useSocket';
 import { joinGroupRoom } from '../../services/socket';
 import { DAYS_AR, SESSION_TYPES } from '../../utils/constants';
-import { getInitials, getAvatarColor, formatTime } from '../../utils/helpers';
+import { getInitials, getAvatarColor, formatTime, NO_GROUP_TITLE, NO_GROUP_HINT } from '../../utils/helpers';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import api from '../../services/api';
 import '../../components/halaqa/halaqa.css';
@@ -83,8 +83,9 @@ export default function MyGroupPage() {
       <div className="halaqa" style={{ ...sheet, maxWidth: 820, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', padding: '48px 16px' }}>
           <Users size={44} color={HQ.LINE} style={{ margin: '0 auto 12px' }} aria-hidden />
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: HQ.INK, margin: '0 0 8px' }}>لم تُعيَّن في مجموعة بعد</h1>
-          <p style={{ color: HQ.MUTED, fontSize: 14, margin: 0 }}>سيتم تعيينك في مجموعة من قِبَل الإدارة قريباً</p>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: HQ.INK, margin: '0 0 8px' }}>{NO_GROUP_TITLE}</h1>
+          <p style={{ color: HQ.MUTED, fontSize: 14, margin: '0 0 20px' }}>{NO_GROUP_HINT}</p>
+          <HqActionLink to="/student/quran">افتح المصحف ريثما يتم تعيينك</HqActionLink>
         </div>
       </div>
     </PageLayout>
@@ -130,7 +131,7 @@ export default function MyGroupPage() {
             <span style={{ ...chip, background: HQ.PAPER }}>
               <Lock size={17} color="#C2410C" aria-hidden />
             </span>
-            <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>توقّف حضور الجلسات لانتهاء الاشتراك.</span>
+            <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>انتهى اشتراكك — المحتوى محجوب بالكامل حتى السداد.</span>
             <Link to="/student/subscription" style={{ fontSize: 14, fontWeight: 800, color: '#C2410C', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <CreditCard size={15} aria-hidden /> السداد
             </Link>

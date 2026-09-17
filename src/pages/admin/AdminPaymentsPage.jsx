@@ -52,29 +52,31 @@ export default function AdminPaymentsPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Settings states
+  // Settings states — start EMPTY so placeholder-looking values can never
+  // be saved as real payment destinations if the fetch fails.
   const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsFailed, setSettingsFailed] = useState(false);
   const [settings, setSettings] = useState({
-    vodafoneCashNumbers: ['01012345678'],
+    vodafoneCashNumbers: [],
     vodafoneInstructions: '',
     vodafoneEnabled: true,
-    instaPayAddress: 'quran-academy@instapay',
-    instaPayPhone: '01012345678',
-    instaPayAccountName: 'أكاديمية تحفيظ القرآن الكريم',
+    instaPayAddress: '',
+    instaPayPhone: '',
+    instaPayAccountName: '',
     instaPayInstructions: '',
     instaPayEnabled: true,
     plan: {
       name: 'الاشتراك الشهري في حلقات القرآن الكريم',
       description: 'اشتراك شهري شامل لحضور كافة الحلقات المباشرة ومتابعة خطة الحفظ',
-      priceEGP: 250,
-      priceSAR: 49,
+      priceEGP: '',
+      priceSAR: '',
       quarterlyDiscountPercent: 10,
       annualDiscountPercent: 20,
     },
     freeTrialSessionsCount: 1,
     reminderDaysBeforeExpiry: 3,
-    supportPhone: '01012345678',
-    supportWhatsapp: '201012345678',
+    supportPhone: '',
+    supportWhatsapp: '',
   });
 
   useEffect(() => {
@@ -130,12 +132,14 @@ export default function AdminPaymentsPage() {
 
   const fetchSettings = async () => {
     try {
+      setSettingsFailed(false);
       const res = await api.get('/payments/admin/settings');
       if (res.data?.settings) {
         setSettings(res.data.settings);
       }
     } catch (err) {
       console.error('Error fetching settings:', err);
+      setSettingsFailed(true);
     }
   };
 
@@ -185,6 +189,20 @@ export default function AdminPaymentsPage() {
 
   const handleSaveSettings = async (e) => {
     e.preventDefault();
+    // Never save placeholder-looking payment data: prices and at least one
+    // enabled payment destination are required.
+    const priceEGP = Number(settings.plan?.priceEGP);
+    const priceSAR = Number(settings.plan?.priceSAR);
+    if (!priceEGP && !priceSAR) {
+      toast.error('حدد سعر الاشتراك (بالجنيه أو بالريال على الأقل) قبل الحفظ');
+      return;
+    }
+    const vodaOk = (settings.vodafoneCashNumbers || []).filter(Boolean).length > 0;
+    const instaOk = Boolean((settings.instaPayAddress || '').trim());
+    if (!vodaOk && !instaOk) {
+      toast.error('أدخل رقم فودافون كاش أو عنوان انستاباي قبل الحفظ');
+      return;
+    }
     setSettingsLoading(true);
     try {
       const res = await api.put('/payments/admin/settings', settings);
@@ -634,6 +652,11 @@ export default function AdminPaymentsPage() {
           {/* TAB 2: PAYMENT SETTINGS */}
           {activeTab === 'settings' && (
             <form onSubmit={handleSaveSettings} className="space-y-8">
+              {settingsFailed && (
+                <div role="alert" style={{ background: HQ.SURFACE, border: '1px solid #C2410C', borderRadius: 14, padding: 16, fontSize: 14, color: '#C2410C', fontWeight: 700 }}>
+                  تعذر تحميل الإعدادات الحالية — الحقول فارغة عمداً حتى لا تُحفظ قيم وهمية. أعد تحميل الصفحة قبل الحفظ.
+                </div>
+              )}
 
               {/* Vodafone Cash Configuration Card */}
               <div style={panel}>

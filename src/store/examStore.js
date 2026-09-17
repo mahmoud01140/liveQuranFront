@@ -38,7 +38,9 @@ const useExamStore = create((set, get) => ({
   addOralRecording: (questionId, audioBlob, audioUrl) => set((state) => ({
     oralRecordings: [
       ...state.oralRecordings.filter((r) => r.questionId !== questionId),
-      { questionId, audioBlob, audioUrl },
+      // taskId mirrors questionId: the oral-submit endpoint reads taskId_*,
+      // the recitation endpoint reads questionId_* — both must be present.
+      { questionId, taskId: questionId, audioBlob, audioUrl },
     ],
   })),
 

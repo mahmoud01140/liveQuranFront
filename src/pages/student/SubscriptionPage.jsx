@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  CreditCard, CheckCircle2, AlertCircle, ShieldCheck,
+  CreditCard, CheckCircle2, AlertCircle, ShieldCheck, Clock,
   Copy, Check, Upload, Phone, Eye, RefreshCw, Smartphone, Building2, Lock, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -131,22 +131,42 @@ export default function SubscriptionPage() {
     }
   };
 
+  // Prices and payment destinations come ONLY from the admin panel
+  // (/payments/public-config). No invented fallbacks — a missing value
+  // renders as unavailable, never as a made-up number.
   const calculateAmount = (plan, cycle, curr) => {
-    if (!plan) return 0;
-    const baseMonthly = curr === 'EGP' ? (plan.priceEGP || 250) : (plan.priceSAR || 49);
+    if (!plan) return null;
+    const baseMonthly = curr === 'EGP' ? plan.priceEGP : plan.priceSAR;
+    if (baseMonthly == null) return null;
     if (cycle === 'monthly') return baseMonthly;
     if (cycle === 'quarterly') {
       const total = baseMonthly * 3;
-      const discount = (plan.quarterlyDiscountPercent || 10) / 100;
+      const discount = (plan.quarterlyDiscountPercent ?? 10) / 100;
       return Math.round(total * (1 - discount));
     }
     if (cycle === 'annual') {
       const total = baseMonthly * 12;
-      const discount = (plan.annualDiscountPercent || 20) / 100;
+      const discount = (plan.annualDiscountPercent ?? 20) / 100;
       return Math.round(total * (1 - discount));
     }
     return baseMonthly;
   };
+
+  const vodaNumbers = (paymentMethods?.vodafoneCash?.numbers || []).filter(Boolean);
+  const vodaEnabled = paymentMethods?.vodafoneCash?.enabled !== false && vodaNumbers.length > 0;
+  const instaAddress = paymentMethods?.instaPay?.address || '';
+  const instaAccountName = paymentMethods?.instaPay?.accountName || '';
+  const instaEnabled = paymentMethods?.instaPay?.enabled !== false && Boolean(instaAddress);
+  const availableMethods = [
+    ...(vodaEnabled ? ['vodafone_cash'] : []),
+    ...(instaEnabled ? ['instapay'] : []),
+  ];
+  const noMethodsConfigured = availableMethods.length === 0;
+  const effectiveMethod = availableMethods.includes(selectedMethod)
+    ? selectedMethod
+    : (availableMethods[0] || selectedMethod);
+  const displayAmount = calculateAmount(planConfig, billingCycle, currency);
+  const canCheckout = displayAmount != null && !noMethodsConfigured;
 
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
@@ -154,16 +174,24 @@ export default function SubscriptionPage() {
       toast.error('يرجى رفع صورة إيصال التحويل أو لقطة الشاشة للعملية');
       return;
     }
-    if (selectedMethod === 'vodafone_cash' && !senderPhone) {
+    if (noMethodsConfigured || displayAmount == null) {
+      toast.error('بيانات السداد غير متاحة حالياً من الإدارة — حاول لاحقاً');
+      return;
+    }
+    if (effectiveMethod === 'vodafone_cash' && !senderPhone) {
       toast.error('يرجى إدخال رقم المحفظة / الهاتف المحول منه');
       return;
     }
-    const calculatedAmount = calculateAmount(planConfig, billingCycle, currency);
+    if (!senderName.trim()) {
+      toast.error('يرجى إدخال اسم المحوِّل');
+      return;
+    }
     const formData = new FormData();
     formData.append('billingCycle', billingCycle);
-    formData.append('amount', calculatedAmount);
+    // NOTE: the amount is intentionally NOT sent — the server recalculates
+    // the price from the admin panel settings to prevent tampering.
     formData.append('currency', currency);
-    formData.append('method', selectedMethod);
+    formData.append('method', effectiveMethod);
     formData.append('senderPhone', senderPhone);
     formData.append('senderName', senderName);
     formData.append('referenceNumber', referenceNumber);
@@ -190,21 +218,26 @@ export default function SubscriptionPage() {
   const isTrial = subscription?.isTrial;
   const isExpiringSoon = subscription?.isExpiringSoon;
   const isExpired = subscription?.isExpired;
+  const pendingPayment = payments.find(p => p.status === 'pending');
   const trialUsed = (subscription?.trialSessionsAttended || 0) >= (subscription?.trialSessionsAllowed || 1);
   const currencyLabel = currency === 'EGP' ? 'ج.م' : 'ر.س';
 
-  const statusTitle = isPaidActive
+  const statusTitle = !subscription
+    ? 'ابدأ بحصتك التجريبية'
+    : isPaidActive
     ? 'اشتراكك مفعل وسارٍ'
     : isTrial && !trialUsed
     ? 'محاضرتك التجريبية متاحة'
     : trialUsed && !isPaidActive
     ? 'انتهت التجريبية — الاشتراك مطلوب'
     : 'الاشتراك منتهي';
-  const statusHint = isPaidActive && subscription?.endDate
+  const statusHint = !subscription
+    ? 'احضر أول جلسة مباشرة مجاناً لتجربة الحلقة، ثم سدد الاشتراك لفتح كامل المحتوى.'
+    : isPaidActive && subscription?.endDate
     ? `ينتهي في ${formatDateAr(subscription.endDate)} (متبقي ${subscription.daysRemaining} يوم)`
     : isTrial && !trialUsed
     ? 'يمكنك حضور أول جلسة مباشرة مجانًا لتجربة الحلقة.'
-    : 'أتممت جلستك التجريبية — سدد الاشتراك لمواصلة الحضور مع مجموعتك.';
+    : 'انتهى اشتراكك — المحتوى محجوب بالكامل حتى السداد. تُراجَع الإيصالات خلال 24 ساعة ولا يُفتح المحتوى أثناء المراجعة.';
 
   const inputStyle = {
     width: '100%', padding: '12px 14px', borderRadius: 12, border: `1px solid ${HQ.LINE}`,
@@ -245,10 +278,16 @@ export default function SubscriptionPage() {
             {/* 1. My status */}
             <section aria-label="حالة اشتراكي"
               style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 20, marginBottom: 16 }}>
+              {pendingPayment && (
+                <p role="status" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px', fontSize: 14, fontWeight: 800, color: '#B45309' }}>
+                  <Clock size={16} />
+                  طلبك قيد المراجعة — سيُفتح المحتوى بعد اعتماد الإدارة خلال 24 ساعة.
+                </p>
+              )}
               {(isExpiringSoon || isExpired) && (
                 <p role={isExpired ? 'alert' : 'status'} style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px', fontSize: 14, fontWeight: 800, color: isExpired ? '#C2410C' : '#B45309' }}>
                   {isExpired ? <Lock size={16} /> : <AlertCircle size={16} />}
-                  {isExpired ? 'توقّف حضور الجلسات لانتهاء الاشتراك' : `يتبقى ${subscription?.daysRemaining} أيام على اشتراكك`}
+                  {isExpired ? 'انتهى اشتراكك — المحتوى محجوب بالكامل حتى السداد' : `يتبقى ${subscription?.daysRemaining} أيام على اشتراكك`}
                 </p>
               )}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -261,8 +300,8 @@ export default function SubscriptionPage() {
                   </div>
                   <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>{statusHint}</p>
                 </div>
-                <button type="button" onClick={handleOpenCheckout} className="hq-action"
-                  style={{ background: HQ.MENTOR, color: '#fff', padding: '0 24px', fontSize: 15, flex: 'none' }}>
+                <button type="button" onClick={handleOpenCheckout} disabled={!canCheckout} className="hq-action"
+                  style={{ background: HQ.MENTOR, color: '#fff', padding: '0 24px', fontSize: 15, flex: 'none', opacity: canCheckout ? 1 : 0.5 }}>
                   <CreditCard size={17} /> {isPaidActive ? 'تجديد مقدمًا' : 'اشترك الآن'}
                 </button>
               </div>
@@ -309,17 +348,28 @@ export default function SubscriptionPage() {
 
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
                 <strong style={{ fontSize: 40, fontWeight: 900, color: HQ.INK }}>
-                  {calculateAmount(planConfig, billingCycle, currency)}
+                  {displayAmount == null ? '—' : displayAmount}
                 </strong>
                 <span style={{ fontSize: 15, fontWeight: 800, color: HQ.MUTED }}>
                   {currencyLabel} / {CYCLES.find(c => c.key === billingCycle)?.suffix}
                 </span>
               </div>
-              <p style={{ margin: '0 0 16px', fontSize: 13, color: HQ.MUTED }}>
-                {billingCycle === 'annual' ? 'اشتراك سنوي كامل بخصم الإدارة' : billingCycle === 'quarterly' ? 'اشتراك 3 شهور بخصم الإدارة' : 'سداد شهري ميسر'}
-              </p>
-              <button type="button" onClick={handleOpenCheckout} className="hq-action"
-                style={{ width: '100%', background: HQ.MENTOR, color: '#fff', fontSize: 16 }}>
+              {displayAmount == null ? (
+                <p role="alert" style={{ margin: '0 0 16px', fontSize: 13, color: '#C2410C' }}>
+                  سعر هذه العملة غير مضبوط من الإدارة حالياً — جرّب العملة الأخرى أو حاول لاحقاً.
+                </p>
+              ) : (
+                <p style={{ margin: '0 0 16px', fontSize: 13, color: HQ.MUTED }}>
+                  {billingCycle === 'annual' ? 'اشتراك سنوي كامل بخصم الإدارة' : billingCycle === 'quarterly' ? 'اشتراك 3 شهور بخصم الإدارة' : 'سداد شهري ميسر'}
+                </p>
+              )}
+              {noMethodsConfigured && (
+                <p role="alert" style={{ margin: '0 0 16px', fontSize: 13, color: '#C2410C' }}>
+                  طرق الدفع غير متاحة حالياً من الإدارة — حاول لاحقاً أو تواصل مع الدعم.
+                </p>
+              )}
+              <button type="button" onClick={handleOpenCheckout} disabled={!canCheckout} className="hq-action"
+                style={{ width: '100%', background: HQ.MENTOR, color: '#fff', fontSize: 16, opacity: canCheckout ? 1 : 0.5 }}>
                 <CreditCard size={18} /> {isPaidActive ? 'تجديد الاشتراك' : 'اشترك وسدد الآن'}
               </button>
             </section>
@@ -413,84 +463,104 @@ export default function SubscriptionPage() {
             </div>
 
             <form onSubmit={handleSubmitPayment}>
-              {/* Amount summary */}
+              {/* Amount summary — admin price only */}
               <div style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 14, padding: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <span style={{ fontSize: 14, color: HQ.MUTED }}>المبلغ المطلوب تحويله</span>
                 <strong style={{ fontSize: 24, color: HQ.INK }}>
-                  {calculateAmount(planConfig, billingCycle, currency)} {currency === 'EGP' ? 'ج.م' : 'ر.س'}
+                  {displayAmount == null ? 'غير متاح' : `${displayAmount} ${currency === 'EGP' ? 'ج.م' : 'ر.س'}`}
                 </strong>
               </div>
 
-              {/* Step 1: method */}
+              {/* Step 1: method — only admin-enabled methods */}
               <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 900, color: HQ.INK }}>1. اختر طريقة التحويل</p>
+              {noMethodsConfigured ? (
+                <p role="alert" style={{ margin: '0 0 20px', fontSize: 14, color: '#C2410C' }}>
+                  طرق الدفع غير متاحة حالياً من الإدارة — لا يمكن إتمام السداد الآن.
+                </p>
+              ) : (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>
                 {[
-                  { key: 'vodafone_cash', label: 'فودافون كاش', hint: 'محافظ إلكترونية', icon: Smartphone },
-                  { key: 'instapay', label: 'انستاباي', hint: 'تحويل بنكي لحظي', icon: Building2 },
+                  ...(vodaEnabled ? [{ key: 'vodafone_cash', label: 'فودافون كاش', hint: 'محافظ إلكترونية', icon: Smartphone }] : []),
+                  ...(instaEnabled ? [{ key: 'instapay', label: 'انستاباي', hint: 'تحويل بنكي لحظي', icon: Building2 }] : []),
                 ].map(m => (
-                  <button key={m.key} type="button" aria-pressed={selectedMethod === m.key}
+                  <button key={m.key} type="button" aria-pressed={effectiveMethod === m.key}
                     onClick={() => setSelectedMethod(m.key)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10, padding: 12, minHeight: 64,
-                      background: selectedMethod === m.key ? HQ.PAPER : HQ.SURFACE,
-                      border: selectedMethod === m.key ? `2px solid ${HQ.MENTOR}` : `1px solid ${HQ.LINE}`,
+                      background: effectiveMethod === m.key ? HQ.PAPER : HQ.SURFACE,
+                      border: effectiveMethod === m.key ? `2px solid ${HQ.MENTOR}` : `1px solid ${HQ.LINE}`,
                       borderRadius: 14, cursor: 'pointer', textAlign: 'right',
                     }}>
-                    <m.icon size={20} color={selectedMethod === m.key ? HQ.MENTOR : HQ.MUTED} style={{ flex: 'none' }} />
+                    <m.icon size={20} color={effectiveMethod === m.key ? HQ.MENTOR : HQ.MUTED} style={{ flex: 'none' }} />
                     <span>
                       <strong style={{ display: 'block', fontSize: 14, color: HQ.INK }}>{m.label}</strong>
                       <span style={{ display: 'block', fontSize: 12, color: HQ.MUTED }}>{m.hint}</span>
                     </span>
-                    {selectedMethod === m.key && <Check size={17} color={HQ.MENTOR} style={{ marginRight: 'auto' }} />}
+                    {effectiveMethod === m.key && <Check size={17} color={HQ.MENTOR} style={{ marginRight: 'auto' }} />}
                   </button>
                 ))}
               </div>
+              )}
 
-              {/* Step 2: transfer details */}
+              {/* Step 2: transfer details — admin numbers only, never invented */}
               <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 900, color: HQ.INK }}>2. حوّل إلى الحساب التالي</p>
               <div style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 14, padding: 14, marginBottom: 20 }}>
-                {selectedMethod === 'vodafone_cash' ? (
+                {effectiveMethod === 'vodafone_cash' ? (
+                  vodaEnabled ? (
                   <>
                     <span style={{ display: 'block', fontSize: 12, color: HQ.MUTED }}>رقم محفظة فودافون كاش</span>
                     <span style={{ display: 'block', fontSize: 20, fontWeight: 900, color: HQ.INK, margin: '2px 0 8px', direction: 'ltr', textAlign: 'right' }}>
-                      {paymentMethods?.vodafoneCash?.numbers?.[0] || '01012345678'}
+                      {vodaNumbers[0]}
                     </span>
                     <button type="button"
-                      onClick={() => copyToClipboard(paymentMethods?.vodafoneCash?.numbers?.[0] || '01012345678', 'voda-num')}
+                      onClick={() => copyToClipboard(vodaNumbers[0], 'voda-num')}
                       className="hq-action" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, color: HQ.INK, padding: '0 16px', fontSize: 13 }}>
                       {copiedKey === 'voda-num' ? <Check size={15} color={HQ.MENTOR} /> : <Copy size={15} />}
                       {copiedKey === 'voda-num' ? 'تم النسخ' : 'نسخ الرقم'}
                     </button>
                   </>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: 14, color: '#C2410C' }}>فودافون كاش غير متاح حالياً من الإدارة.</p>
+                  )
                 ) : (
+                  instaEnabled ? (
                   <>
                     <span style={{ display: 'block', fontSize: 12, color: HQ.MUTED }}>العنوان اللحظي (IPA)</span>
                     <span style={{ display: 'block', fontSize: 17, fontWeight: 900, color: HQ.INK, margin: '2px 0 8px', direction: 'ltr', textAlign: 'right' }}>
-                      {paymentMethods?.instaPay?.address || 'quran-academy@instapay'}
+                      {instaAddress}
                     </span>
                     <p style={{ margin: '0 0 8px', fontSize: 13, color: HQ.MUTED }}>
-                      المستلم: <strong style={{ color: HQ.INK }}>{paymentMethods?.instaPay?.accountName || 'أكاديمية تحفيظ القرآن الكريم'}</strong>
+                      المستلم: <strong style={{ color: HQ.INK }}>{instaAccountName}</strong>
                     </p>
                     <button type="button"
-                      onClick={() => copyToClipboard(paymentMethods?.instaPay?.address || 'quran-academy@instapay', 'insta-addr')}
+                      onClick={() => copyToClipboard(instaAddress, 'insta-addr')}
                       className="hq-action" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, color: HQ.INK, padding: '0 16px', fontSize: 13 }}>
                       {copiedKey === 'insta-addr' ? <Check size={15} color={HQ.MENTOR} /> : <Copy size={15} />}
                       {copiedKey === 'insta-addr' ? 'تم النسخ' : 'نسخ العنوان'}
                     </button>
                   </>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: 14, color: '#C2410C' }}>انستاباي غير متاح حالياً من الإدارة.</p>
+                  )
                 )}
               </div>
 
               {/* Step 3: sender + receipt */}
               <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 900, color: HQ.INK }}>3. بيانات التحويل والإيصال</p>
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStyle} htmlFor="sub-sender-name">اسم المحوِّل *</label>
+                <input id="sub-sender-name" type="text" required value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                  placeholder="الاسم الذي تم التحويل منه" style={inputStyle} />
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={labelStyle} htmlFor="sub-sender-phone">
-                    {selectedMethod === 'vodafone_cash' ? 'رقم المحفظة المحول منها *' : 'هاتفك أو حساب انستاباي *'}
+                    {effectiveMethod === 'vodafone_cash' ? 'رقم المحفظة المحول منها *' : 'هاتفك أو حساب انستاباي *'}
                   </label>
                   <input id="sub-sender-phone" type="text" required value={senderPhone}
                     onChange={(e) => setSenderPhone(e.target.value)}
-                    placeholder={selectedMethod === 'vodafone_cash' ? '010XXXXXXXX' : 'اسم المستخدم أو 01XXXXXXXXX'}
+                    placeholder={effectiveMethod === 'vodafone_cash' ? '010XXXXXXXX' : 'اسم المستخدم أو 01XXXXXXXXX'}
                     style={inputStyle} />
                 </div>
                 <div>
@@ -529,12 +599,12 @@ export default function SubscriptionPage() {
                   placeholder="أي معلومات إضافية للإدارة..." style={inputStyle} />
               </div>
 
-              <button type="submit" disabled={isSubmitting} className="hq-action"
-                style={{ width: '100%', background: HQ.MENTOR, color: '#fff', fontSize: 16, opacity: isSubmitting ? 0.6 : 1 }}>
+              <button type="submit" disabled={isSubmitting || !canCheckout} className="hq-action"
+                style={{ width: '100%', background: HQ.MENTOR, color: '#fff', fontSize: 16, opacity: (isSubmitting || !canCheckout) ? 0.6 : 1 }}>
                 {isSubmitting ? <><LoadingSpinner size="sm" color="white" /> جارٍ الإرسال...</> : <><ShieldCheck size={18} /> تأكيد وإرسال الإيصال</>}
               </button>
               <p style={{ fontSize: 12, textAlign: 'center', color: HQ.MUTED, margin: '8px 0 0' }}>
-                تُراجَع الإيصالات ويُفعَّل اشتراكك سريعًا من المشرفين
+                تُراجَع الإيصالات خلال 24 ساعة ويُفعَّل اشتراكك بعد اعتماد الإدارة — لا يُفتح المحتوى أثناء المراجعة.
               </p>
             </form>
           </div>

@@ -43,11 +43,23 @@ const types = [
 export default function RegistrationTypePage() {
   const { user, updateUser } = useAuthStore();
   const navigate = useNavigate();
-  const [selected, setSelected] = useState(null);
+  // Prefill the current choice so a returning student sees where they stand
+  const [selected, setSelected] = useState(user?.registrationType || null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleNext = async () => {
     if (!selected) { toast.error('الرجاء اختيار نوع التسجيل'); return; }
+    if (!user?._id) { toast.error('انتهت الجلسة. سجل الدخول مجدداً.'); navigate('/login'); return; }
+    // Switching tracks mid-onboarding orphans the saved survey answers and
+    // changes the placement exam — confirm and clean up.
+    if (user.registrationType && user.registrationType !== selected) {
+      if (!window.confirm('تغيير نوع التسجيل سيتجاهل إجابات الاستبيان المحفوظة ويغير امتحان التحديد. هل تريد المتابعة؟')) return;
+      try {
+        Object.keys(localStorage)
+          .filter(k => k.startsWith(`survey_answers_${user._id}_`))
+          .forEach(k => localStorage.removeItem(k));
+      } catch (_) {}
+    }
     setIsLoading(true);
     try {
       await api.put(`/users/${user._id}`, { registrationType: selected });
@@ -73,6 +85,9 @@ export default function RegistrationTypePage() {
             <div className="onb-progress" role="progressbar" aria-valuenow={33} aria-valuemin={0} aria-valuemax={100} aria-label="تقدم التسجيل">
               <span style={{ width: '33%' }} />
             </div>
+            <p className="mt-2" style={{ fontSize: '0.8125rem', color: '#756E85' }}>
+              الخطوة 1 (إنشاء الحساب وتفعيل البريد) مكتملة ✓
+            </p>
           </div>
 
           <div className="text-center mb-10">
@@ -130,7 +145,14 @@ export default function RegistrationTypePage() {
             })}
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => navigate('/verify-email')}
+              className="onb-ghost"
+            >
+              رجوع
+            </button>
             <button
               onClick={handleNext}
               disabled={!selected || isLoading}

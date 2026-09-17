@@ -5,7 +5,7 @@ import Sidebar from '../../components/shared/Sidebar';
 import useAuthStore from '../../store/authStore';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
-import { formatDateAr } from '../../utils/helpers';
+import { formatDateAr, NO_GROUP_TITLE, NO_GROUP_HINT } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 import Pagination from '../../components/shared/Pagination';
 import usePagination from '../../hooks/usePagination';
@@ -59,7 +59,7 @@ export default function HomeworkPage() {
 
   const loadHomework = () => {
     const groupId = user?.group?._id || user?.group;
-    if (!groupId) { setIsLoading(false); return; }
+    if (!groupId) { setIsLoading(false); setSessions([]); return; }
     setIsLoading(true);
     setLoadFailed(false);
     api.get(`/live/group/${groupId}/homework`)
@@ -157,6 +157,10 @@ export default function HomeworkPage() {
     );
 
   const handleSubmit = async (sessionId) => {
+    const session = sessions.find(s => s._id === sessionId);
+    if (session && isOverdue(session)) {
+      if (!window.confirm('انتهى موعد هذا الواجب — سيُسجَّل تسليمك كمتأخر. هل تريد المتابعة؟')) return;
+    }
     setSubmitting(sessionId);
     try {
       const formData = new FormData();
@@ -174,25 +178,21 @@ export default function HomeworkPage() {
         },
       });
 
-      const newSubmission = {
-        student: { _id: user._id },
-        notes: notes[sessionId] || '',
-        submittedAt: new Date(),
-        audioUrl: audioUrl || '',
-        files: selectedFiles.map(f => ({ name: f.name, url: URL.createObjectURL(f) })),
-        isChecked: false
-      };
-
-      setSessions(prev => prev.map(s =>
-        s._id === sessionId
-          ? { ...s, homeworkSubmissions: [...(s.homeworkSubmissions || []), newSubmission] }
-          : s
-      ));
       setAudioBlob(null);
       setAudioUrl(null);
       setSelectedFiles([]);
+      setNotes(p => ({ ...p, [sessionId]: '' }));
       toast.success('تم تسليم الواجب بنجاح');
       await checkAuth();
+      // Re-fetch from the server so audio/files point at real URLs
+      // (local blob URLs die on reload).
+      try {
+        const groupId = user?.group?._id || user?.group;
+        if (groupId) {
+          const r = await api.get(`/live/group/${groupId}/homework`);
+          setSessions(r.data.sessions || []);
+        }
+      } catch (_) {}
     } catch (err) {
       toast.error(err?.response?.data?.message || 'خطأ في التسليم');
     } finally { setSubmitting(null); }
@@ -245,8 +245,8 @@ export default function HomeworkPage() {
           ) : sessions.length === 0 ? (
             <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 48, textAlign: 'center' }}>
               <ClipboardList size={44} color={HQ.LINE} style={{ margin: '0 auto 12px' }} />
-              <h2 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 900, color: HQ.INK }}>لا واجبات بعد</h2>
-              <p style={{ color: HQ.MUTED, fontSize: 14, margin: 0 }}>سيضيف المعلم الواجبات بعد كل حصة — ستجدها هنا.</p>
+              <h2 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 900, color: HQ.INK }}>{!(user?.group?._id || user?.group) ? NO_GROUP_TITLE : 'لا واجبات بعد'}</h2>
+              <p style={{ color: HQ.MUTED, fontSize: 14, margin: 0 }}>{!(user?.group?._id || user?.group) ? NO_GROUP_HINT : 'سيضيف المعلم الواجبات بعد كل حصة — ستجدها هنا.'}</p>
             </div>
           ) : (
             <>
@@ -418,8 +418,13 @@ export default function HomeworkPage() {
 
                               <button type="button" onClick={() => handleSubmit(session._id)} disabled={submitting === session._id} className="hq-action"
                                 style={{ width: '100%', background: HQ.MENTOR, color: '#fff', fontSize: 15, opacity: submitting === session._id ? 0.6 : 1 }}>
-                                {submitting === session._id ? <LoadingSpinner size="sm" color="white" /> : <><Send size={16} /> تسليم الواجب</>}
+                                {submitting === session._id ? <LoadingSpinner size="sm" color="white" /> : <><Send size={16} /> {st === 'overdue' ? 'تسليم متأخر' : 'تسليم الواجب'}</>}
                               </button>
+                              {st === 'overdue' && (
+                                <p style={{ margin: '8px 0 0', fontSize: 13, color: '#C2410C' }}>
+                                  انتهى الموعد — يمكنك التسليم الآن وسيُسجَّل كمتأخر.
+                                </p>
+                              )}
                             </div>
                           )}
                         </div>

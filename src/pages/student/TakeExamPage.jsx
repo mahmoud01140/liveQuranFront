@@ -37,6 +37,9 @@ export default function TakeExamPage() {
   const [result, setResult] = useState(null);
   const [recording, setRecording] = useState(false);
   const [recordedQuestions, setRecordedQuestions] = useState({});
+  const [timeLeft, setTimeLeft] = useState(null);
+  const [recitationFailed, setRecitationFailed] = useState(false);
+  const autoSubmitRef = useRef(false);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
 
@@ -58,9 +61,19 @@ export default function TakeExamPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const groupId = user?.group?._id || user?.group;
-        const res = await api.get(`/exams/group/${groupId || 'none'}`);
-        const exam = (res.data.exams || []).find(e => e._id === examId);
+        // Assigned exams can target the student individually, their group, or
+        // their level — so look in the unified assigned list FIRST, then fall
+        // back to the legacy group-only endpoint.
+        let exam = null;
+        try {
+          const assignedRes = await api.get('/exams/student/assigned');
+          exam = (assignedRes.data.exams || []).find(e => e._id === examId);
+        } catch (_) {}
+        if (!exam) {
+          const groupId = user?.group?._id || user?.group;
+          const res = await api.get(`/exams/group/${groupId || 'none'}`);
+          exam = (res.data.exams || []).find(e => e._id === examId);
+        }
         if (!exam) {
           toast.error('لم يتم العثور على الامتحان');
           navigate('/student/exams');
@@ -87,6 +100,28 @@ export default function TakeExamPage() {
     load();
     return () => { resetExam(); stopAudio(); };
   }, [examId]);
+
+  // Exam timer — auto-submit exactly once when time runs out
+  useEffect(() => {
+    if (currentExam?.duration && timeLeft === null) {
+      setTimeLeft(currentExam.duration * 60);
+    }
+  }, [currentExam, timeLeft]);
+
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0) return;
+    const t = setInterval(() => setTimeLeft((v) => v - 1), 1000);
+    return () => clearInterval(t);
+  }, [timeLeft]);
+
+  useEffect(() => {
+    if (timeLeft === 0 && !autoSubmitRef.current && !submitted && currentExam) {
+      autoSubmitRef.current = true;
+      toast('انتهى الوقت وتم تسليم الامتحان تلقائياً');
+      handleSubmit(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeLeft]);
 
   // Load Quran verses & audio when switching to a recitation question
   const q = currentExam?.questions?.[currentQuestion];
@@ -125,6 +160,10 @@ export default function TakeExamPage() {
 
   const startRecording = async (questionId) => {
     try {
+      // Recording forces quiz mode: the reference text/audio is hidden
+      // so the recitation is from memory.
+      setQuranMode(p => ({ ...p, [currentQuestion]: 'quiz' }));
+      try { stopAudio(); } catch (_) {}
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunksRef.current = [];
       const mr = new MediaRecorder(stream);
@@ -149,30 +188,53 @@ export default function TakeExamPage() {
     setRecording(false);
   };
 
-  const handleSubmit = async () => {
-    if (!window.confirm('هل أنت متأكد من تسليم الامتحان؟')) return;
+  const submitRecitationOnly = async (resultId) => {
+    const recitationRecs = oralRecordings.filter(r => r.audioBlob);
+    if (recitationRecs.length === 0 || !resultId) return true;
+    const formData = new FormData();
+    formData.append('examResultId', resultId);
+    recitationRecs.forEach((rec, idx) => {
+      formData.append('recordings', rec.audioBlob, `rec-${idx}.webm`);
+      if (rec.questionId) formData.append(`questionId_${idx}`, rec.questionId);
+    });
+    await api.post(`/exams/${examId}/submit-recitation`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return true;
+  };
+
+  const handleSubmit = async (auto = false) => {
+    if (!auto && !window.confirm('هل أنت متأكد من تسليم الامتحان؟')) return;
     try {
       stopAudio();
       const res = await submitWrittenExam(examId);
 
-      // If there are recitation recordings, submit them too
-      const recitationRecs = oralRecordings.filter(r => r.audioBlob);
-      if (recitationRecs.length > 0 && res?._id) {
-        const formData = new FormData();
-        formData.append('examResultId', res._id);
-        recitationRecs.forEach((rec, idx) => {
-          formData.append('recordings', rec.audioBlob, `rec-${idx}.webm`);
-          if (rec.questionId) formData.append(`questionId_${idx}`, rec.questionId);
-        });
-        await api.post(`/exams/${examId}/submit-recitation`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+      // Recitation audio is a second request — a failure must not silently
+      // lose the recordings, so it gets its own error state + retry.
+      try {
+        await submitRecitationOnly(res?._id);
+        setRecitationFailed(false);
+      } catch (_) {
+        setRecitationFailed(true);
+        toast.error('سُلّمت الإجابات الكتابية، لكن تعذر رفع التسجيلات الصوتية — أعد المحاولة من شاشة النتيجة');
       }
 
       setResult(res);
       setSubmitted(true);
     } catch (err) {
+      autoSubmitRef.current = false;
       toast.error(err?.response?.data?.message || 'خطأ في التسليم');
+    }
+  };
+
+  const handleRetryRecitation = async () => {
+    if (!result?._id) return;
+    try {
+      await submitRecitationOnly(result._id);
+      setRecitationFailed(false);
+      toast.success('تم رفع التسجيلات الصوتية بنجاح');
+    } catch (_) {
+      toast.error('تعذر الرفع مجدداً — تحقق من الاتصال وحاول مرة أخرى');
     }
   };
 
@@ -215,13 +277,25 @@ export default function TakeExamPage() {
             <h2 className="font-extrabold mb-2" style={{ fontSize: '1.5rem', color: HQ.INK }}>{tone.title}</h2>
 
             {/* Earned points — real result data only */}
-            {(result.xpEarned || 50) && (
+            {result.xpEarned > 0 && (
               <div className="my-4 p-3 flex items-center justify-center gap-2"
                 style={{ background: '#E2EFE7', borderRadius: 12 }}>
                 <Star size={17} color={HQ.MENTOR} aria-hidden />
                 <span className="text-sm font-bold" style={{ color: '#0F5940' }}>
-                  النقاط المكتسبة: +{result.xpEarned || 50} XP
+                  النقاط المكتسبة: +{result.xpEarned} XP
                 </span>
+              </div>
+            )}
+
+            {recitationFailed && (
+              <div role="alert" className="my-4 p-3" style={{ background: HQ.PAPER, border: '1px solid #C2410C', borderRadius: 12 }}>
+                <p className="text-sm font-bold mb-2" style={{ color: '#C2410C' }}>
+                  تعذر رفع تسجيلاتك الصوتية — إجاباتك الكتابية محفوظة.
+                </p>
+                <button type="button" onClick={handleRetryRecitation}
+                  className="hq-action" style={{ background: '#C2410C', color: '#fff', padding: '0 20px', fontSize: 14, width: '100%' }}>
+                  إعادة محاولة رفع التسجيلات
+                </button>
               </div>
             )}
 
@@ -282,6 +356,17 @@ export default function TakeExamPage() {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-bold truncate" style={{ color: HQ.INK, maxWidth: 200 }}>{currentExam.title}</span>
                 <div className="flex items-center gap-2">
+                  {timeLeft !== null && (
+                    <span role="timer" aria-label="الوقت المتبقي للامتحان"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.8125rem', fontWeight: 800,
+                        padding: '4px 12px', borderRadius: 9999, fontVariantNumeric: 'tabular-nums',
+                        background: timeLeft < 120 ? '#C2410C' : HQ.PAPER, color: timeLeft < 120 ? '#fff' : HQ.INK,
+                      }}>
+                      <Clock size={13} aria-hidden />
+                      {String(Math.floor(timeLeft / 60)).padStart(2, '0')}:{String(timeLeft % 60).padStart(2, '0')}
+                    </span>
+                  )}
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', fontSize: '0.8125rem', fontWeight: 700,
                     padding: '4px 12px', borderRadius: 9999, background: '#E2EFE7', color: '#0F5940',
@@ -413,7 +498,7 @@ export default function TakeExamPage() {
                             }}>
                             التدرب والاستماع
                           </button>
-                          <button type="button" onClick={() => setQuranMode(p => ({ ...p, [currentQuestion]: 'quiz' }))}
+                          <button type="button" onClick={() => { try { stopAudio(); } catch (_) {} setQuranMode(p => ({ ...p, [currentQuestion]: 'quiz' })); }}
                             aria-pressed={currentMode === 'quiz'}
                             className="flex-1 text-sm font-bold"
                             style={{
@@ -424,6 +509,9 @@ export default function TakeExamPage() {
                             وضع التسميع
                           </button>
                         </div>
+                        <p className="text-center" style={{ fontSize: '0.8125rem', color: HQ.MUTED }}>
+                          عند بدء التسجيل يُخفى النص تلقائياً — التسميع من الحفظ.
+                        </p>
 
                         {q.instruction && (
                           <div className="p-3.5 sm:p-4 text-right" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
@@ -629,7 +717,7 @@ export default function TakeExamPage() {
                   <ChevronRight size={16} aria-hidden /> السابق
                 </button>
                 {isLast ? (
-                  <button type="button" onClick={handleSubmit} disabled={isSubmitting}
+                  <button type="button" onClick={() => handleSubmit(false)} disabled={isSubmitting}
                     className="hq-action flex-1 text-sm" style={{ background: HQ.MENTOR, color: '#fff', opacity: isSubmitting ? 0.6 : 1 }}>
                     {isSubmitting ? <LoadingSpinner size="sm" color="white" /> : <><Send size={15} aria-hidden /> تسليم الامتحان</>}
                   </button>

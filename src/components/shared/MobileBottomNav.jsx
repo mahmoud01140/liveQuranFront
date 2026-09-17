@@ -43,7 +43,8 @@ export default function MobileBottomNav() {
   const isTakingExam = location.pathname.includes('/take') || location.pathname.startsWith('/onboarding');
   if (isTakingExam) return null;
 
-  const items = (user.role === 'admin' || user.role === 'teacher') ? adminNavItems
+  const items = user.role === 'admin' ? adminNavItems
+    : user.role === 'teacher' ? teacherNavItems
     : user.role === 'parent' ? parentNavItems
     : studentNavItems;
 
