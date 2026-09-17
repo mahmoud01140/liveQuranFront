@@ -14,7 +14,6 @@ const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'));
-const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'));
 
 // Onboarding
 const RegistrationTypePage = lazy(() => import('./pages/onboarding/RegistrationTypePage'));
@@ -96,11 +95,6 @@ export default function App() {
             <Route path="/forgot-password" element={user ? <Navigate to={getDashboardPath(user)} /> : <ForgotPasswordPage />} />
             {/* Reset link must always render — the user is typically logged in when clicking it */}
             <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-            <Route path="/verify-email" element={
-              <ProtectedRoute>
-                <VerifyEmailPage />
-              </ProtectedRoute>
-            } />
 
             {/* Waiting approval — user took exam but awaiting review */}
             <Route path="/waiting-approval" element={
@@ -188,6 +182,6 @@ function getDashboardPath(user) {
   }
 
   // New user — hasn't taken exam yet
-  if (!user.isVerified || !user.assignedLevel) return '/onboarding/type';
+  if (!user.assignedLevel) return '/onboarding/type';
   return '/student';
 }

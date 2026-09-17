@@ -36,7 +36,6 @@ export default function LoginPage() {
         if (u.assignedLevel) navigate('/student');
         else navigate('/waiting-approval');
       }
-      else if (!u.isVerified) navigate('/onboarding/type');
       else if (!u.assignedLevel) navigate('/onboarding/type');
       else navigate('/student');
     } catch (error) {

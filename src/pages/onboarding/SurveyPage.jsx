@@ -99,7 +99,7 @@ export default function SurveyPage() {
           {/* Progress */}
           <div className="mb-8">
             <div className="flex items-center justify-between text-sm mb-2">
-              <span className="onb-badge">الخطوة 3 من 6 — الاستبيان</span>
+              <span className="onb-badge">الخطوة 2 من 5 — الاستبيان</span>
               <span style={{ color: '#756E85' }}>السؤال {currentQ + 1} من {questions.length}</span>
             </div>
             <div className="onb-progress" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="تقدم الاستبيان">

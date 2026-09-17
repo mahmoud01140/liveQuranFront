@@ -79,15 +79,12 @@ export default function RegistrationTypePage() {
           {/* Progress */}
           <div className="mb-8">
             <div className="flex items-center gap-2 text-sm mb-2">
-              <span className="onb-badge">الخطوة 2 من 6</span>
+              <span className="onb-badge">الخطوة 1 من 5</span>
               <span style={{ color: '#756E85' }}>اختيار نوع التسجيل</span>
             </div>
-            <div className="onb-progress" role="progressbar" aria-valuenow={33} aria-valuemin={0} aria-valuemax={100} aria-label="تقدم التسجيل">
-              <span style={{ width: '33%' }} />
+            <div className="onb-progress" role="progressbar" aria-valuenow={20} aria-valuemin={0} aria-valuemax={100} aria-label="تقدم التسجيل">
+              <span style={{ width: '20%' }} />
             </div>
-            <p className="mt-2" style={{ fontSize: '0.8125rem', color: '#756E85' }}>
-              الخطوة 1 (إنشاء الحساب وتفعيل البريد) مكتملة ✓
-            </p>
           </div>
 
           <div className="text-center mb-10">
@@ -148,7 +145,7 @@ export default function RegistrationTypePage() {
           <div className="flex items-center justify-between">
             <button
               type="button"
-              onClick={() => navigate('/verify-email')}
+              onClick={() => navigate('/')}
               className="onb-ghost"
             >
               رجوع

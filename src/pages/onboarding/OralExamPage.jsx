@@ -107,7 +107,7 @@ export default function OralExamPage() {
           {/* Progress */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="onb-badge">الخطوة 5 من 6 — الامتحان الشفهي (إجباري)</span>
+              <span className="onb-badge">الخطوة 4 من 5 — الامتحان الشفهي (إجباري)</span>
               <span className="text-sm" style={{ color: '#756E85' }}>المهمة {currentTask + 1} من {tasks.length}</span>
             </div>
             <div className="onb-progress" role="progressbar" aria-valuenow={Math.round(((currentTask + 1) / tasks.length) * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="تقدم الامتحان الشفهي">

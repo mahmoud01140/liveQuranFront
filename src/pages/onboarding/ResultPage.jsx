@@ -56,7 +56,7 @@ export default function ResultPage() {
             transition={{ duration: 0.2 }}
             className="text-center mb-8"
           >
-            <span className="onb-badge">الخطوة 6 من 6 — النتيجة</span>
+            <span className="onb-badge">الخطوة 5 من 5 — النتيجة</span>
             <h1 className="font-extrabold mt-3 mb-2" style={{ fontSize: '2rem', lineHeight: 1.4, color: '#2A2438' }}>أحسنت! انتهيت من التسجيل</h1>
             <p style={{ color: '#756E85' }}>هذه نتيجة امتحان التحديد الخاص بك</p>
           </motion.div>

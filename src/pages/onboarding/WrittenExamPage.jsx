@@ -129,7 +129,7 @@ export default function WrittenExamPage() {
           <div className="mb-6">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div>
-                <span className="onb-badge">الخطوة 4 من 6 — الامتحان التحريري</span>
+                <span className="onb-badge">الخطوة 3 من 5 — الامتحان التحريري</span>
                 <p className="text-sm mt-1" style={{ color: '#756E85' }}>{currentExam.title}</p>
               </div>
               {timeLeft !== null && (

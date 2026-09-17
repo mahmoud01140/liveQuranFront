@@ -123,12 +123,7 @@ export default function WaitingApprovalPage() {
 
               {/* Actions */}
               <div className="flex flex-col gap-3">
-                {!user?.isVerified && (
-                  <button onClick={() => navigate('/verify-email')} className="onb-btn onb-btn-block">
-                    فعّل بريدك أولاً — لن تظهر للإدارة قبل التفعيل
-                  </button>
-                )}
-                <button onClick={() => navigate('/student/quran')} className="onb-ghost w-full justify-center">
+                <button onClick={() => navigate('/student/quran')} className="onb-btn onb-btn-block">
                   <BookOpen className="w-4 h-4" aria-hidden />
                   افتح المصحف ريثما تتم المراجعة
                 </button>

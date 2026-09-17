@@ -81,17 +81,6 @@ const useAuthStore = create(
       },
 
       updateUser: (updates) => set((state) => ({ user: { ...state.user, ...updates } })),
-
-      verifyEmail: async (otp) => {
-        const res = await api.post('/auth/verify-email', { otp });
-        set({ user: res.data.user });
-        return res.data;
-      },
-
-      resendOTP: async () => {
-        const res = await api.post('/auth/resend-otp');
-        return res.data;
-      },
     }),
     {
       name: 'auth-storage',

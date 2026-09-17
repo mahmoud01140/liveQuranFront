@@ -6,8 +6,8 @@ import { isSubscriptionBlocked } from '../../utils/helpers';
 import LoadingSpinner from './LoadingSpinner';
 
 // Pages where an expired/unsubscribed student is still allowed:
-// paying, verifying email, waiting for review/group, or finishing the mandatory placement.
-const SUB_ALLOWLIST = ['/student/subscription', '/verify-email', '/waiting-approval', '/onboarding'];
+// paying, waiting for review/group, or finishing the mandatory placement.
+const SUB_ALLOWLIST = ['/student/subscription', '/waiting-approval', '/onboarding'];
 
 // Short-lived cache so every student navigation doesn't refetch billing status.
 let subCache = { userId: null, at: 0, blocked: false };
@@ -77,13 +77,6 @@ export default function ProtectedRoute({ children, role }) {
   }
 
   if (user.role === 'student') {
-    // 0. Email verification comes first — the admin review queue only
-    //    lists verified students, so unverified ones would wait forever.
-    const isVerifyRoute = location.pathname === '/verify-email';
-    if (!user.isVerified && !isVerifyRoute) {
-      return <Navigate to="/verify-email" replace />;
-    }
-
     // 1. Full subscription block: expired or trial-consumed students can only
     //    pay, wait, or finish placement — everything else is locked.
     if (needsSubCheck && (subCheck.blocked || subCache.blocked)) {
