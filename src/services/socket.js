@@ -6,6 +6,7 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 let socket = null;
 let currentToken = null;
 let activeGroupRooms = new Set(); // Track joined rooms for reconnection
+let connectErrorLogged = false; // Log the first failure only — polling retries would spam the console
 
 export const getSocket = () => {
   if (!socket) {
@@ -35,6 +36,7 @@ export const connectSocket = (token) => {
   s.off('connect');
   s.on('connect', () => {
     console.log('🔌 Socket connected:', s.id);
+    connectErrorLogged = false;
     if (currentToken) s.emit('authenticate', currentToken);
     // Re-join all active group rooms on reconnect
     activeGroupRooms.forEach(groupId => {
@@ -58,7 +60,12 @@ export const connectSocket = (token) => {
   s.on('auth-error', handleAuthFailure);
   s.off('connect_error');
   s.on('connect_error', (err) => {
-    console.error('Socket error:', err.message);
+    // Retries continue in the background (recover automatically if the
+    // realtime server comes back); only the first failure is logged.
+    if (!connectErrorLogged) {
+      connectErrorLogged = true;
+      console.error('Socket error:', err.message);
+    }
     handleAuthFailure(err.message);
   });
   return s;
