@@ -41,10 +41,14 @@ export default function RegisterPage() {
 
     try {
       const { firstName, lastName, email, password, phone, country, dateOfBirth, gender, role } = form;
-      await register({ firstName, lastName, email, password, phone, country, dateOfBirth, gender, role });
+      const data = await register({ firstName, lastName, email, password, phone, country, dateOfBirth, gender, role });
       if (role === 'parent') {
         toast.success('تم إنشاء الحساب بنجاح!');
         navigate('/parent');
+      } else if (data?.user?.isVerified) {
+        // Email verification bypassed (SKIP_EMAIL_VERIFICATION) — go straight in
+        toast.success('تم إنشاء الحساب بنجاح!');
+        navigate('/onboarding/type');
       } else {
         toast.success('تم إنشاء الحساب! فعّل بريدك بالرمز المرسل إليك.');
         navigate('/verify-email');
