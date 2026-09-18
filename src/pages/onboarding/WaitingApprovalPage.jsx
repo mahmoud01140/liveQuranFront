@@ -1,40 +1,115 @@
-import { useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, MotionConfig } from 'framer-motion';
-import { Clock, Check, BookOpen, RefreshCw, LogOut } from 'lucide-react';
+import { motion, MotionConfig, AnimatePresence } from 'framer-motion';
+import {
+  Clock, Check, BookOpen, RefreshCw, LogOut, Bell, Sparkles,
+  Volume2, ShieldCheck, ChevronDown, ChevronUp, HelpCircle,
+  Headphones, Users, Calendar, ArrowLeft, CheckCircle2, MessageCircle
+} from 'lucide-react';
+import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
+import useSocket from '../../hooks/useSocket';
+import api from '../../services/api';
+import { getLevelLabel } from '../../utils/helpers';
 import './Onboarding.css';
+
+const FAQS = [
+  {
+    q: 'كم يستغرق تدقيق التلاوة وتسكيني في الحلقة؟',
+    a: 'تستغرق المراجعة عادة بين ساعتين إلى 24 ساعة كحد أقصى؛ حيث يستمع أحد المقرئين المتخصصين لتسجيلاتك الشفهية بعناية لتحديد المستوى الأدق، ثم اختيار أنسب حلقة تناسب جدولك ومستواك.',
+  },
+  {
+    q: 'متى يبدأ سداد الاشتراك ورسوم التحفيظ؟',
+    a: 'لا يوجد أي سداد مطلوب الآن! حسابك يبدأ بحصة تجريبية مجانية بعد التسكين مباشرة لتتعرف على معلمك وأسلوب الحلقة قبل أي التزام مالي.',
+  },
+  {
+    q: 'ماذا لو كان موعد الحلقة المسكّن بها غير مناسب لجدولي؟',
+    a: 'يمكنك بكل سهولة وبضغطة زر طلب تغيير موعد حلقتك بالتواصل المباشر مع إدارة التسكين لاختيار موعد بديل يناسب أوقات فراغك.',
+  },
+  {
+    q: 'كيف سأعرف عندما تنتهي المراجعة ويتم تسكيني؟',
+    a: 'ستصلك رسالة فورية عبر بريدك الإلكتروني المسجل، وإشعار على هاتفك أو متصفحك، كما تتحدث هذه الصفحة تلقائياً باللحظة دون الحاجة لإعادة تحميلها.',
+  },
+];
 
 export default function WaitingApprovalPage() {
   const { user, checkAuth, refreshUser, logout } = useAuthStore();
   const navigate = useNavigate();
 
-  // Poll for updates every 30 seconds — always read the FRESH store value
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [openFaq, setOpenFaq] = useState(null);
+  const [showRecordings, setShowRecordings] = useState(false);
+  const [pushStatus, setPushStatus] = useState(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission;
+    }
+    return 'unsupported';
+  });
+
+  // Real-time synchronization via Socket.io
+  useSocket({
+    notification: async (notif) => {
+      toast.success(notif?.title || 'تحديث جديد بخصوص مراجعة حسابك');
+      const fresh = await refreshUser();
+      if (fresh?.assignedLevel && fresh?.group) {
+        toast.success('مبارك! تم تسكينك في مجموعتك بنجاح 🎉');
+      }
+    },
+    'group-assigned': async (data) => {
+      toast.success(`🎉 مبارك! تم تعيينك في ${data?.groupName || 'مجموعتك'}`);
+      await refreshUser();
+    },
+  });
+
+  // Auto-poll every 15 seconds to ensure fresh state
   useEffect(() => {
     const interval = setInterval(async () => {
-      const fresh = await refreshUser();
-      if (fresh?.assignedLevel) {
-        navigate('/student', { replace: true });
-      }
-    }, 30000);
+      try {
+        await refreshUser();
+      } catch (_) {}
+    }, 15000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // If user now has an assigned level, redirect to dashboard
-  useEffect(() => {
-    if (user?.assignedLevel) {
-      navigate('/student', { replace: true });
-    }
-  }, [user?.assignedLevel, navigate]);
+  }, [refreshUser]);
 
   const handleRefresh = async () => {
-    const fresh = await refreshUser();
-    await checkAuth();
-    const current = fresh?.assignedLevel
-      || useAuthStore.getState().user?.assignedLevel;
-    if (current) {
-      navigate('/student', { replace: true });
+    setIsRefreshing(true);
+    try {
+      const fresh = await refreshUser();
+      await checkAuth();
+      if (fresh?.assignedLevel && fresh?.group) {
+        toast.success('تم تسكينك في حلقتك بنجاح!');
+      } else if (fresh?.assignedLevel) {
+        toast.success(`تم اعتماد مستواك: ${getLevelLabel(fresh.assignedLevel)}`);
+      } else {
+        toast('المراجعة لا تزال جارية بعناية، شكراً لصبرك');
+      }
+    } catch (_) {
+      toast.error('تعذر التحقق من الاتصال');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleEnablePush = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      toast.error('المتصفح لا يدعم الإشعارات الفورية');
+      return;
+    }
+    try {
+      const perm = await Notification.requestPermission();
+      setPushStatus(perm);
+      if (perm === 'granted') {
+        toast.success('تم تفعيل إشعارات المتصفح بنجاح! سننبهك فور اعتمادك.');
+        try {
+          await api.put('/auth/push-subscription', {
+            subscription: { browserEnabled: true, timestamp: new Date() },
+          });
+        } catch (_) {}
+      } else {
+        toast.error('تم رفض الإشعارات في المتصفح');
+      }
+    } catch (_) {
+      toast.error('تعذر تفعيل الإشعارات');
     }
   };
 
@@ -43,109 +118,395 @@ export default function WaitingApprovalPage() {
     navigate('/login');
   };
 
+  const hasLevel = Boolean(user?.assignedLevel);
+  const hasGroup = Boolean(user?.group?._id || user?.group);
+  const levelLabel = hasLevel ? getLevelLabel(user.assignedLevel) : null;
+  const recordingsCount = user?.oralExamRecordings?.length || 0;
+
   const steps = [
-    { label: 'إنشاء الحساب', done: true },
-    { label: 'امتحان تحديد المستوى', done: true },
-    { label: 'مراجعة النتائج', done: false, current: true },
-    { label: 'تعيين المجموعة', done: false },
+    {
+      id: 1,
+      title: 'استلام الاختبار والتسجيلات',
+      detail: `الامتحان التحريري: ${user?.placementExamScore !== undefined ? `${user.placementExamScore}%` : 'مكتمل'} · التسجيلات الشفهية: ${recordingsCount} تسجيلات`,
+      done: true,
+      current: false,
+    },
+    {
+      id: 2,
+      title: 'مراجعة المقرئ لتلاوتك',
+      detail: hasLevel ? 'تم الاستماع وتدقيق التجويد والمخارج بنجاح' : 'يستمع أحد المقرئين المعتمدين لتسجيلك بعناية الآن',
+      done: hasLevel,
+      current: !hasLevel,
+    },
+    {
+      id: 3,
+      title: 'اعتماد المستوى الدراسي',
+      detail: hasLevel ? `المستوى المعتمد: ${levelLabel}` : 'تحديد المرحلة القرآنية الأنسب لقدراتك',
+      done: hasLevel,
+      current: !hasLevel,
+    },
+    {
+      id: 4,
+      title: 'التسكين في الحلقة والمجموعة',
+      detail: hasGroup
+        ? `تم تسكينك في: ${user?.group?.name || 'مجموعتك القرآنية'}`
+        : hasLevel
+        ? 'فريق الإشراف يختار لك أفضل حلقة ومعلم تناسب أوقاتك'
+        : 'اختيار جدول الحصص بعد اعتماد المستوى',
+      done: hasGroup,
+      current: hasLevel && !hasGroup,
+    },
   ];
 
   return (
     <MotionConfig reducedMotion="user">
       <div className="onb" dir="rtl">
-        <div className="min-h-screen flex items-center justify-center px-4 py-12">
+        <div className="max-w-2xl mx-auto px-4 py-8">
+          
+          {/* Top Bar with Status indicator and Logout */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <span className="onb-pulse-dot" aria-hidden />
+              <span className="text-xs font-bold" style={{ color: '#0F5940' }}>
+                متابعة التسكين اللحظية المباشرة
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="onb-ghost text-xs flex items-center gap-1.5"
+              style={{ color: '#756E85' }}
+            >
+              <LogOut className="w-3.5 h-3.5" aria-hidden />
+              تسجيل الخروج
+            </button>
+          </div>
+
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="w-full max-w-lg"
+            transition={{ duration: 0.25 }}
+            className="onb-card mb-6 text-center"
           >
-            <div className="onb-card text-center">
-              {/* Calm status mark */}
-              <span
-                aria-hidden
-                className="mx-auto mb-6 flex items-center justify-center"
-                style={{ width: 88, height: 88, borderRadius: 22, background: '#E2EFE7' }}
-              >
-                <Clock size={40} style={{ color: '#177B58' }} />
-              </span>
+            {/* Header Icon based on state */}
+            <div className="mx-auto mb-4 flex items-center justify-center" style={{
+              width: 76,
+              height: 76,
+              borderRadius: 22,
+              background: hasGroup ? '#E2EFE7' : hasLevel ? '#ECE9F4' : '#E2EFE7',
+            }}>
+              {hasGroup ? (
+                <Sparkles size={38} style={{ color: '#177B58' }} />
+              ) : hasLevel ? (
+                <ShieldCheck size={38} style={{ color: '#4A3F6B' }} />
+              ) : (
+                <Clock size={38} style={{ color: '#177B58' }} />
+              )}
+            </div>
 
-              <h1 className="font-extrabold mb-3" style={{ fontSize: '1.5rem', color: '#2A2438' }}>
-                جارٍ مراجعة امتحانك
-              </h1>
+            {/* Main Title & Subtitle */}
+            <h1 className="font-extrabold mb-2" style={{ fontSize: '1.65rem', color: '#2A2438' }}>
+              {hasGroup ? (
+                `مبارك يا ${user?.firstName || 'طالبنا'}! اكتمل تسكينك في حلقتك`
+              ) : hasLevel ? (
+                `مبارك يا ${user?.firstName || 'طالبنا'}! تم اعتماد مستواك`
+              ) : (
+                `أهلاً بك يا ${user?.firstName || 'طالبنا'} — طلبك قيد المراجعة`
+              )}
+            </h1>
 
-              <p className="mb-6" style={{ color: '#756E85', lineHeight: 1.8 }}>
-                لقد أتممت امتحان تحديد المستوى بنجاح!
-                <br />
-                فريقنا يراجع إجاباتك وتسجيلاتك الشفهية لتحديد مستواك النهائي.
-              </p>
+            <p className="mb-6 max-w-lg mx-auto text-sm" style={{ color: '#756E85', lineHeight: 1.8 }}>
+              {hasGroup ? (
+                `تم ضمك رسمياً إلى ${user?.group?.name || 'مجموعتك'}، ومقعدك جاهز الآن مع معلمك وزملائك.`
+              ) : hasLevel ? (
+                <span>
+                  تم اعتماد مستواك رسمياً: <strong style={{ color: '#0F5940' }}>{levelLabel}</strong>. 
+                  نحن الآن في الخطوة الأخيرة لتسكينك مع معلمك في الموعد الأنسب.
+                </span>
+              ) : (
+                'لقد أتممت الاختبار بنجاح! يستمع أحد المقرئين المعتمدين لتلاوتك الشفهية لتحديد مستواك الدقيق وتسكينك في أفضل حلقة.'
+              )}
+            </p>
 
-              {/* Status steps */}
-              <ol className="rounded-2xl p-5 mb-6 text-right" style={{ background: '#FBF7EE', listStyle: 'none', margin: 0 }}>
-                <div className="space-y-4">
-                  {steps.map((step, i) => (
-                    <li key={i} className="flex items-center gap-3">
-                      <span aria-hidden className={`onb-stepdot${step.done ? ' done' : step.current ? ' now' : ''}`}>
-                        {step.done ? <Check size={14} strokeWidth={3.5} /> : (i + 1)}
-                      </span>
-                      <span className="text-sm" style={{
-                        fontWeight: step.current ? 800 : 500,
-                        color: step.done ? '#2A2438' : step.current ? '#0F5940' : '#756E85',
-                      }}>
-                        {step.label}
-                        {step.current && (
-                          <span className="mr-2" style={{ fontSize: '0.8125rem', color: '#756E85' }}>— قيد المراجعة</span>
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </div>
-              </ol>
+            {/* Primary Action Button if ready */}
+            {hasLevel && (
+              <div className="mb-6">
+                <button
+                  type="button"
+                  onClick={() => navigate('/student')}
+                  className="onb-btn onb-btn-block flex items-center justify-center gap-2"
+                  style={{ fontSize: '1.05rem', padding: '14px 28px' }}
+                >
+                  <BookOpen className="w-5 h-5" aria-hidden />
+                  {hasGroup ? 'الدخول إلى حلقتي ومجموعتي الآن' : 'الدخول إلى لوحة الطالب وتصفح المصحف'}
+                  <ArrowLeft className="w-4 h-4 mr-1" aria-hidden />
+                </button>
+              </div>
+            )}
 
-              {/* Expected time */}
-              <div className="onb-notice mb-6 text-right">
-                <Clock className="w-5 h-5 flex-none mt-0.5" style={{ color: '#B45309' }} aria-hidden />
-                <div>
-                  <p className="text-sm font-bold" style={{ color: '#2A2438' }}>الوقت المتوقع</p>
-                  <p className="text-sm" style={{ color: '#756E85' }}>
-                    مراجعة التسجيلات الشفهية خلال <strong>24 ساعة</strong>، ثم تسكينك في مجموعة تناسب مستواك.
-                    ستصلك رسالة إشعار عند كل خطوة.
-                  </p>
-                </div>
+            {/* 4-Step Interactive Timeline */}
+            <div className="rounded-2xl p-5 mb-6 text-right" style={{ background: '#FBF7EE' }}>
+              <div className="flex items-center justify-between mb-4 pb-2 border-b" style={{ borderColor: '#E8E2D4' }}>
+                <span className="text-xs font-bold" style={{ color: '#2A2438' }}>مسار اعتماد وتسكين الطالب</span>
+                <span className="text-xs font-semibold" style={{ color: '#177B58' }}>
+                  {hasGroup ? 'مكتمل 100%' : hasLevel ? 'الخطوة 4 من 4 (75%)' : 'الخطوة 2 من 4 (35%)'}
+                </span>
               </div>
 
-              {user?.placementExamScore !== undefined && (
-                <div className="rounded-xl p-4 mb-6 flex items-center justify-between" style={{ background: '#E2EFE7' }}>
-                  <span className="text-sm font-medium" style={{ color: '#0F5940' }}>نتيجتك المبدئية</span>
-                  <span className="text-lg font-black" style={{ color: '#0F5940' }}>{user.placementExamScore}%</span>
-                </div>
-              )}
+              <ol className="space-y-4" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {steps.map((step) => (
+                  <li key={step.id} className="flex items-start gap-3">
+                    <span
+                      aria-hidden
+                      className={`onb-stepdot mt-0.5 ${step.done ? 'done' : step.current ? 'now' : ''}`}
+                    >
+                      {step.done ? (
+                        <Check size={14} strokeWidth={3.5} />
+                      ) : (
+                        step.id
+                      )}
+                    </span>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span
+                          className="text-sm font-bold"
+                          style={{
+                            color: step.done ? '#2A2438' : step.current ? '#0F5940' : '#756E85',
+                          }}
+                        >
+                          {step.title}
+                        </span>
+                        {step.current && (
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold"
+                            style={{ background: '#E2EFE7', color: '#0F5940' }}
+                          >
+                            <span className="onb-pulse-dot" style={{ width: 6, height: 6 }} aria-hidden />
+                            قيد العمل الآن
+                          </span>
+                        )}
+                        {step.done && (
+                          <span className="text-xs font-bold" style={{ color: '#177B58' }}>مكتمل ✓</span>
+                        )}
+                      </div>
+                      <p className="text-xs mt-1" style={{ color: '#756E85' }}>
+                        {step.detail}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
 
-              {/* Actions */}
-              <div className="flex flex-col gap-3">
-                <button onClick={() => navigate('/student/quran')} className="onb-btn onb-btn-block">
-                  <BookOpen className="w-4 h-4" aria-hidden />
-                  افتح المصحف ريثما تتم المراجعة
-                </button>
-                <button onClick={handleRefresh} className="onb-ghost w-full justify-center">
-                  <RefreshCw className="w-4 h-4" aria-hidden />
-                  تحديث الحالة
-                </button>
-                <button onClick={handleLogout} className="onb-ghost w-full justify-center text-sm">
-                  <LogOut className="w-4 h-4" aria-hidden />
-                  تسجيل الخروج
-                </button>
+            {/* Notification channels reassurance card */}
+            <div className="onb-notice mb-6 text-right">
+              <Bell className="w-5 h-5 flex-none mt-0.5" style={{ color: '#177B58' }} aria-hidden />
+              <div className="flex-1">
+                <p className="text-sm font-bold mb-1" style={{ color: '#2A2438' }}>قنوات إشعارك الفورية</p>
+                <p className="text-xs leading-relaxed" style={{ color: '#756E85' }}>
+                  فور اعتماد تلاوتك وتسكينك، سنرسل لك إشعاراً فورياً على بريدك المسجل:
+                  <strong className="block mt-0.5 text-xs" style={{ color: '#2A2438', direction: 'ltr', textAlign: 'right' }}>
+                    {user?.email}
+                  </strong>
+                </p>
+
+                {/* Push Notification Toggle */}
+                <div className="mt-3 pt-3 border-t flex items-center justify-between flex-wrap gap-2" style={{ borderColor: '#E8E2D4' }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium" style={{ color: '#2A2438' }}>
+                      إشعارات المتصفح المباشرة:
+                    </span>
+                    {pushStatus === 'granted' ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold" style={{ color: '#177B58' }}>
+                        <CheckCircle2 size={13} /> مفعلة على جهازك
+                      </span>
+                    ) : (
+                      <span className="text-xs" style={{ color: '#756E85' }}>غير مفعلة بعد</span>
+                    )}
+                  </div>
+                  {pushStatus !== 'granted' && (
+                    <button
+                      type="button"
+                      onClick={handleEnablePush}
+                      className="onb-btn-outline text-xs"
+                      style={{ minHeight: 34, padding: '4px 14px', borderRadius: 8 }}
+                    >
+                      <Bell size={13} aria-hidden />
+                      تفعيل إشعارات المتصفح
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="text-center mt-6">
-              <div className="flex items-center justify-center gap-2" style={{ color: '#756E85' }}>
-                <BookOpen className="w-4 h-4" style={{ color: '#177B58' }} aria-hidden />
-                <span style={{ fontSize: '0.8125rem' }}>منصة الحلقة لتحفيظ القرآن الكريم</span>
+            {/* Oral Recordings Review Audio Drawer (Calms the student about their submission) */}
+            {recordingsCount > 0 && (
+              <div className="mb-6 border rounded-2xl overflow-hidden text-right" style={{ borderColor: '#E8E2D4' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowRecordings(!showRecordings)}
+                  className="w-full flex items-center justify-between p-4"
+                  style={{ background: '#FBF7EE' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Volume2 size={18} style={{ color: '#177B58' }} />
+                    <span className="text-sm font-bold" style={{ color: '#2A2438' }}>
+                      تسجيلاتك الصوتية المستلمة ({recordingsCount} مقاطع)
+                    </span>
+                  </div>
+                  <span className="text-xs font-medium flex items-center gap-1" style={{ color: '#756E85' }}>
+                    {showRecordings ? 'إخفاء التسجيلات' : 'استمع لتسجيلك للتأكد'}
+                    {showRecordings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </span>
+                </button>
+
+                <AnimatePresence>
+                  {showRecordings && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="p-4 space-y-3"
+                      style={{ background: '#FFFFFF' }}
+                    >
+                      <p className="text-xs" style={{ color: '#756E85' }}>
+                        هذه التسجيلات الصوتية التي يستمع إليها المعلم حالياً لتقييم مخارج الحروف وأحكام التجويد:
+                      </p>
+                      {user.oralExamRecordings.map((url, idx) => (
+                        <div key={idx} className="onb-audio-chip flex items-center justify-between">
+                          <span className="text-xs font-bold" style={{ color: '#2A2438' }}>
+                            المقطع الصوتي {idx + 1}
+                          </span>
+                          <audio controls src={url} style={{ height: 32, maxWidth: 220 }} />
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => navigate('/student/quran')}
+                className="onb-btn-outline flex-1 justify-center"
+              >
+                <BookOpen className="w-4 h-4" aria-hidden />
+                تصفح المصحف المكرر ريثما تنتهي المراجعة
+              </button>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="onb-ghost flex-1 justify-center border"
+                style={{ borderColor: '#E8E2D4', background: '#FFFFFF' }}
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden />
+                {isRefreshing ? 'جارٍ التحقق...' : 'تحديث الحالة الآن'}
+              </button>
+            </div>
+          </motion.div>
+
+          {/* Productive Waiting Section: Tips to Prepare for First Class */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.1 }}
+            className="onb-card mb-6 text-right"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles size={18} style={{ color: '#177B58' }} />
+              <h2 className="text-base font-extrabold" style={{ color: '#2A2438', margin: 0 }}>
+                استعد لحلقتك الأولى (3 نصائح ذهبية)
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3.5 rounded-xl border" style={{ background: '#FBF7EE', borderColor: '#E8E2D4' }}>
+                <Headphones size={20} style={{ color: '#177B58', marginBottom: 8 }} />
+                <h3 className="text-xs font-bold mb-1" style={{ color: '#2A2438' }}>جودة الصوت</h3>
+                <p className="text-xs" style={{ color: '#756E85', lineHeight: 1.6 }}>
+                  احرص على استخدام سماعات أذن ذات مايكروفون واضح لتصل تلاوتك نقية لمعلمك.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl border" style={{ background: '#FBF7EE', borderColor: '#E8E2D4' }}>
+                <Users size={20} style={{ color: '#177B58', marginBottom: 8 }} />
+                <h3 className="text-xs font-bold mb-1" style={{ color: '#2A2438' }}>الهدوء والتركيز</h3>
+                <p className="text-xs" style={{ color: '#756E85', lineHeight: 1.6 }}>
+                  اختر مكاناً هادئاً بعيداً عن المشتتات، واحرص على الحضور قبل الحصة بـ 5 دقائق.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl border" style={{ background: '#FBF7EE', borderColor: '#E8E2D4' }}>
+                <BookOpen size={20} style={{ color: '#177B58', marginBottom: 8 }} />
+                <h3 className="text-xs font-bold mb-1" style={{ color: '#2A2438' }}>المصحف والورد</h3>
+                <p className="text-xs" style={{ color: '#756E85', lineHeight: 1.6 }}>
+                  استخدم مصحف المنصة التفاعلي لتكرار الآيات والتدرب على الترتيل الصحيح.
+                </p>
               </div>
             </div>
           </motion.div>
+
+          {/* Interactive FAQs Accordion */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: 0.15 }}
+            className="onb-card mb-6 text-right"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <HelpCircle size={18} style={{ color: '#177B58' }} />
+              <h2 className="text-base font-extrabold" style={{ color: '#2A2438', margin: 0 }}>
+                الأسئلة الشائعة حول التسكين والمراجعة
+              </h2>
+            </div>
+
+            <div className="space-y-2.5">
+              {FAQS.map((faq, i) => {
+                const isOpen = openFaq === i;
+                return (
+                  <div key={i} className="onb-faq-item" onClick={() => setOpenFaq(isOpen ? null : i)}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-bold" style={{ color: '#2A2438' }}>
+                        {faq.q}
+                      </span>
+                      {isOpen ? (
+                        <ChevronUp size={17} style={{ color: '#756E85', flex: 'none' }} />
+                      ) : (
+                        <ChevronDown size={17} style={{ color: '#756E85', flex: 'none' }} />
+                      )}
+                    </div>
+                    {isOpen && (
+                      <p className="text-xs mt-2.5 pt-2.5 border-t leading-relaxed" style={{ color: '#756E85', borderColor: '#E8E2D4' }}>
+                        {faq.a}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+
+          {/* Contact Support for quick scheduling needs */}
+          <div className="text-center p-4 rounded-2xl border" style={{ background: '#FFFFFF', borderColor: '#E8E2D4' }}>
+            <p className="text-xs font-bold mb-1" style={{ color: '#2A2438' }}>
+              هل لديك استفسار عاجل بخصوص أوقات الحلقات؟
+            </p>
+            <p className="text-xs mb-3" style={{ color: '#756E85' }}>
+              فريق التسكين متاح للإجابة على أي ظرف خاص بجدولك الزمني.
+            </p>
+            <a
+              href="mailto:support@livequran.app?subject=استفسار بخصوص تسكين الحلقة"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold"
+              style={{ background: '#FBF7EE', border: '1px solid #E8E2D4', color: '#177B58' }}
+            >
+              <MessageCircle size={14} />
+              مراسلة إدارة الحلقات والتسكين
+            </a>
+          </div>
+
         </div>
       </div>
     </MotionConfig>

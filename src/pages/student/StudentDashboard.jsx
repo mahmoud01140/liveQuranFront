@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Video, Clock, Check, AlertTriangle, Lock, CreditCard, Play, ChevronLeft, RotateCcw } from 'lucide-react';
+import { BookOpen, Video, Clock, Check, AlertTriangle, Lock, CreditCard, Play, ChevronLeft, RotateCcw, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import PageLayout from '../../components/shared/PageLayout';
 import useAuthStore from '../../store/authStore';
@@ -204,10 +204,34 @@ export default function StudentDashboard() {
               </div>
             )}
             {!groupId && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
-                <BookOpen size={18} color={HQ.MENTOR} style={{ flex: 'none' }} />
-                <span style={{ flex: 1, fontSize: 14, color: HQ.INK }}>{NO_GROUP_TITLE} — {NO_GROUP_HINT}</span>
-                <Link to="/student/quran" style={{ fontSize: 14, fontWeight: 800, color: HQ.MENTOR, whiteSpace: 'nowrap' }}>المصحف</Link>
+              <div style={{ background: HQ.SURFACE, border: `1.5px solid ${HQ.LINE}`, borderRadius: 16, padding: '16px 18px', marginBottom: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
+                  <span style={{ width: 42, height: 42, borderRadius: 12, background: '#E2EFE7', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                    <Sparkles size={20} color={HQ.MENTOR} />
+                  </span>
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                      <strong style={{ fontSize: 16, color: HQ.INK }}>
+                        مستواك المعتمد: {user?.assignedLevel ? getLevelLabel(user.assignedLevel) : 'بانتظار الاعتماد'}
+                      </strong>
+                      <span style={{ fontSize: 12, fontWeight: 700, background: '#E2EFE7', color: '#0F5940', padding: '2px 10px', borderRadius: 20 }}>
+                        المرحلة 4: جارٍ تسكينك في حلقتك
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: 13, color: HQ.MUTED, lineHeight: 1.6 }}>
+                      فريق الإشراف يختار لك حالياً أفضل حلقة ومعلم تناسب مواعيدك. ستصلك رسالة فور إضافتك للجدول، وريثما يتم ذلك ننصحك بتصفح المصحف المكرر والبدء في تهيئة وردك.
+                    </p>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+                      <Link to="/waiting-approval" style={{ fontSize: 13, fontWeight: 800, color: HQ.MENTOR, textDecoration: 'underline' }}>
+                        متابعة مسار التسكين اللحظي ←
+                      </Link>
+                      <span style={{ color: HQ.LINE }}>|</span>
+                      <Link to="/student/quran" style={{ fontSize: 13, fontWeight: 700, color: HQ.INK }}>
+                        تصفح المصحف المكرر
+                      </Link>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
