@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   CreditCard, CheckCircle2, AlertCircle, ShieldCheck, Clock,
-  Copy, Check, Upload, Phone, Eye, RefreshCw, Smartphone, Building2, Lock, X,
+  Copy, Check, Upload, Phone, Eye, RefreshCw, Smartphone, Building2, Lock, X, BookOpen,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
@@ -101,7 +102,13 @@ export default function SubscriptionPage() {
     setTimeout(() => setCopiedKey(''), 2500);
   };
 
+  const hasGroup = Boolean(user?.group?._id || user?.group);
+
   const handleOpenCheckout = () => {
+    if (!hasGroup) {
+      toast.error('لا يمكن سداد الاشتراك إلا بعد تسكينك في إحدى المجموعات');
+      return;
+    }
     setSenderPhone(user?.phone || '');
     setSenderName(`${user?.firstName || ''} ${user?.lastName || ''}`.trim());
     setReferenceNumber('');
@@ -166,7 +173,7 @@ export default function SubscriptionPage() {
     ? selectedMethod
     : (availableMethods[0] || selectedMethod);
   const displayAmount = calculateAmount(planConfig, billingCycle, currency);
-  const canCheckout = displayAmount != null && !noMethodsConfigured;
+  const canCheckout = displayAmount != null && !noMethodsConfigured && hasGroup;
 
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
@@ -222,7 +229,9 @@ export default function SubscriptionPage() {
   const trialUsed = (subscription?.trialSessionsAttended || 0) >= (subscription?.trialSessionsAllowed || 1);
   const currencyLabel = currency === 'EGP' ? 'ج.م' : 'ر.س';
 
-  const statusTitle = !subscription
+  const statusTitle = !hasGroup
+    ? 'بانتظار تسكينك في مجموعة لتفعيل الاشتراك'
+    : !subscription
     ? 'ابدأ بحصتك التجريبية'
     : isPaidActive
     ? 'اشتراكك مفعل وسارٍ'
@@ -231,7 +240,9 @@ export default function SubscriptionPage() {
     : trialUsed && !isPaidActive
     ? 'انتهت التجريبية — الاشتراك مطلوب'
     : 'الاشتراك منتهي';
-  const statusHint = !subscription
+  const statusHint = !hasGroup
+    ? 'تشترط الأكاديمية تسكينك أولاً في حلقة تناسب مستواك ومواعيدك لتتعرف على معلمك وجدولك وتجرب حصتك الأولى مجاناً. فور تسكينك، ستتمكن من سداد الاشتراك.'
+    : !subscription
     ? 'احضر أول جلسة مباشرة مجاناً لتجربة الحلقة، ثم سدد الاشتراك لفتح كامل المحتوى.'
     : isPaidActive && subscription?.endDate
     ? `ينتهي في ${formatDateAr(subscription.endDate)} (متبقي ${subscription.daysRemaining} يوم)`
@@ -284,26 +295,47 @@ export default function SubscriptionPage() {
                   طلبك قيد المراجعة — سيُفتح المحتوى بعد اعتماد الإدارة خلال 24 ساعة.
                 </p>
               )}
-              {(isExpiringSoon || isExpired) && (
+              {hasGroup && (isExpiringSoon || isExpired) && (
                 <p role={isExpired ? 'alert' : 'status'} style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 12px', fontSize: 14, fontWeight: 800, color: isExpired ? '#C2410C' : '#B45309' }}>
                   {isExpired ? <Lock size={16} /> : <AlertCircle size={16} />}
                   {isExpired ? 'انتهى اشتراكك — المحتوى محجوب بالكامل حتى السداد' : `يتبقى ${subscription?.daysRemaining} أيام على اشتراكك`}
                 </p>
               )}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <div>
+                <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
                     <h2 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: HQ.INK }}>{statusTitle}</h2>
-                    <HqBadge tone={isPaidActive ? 'mentor' : isTrial && !trialUsed ? 'gold' : 'neutral'}>
-                      {isPaidActive ? 'نشط' : isTrial && !trialUsed ? 'تجريبي' : 'مطلوب السداد'}
+                    <HqBadge tone={!hasGroup ? 'neutral' : isPaidActive ? 'mentor' : isTrial && !trialUsed ? 'gold' : 'neutral'}>
+                      {!hasGroup ? 'بانتظار التسكين' : isPaidActive ? 'نشط' : isTrial && !trialUsed ? 'تجريبي' : 'مطلوب السداد'}
                     </HqBadge>
                   </div>
-                  <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED }}>{statusHint}</p>
+                  <p style={{ margin: 0, fontSize: 14, color: HQ.MUTED, lineHeight: 1.6 }}>{statusHint}</p>
+
+                  {/* Actions for unplaced students */}
+                  {!hasGroup && (
+                    <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+                      <Link to="/waiting-approval" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, color: HQ.MENTOR, background: '#E2EFE7', padding: '8px 14px', borderRadius: 10, textDecoration: 'none' }}>
+                        <Clock size={15} /> متابعة حالة التسكين اللحظية
+                      </Link>
+                      <Link to="/student/quran" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: HQ.INK, background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, padding: '8px 14px', borderRadius: 10, textDecoration: 'none' }}>
+                        <BookOpen size={15} /> تصفح المصحف المكرر
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* Placed student group indicator */}
+                  {hasGroup && (
+                    <p style={{ margin: '10px 0 0', fontSize: 13, color: HQ.MENTOR, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <CheckCircle2 size={15} /> مجموعتك المعتمدة: {user?.group?.name || 'مجموعتك القرآنية'}
+                    </p>
+                  )}
                 </div>
-                <button type="button" onClick={handleOpenCheckout} disabled={!canCheckout} className="hq-action"
-                  style={{ background: HQ.MENTOR, color: '#fff', padding: '0 24px', fontSize: 15, flex: 'none', opacity: canCheckout ? 1 : 0.5 }}>
-                  <CreditCard size={17} /> {isPaidActive ? 'تجديد مقدمًا' : 'اشترك الآن'}
-                </button>
+                {hasGroup && (
+                  <button type="button" onClick={handleOpenCheckout} disabled={!canCheckout} className="hq-action"
+                    style={{ background: HQ.MENTOR, color: '#fff', padding: '0 24px', fontSize: 15, flex: 'none', opacity: canCheckout ? 1 : 0.5 }}>
+                    <CreditCard size={17} /> {isPaidActive ? 'تجديد مقدمًا' : 'اشترك الآن'}
+                  </button>
+                )}
               </div>
             </section>
 
@@ -368,10 +400,30 @@ export default function SubscriptionPage() {
                   طرق الدفع غير متاحة حالياً من الإدارة — حاول لاحقاً أو تواصل مع الدعم.
                 </p>
               )}
-              <button type="button" onClick={handleOpenCheckout} disabled={!canCheckout} className="hq-action"
-                style={{ width: '100%', background: HQ.MENTOR, color: '#fff', fontSize: 16, opacity: canCheckout ? 1 : 0.5 }}>
-                <CreditCard size={18} /> {isPaidActive ? 'تجديد الاشتراك' : 'اشترك وسدد الآن'}
-              </button>
+
+              {/* Action Button: Disabled with explanation if unplaced, active if placed */}
+              {!hasGroup ? (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ background: '#FBF7EE', border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Lock size={18} color="#B45309" style={{ flex: 'none' }} />
+                    <span style={{ fontSize: 13, color: HQ.INK, lineHeight: 1.5 }}>
+                      <strong>لا يمكن سداد الاشتراك قبل التسكين:</strong> سيتم فتح إمكانية السداد فور تسكينك في مجموعتك لتجربة حصتك الأولى المجانية.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toast('يرجى الانتظار حتى يتم تسكينك في إحدى المجموعات أولاً لتفعيل الاشتراك', { icon: '⏳' })}
+                    className="hq-action"
+                    style={{ width: '100%', background: '#E8E2D4', color: '#756E85', fontSize: 15, cursor: 'not-allowed' }}>
+                    <Lock size={17} /> بانتظار تسكينك في مجموعة لتفعيل الاشتراك
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={handleOpenCheckout} disabled={!canCheckout} className="hq-action"
+                  style={{ width: '100%', background: HQ.MENTOR, color: '#fff', fontSize: 16, opacity: canCheckout ? 1 : 0.5 }}>
+                  <CreditCard size={18} /> {isPaidActive ? 'تجديد الاشتراك' : 'اشترك وسدد الآن'}
+                </button>
+              )}
             </section>
 
             {/* 3. Payment history — rows, never a wide table */}

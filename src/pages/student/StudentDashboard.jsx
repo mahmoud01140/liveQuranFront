@@ -185,7 +185,7 @@ export default function StudentDashboard() {
             </h1>
 
             {/* Slim subscription alerts (functional, kept) */}
-            {subscription?.isExpiringSoon && (
+            {groupId && subscription?.isExpiringSoon && (
               <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
                 <span style={{ width: 34, height: 34, borderRadius: 10, background: HQ.PAPER, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
                   <AlertTriangle size={17} color="#B45309" />
@@ -194,7 +194,7 @@ export default function StudentDashboard() {
                 <Link to="/student/subscription" style={{ fontSize: 14, fontWeight: 800, color: '#B45309', whiteSpace: 'nowrap' }}>التجديد</Link>
               </div>
             )}
-            {subscription?.isExpired && (
+            {groupId && subscription?.isExpired && (
               <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 12, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
                 <span style={{ width: 34, height: 34, borderRadius: 10, background: HQ.PAPER, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
                   <Lock size={17} color="#C2410C" />
