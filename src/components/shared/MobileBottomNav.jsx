@@ -12,7 +12,7 @@ const studentNavItems = [
   { to: '/student', icon: LayoutDashboard, label: 'المطلوب اليوم', end: true },
   { to: '/student/curriculum', icon: BookOpen, label: 'المنهج والدروس' },
   { to: '/student/quran', icon: BookMarked, label: 'المصحف' },
-  { to: '/student/exams', icon: FileText, label: 'الاختبارات', end: true },
+  { to: '/student/discussion', icon: MessageCircle, label: 'النقاش' },
 ];
 
 const teacherNavItems = [

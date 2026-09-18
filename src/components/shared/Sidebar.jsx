@@ -15,11 +15,9 @@ const studentLinks = [
   { to: '/student', icon: LayoutDashboard, label: 'المطلوب مني اليوم', end: true },
   { to: '/student/curriculum', icon: BookOpen, label: 'المنهج والمجموعة' },
   { to: '/student/quran', icon: BookMarked, label: 'المصحف الإلكتروني والمعلم' },
-  { to: '/student/exams', icon: FileText, label: 'سجل الاختبارات والتقييمات' },
-  { to: '/student/daily-tracker', icon: CalendarCheck, label: 'سجل وأرشيف الورد' },
-  { to: '/student/subscription', icon: CreditCard, label: 'الاشتراك' },
   { to: '/student/discussion', icon: MessageCircle, label: 'غرفة النقاش' },
   { to: '/student/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },
+  { to: '/student/subscription', icon: CreditCard, label: 'الاشتراك' },
 ];
 
 const teacherLinks = [
