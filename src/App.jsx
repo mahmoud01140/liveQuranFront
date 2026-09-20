@@ -136,7 +136,7 @@ export default function App() {
             <Route path="/teacher" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />
             <Route path="/teacher/groups" element={<ProtectedRoute role="teacher"><MyGroupsPage /></ProtectedRoute>} />
             <Route path="/teacher/broadcast" element={<ProtectedRoute role="teacher"><LiveBroadcastPage /></ProtectedRoute>} />
-            <Route path="/teacher/review" element={<ProtectedRoute role="teacher"><TeacherReviewCenterPage /></ProtectedRoute>} />
+            <Route path="/teacher/review" element={<ProtectedRoute role={['teacher', 'admin']}><TeacherReviewCenterPage /></ProtectedRoute>} />
             <Route path="/teacher/homework" element={<ProtectedRoute role="teacher"><Navigate to="/teacher/review" replace /></ProtectedRoute>} />
             <Route path="/teacher/recordings" element={<ProtectedRoute role="teacher"><Navigate to="/teacher/review" replace /></ProtectedRoute>} />
             <Route path="/teacher/create-exam" element={<ProtectedRoute role="teacher"><CreateExamPage /></ProtectedRoute>} />
@@ -146,6 +146,7 @@ export default function App() {
 
             {/* Admin routes */}
             <Route path="/admin" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/review" element={<ProtectedRoute role="admin"><TeacherReviewCenterPage /></ProtectedRoute>} />
             <Route path="/admin/onboarding-settings" element={<ProtectedRoute role="admin"><AdminOnboardingSettingsPage /></ProtectedRoute>} />
             <Route path="/admin/payments" element={<ProtectedRoute role="admin"><AdminPaymentsPage /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute role="admin"><UsersManagement /></ProtectedRoute>} />
@@ -158,7 +159,6 @@ export default function App() {
             <Route path="/admin/exams/:examId/results" element={<ProtectedRoute role="admin"><AdminExamResultsPage /></ProtectedRoute>} />
             <Route path="/teacher/exams" element={<ProtectedRoute role="teacher"><AdminExamsPage /></ProtectedRoute>} />
             <Route path="/admin/discussions" element={<ProtectedRoute role="admin"><DiscussionPage /></ProtectedRoute>} />
-            <Route path="/admin/daily-review" element={<ProtectedRoute role="admin"><TeacherDailyReviewPage /></ProtectedRoute>} />
             <Route path="/admin/resources" element={<ProtectedRoute role="admin"><AdminResourcesPage /></ProtectedRoute>} />
 
             {/* Parent routes */}

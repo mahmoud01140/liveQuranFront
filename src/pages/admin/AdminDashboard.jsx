@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, BookOpen, Clock, Video, ClipboardList, FileText, ChevronLeft, RotateCcw } from 'lucide-react';
+import { Users, BookOpen, Video, ClipboardList, FileText, ChevronLeft, RotateCcw, Volume2 } from 'lucide-react';
 import PageLayout from '../../components/shared/PageLayout';
 import api from '../../services/api';
 import '../../components/halaqa/halaqa.css';
@@ -96,8 +96,7 @@ export default function AdminDashboard() {
             <section aria-label="إجراءات سريعة">
               {[
                 { label: 'إدارة وتسكين الحلقات', hint: 'المجموعات والطلاب الجدد', path: '/admin/groups', icon: BookOpen, primary: true },
-                { label: 'مركز التصحيح', hint: 'الواجبات والتسجيلات', path: '/teacher/review', icon: ClipboardList },
-                { label: 'طابور التسميع', hint: 'الورد اليومي', path: '/teacher/daily-review', icon: Clock },
+                { label: 'تصحيح الامتحانات الشفهية', hint: 'تقييم التلاوات الشفهية', path: '/admin/review', icon: Volume2 },
                 { label: 'بنك الامتحانات', hint: 'إدارة ونتائج', path: '/admin/exams', icon: FileText },
                 { label: 'المدفوعات', hint: 'الإيصالات والاشتراكات', path: '/admin/payments', icon: Users },
                 { label: 'البث المباشر', hint: 'بدء حصة', path: '/admin/groups', icon: Video },

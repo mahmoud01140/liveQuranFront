@@ -3,6 +3,7 @@ import {
   LayoutDashboard, Users, BookOpen, Video, FileText,
   BarChart2, Settings, BookMarked, ClipboardList,
   UserCheck, Book, TrendingUp, ChevronLeft, Sparkles, MessageCircle, CalendarCheck, FolderOpen, Flame, CreditCard,
+  Volume2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAuthStore from '../../store/authStore';
@@ -35,8 +36,7 @@ const adminLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'الرئيسية (لوحة التحكم)', end: true },
   { section: 'التشغيل اليومي' },
   { to: '/admin/groups', icon: BookMarked, label: 'إدارة وتسكين الحلقات' },
-  { to: '/teacher/daily-review', icon: CalendarCheck, label: 'طابور التسميع والورد اليومي' },
-  { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والتسجيلات' },
+  { to: '/admin/review', icon: Volume2, label: 'تصحيح الامتحانات الشفهية' },
   { section: 'المحتوى والاختبارات' },
   { to: '/admin/exams', icon: FileText, label: 'بنك وإدارة الامتحانات' },
   { section: 'الإدارة' },

@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard, BookOpen, Video, FileText, TrendingUp,
-  Users, ClipboardList, MessageCircle, BarChart2, BookMarked,
+  Users, ClipboardList, MessageCircle, BarChart2, BookMarked, Volume2,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import '../../components/halaqa/halaqa.css';
@@ -25,7 +25,7 @@ const teacherNavItems = [
 const adminNavItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'الرئيسية', end: true },
   { to: '/admin/groups', icon: BookMarked, label: 'الحلقات' },
-  { to: '/teacher/daily-review', icon: ClipboardList, label: 'التسميع والورد' },
+  { to: '/admin/review', icon: Volume2, label: 'الامتحانات الشفهية' },
   { to: '/admin/users', icon: Users, label: 'الطلاب' },
 ];
 

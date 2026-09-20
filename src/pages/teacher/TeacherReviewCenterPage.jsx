@@ -26,12 +26,19 @@ const field = {
 export default function TeacherReviewCenterPage() {
   const { user } = useAuthStore();
   const { groups, fetchAllGroups } = useGroupStore();
-  const [activeTab, setActiveTab] = useState('homework'); // 'homework' | 'oral_exams' | 'recordings'
+  const isAdmin = user?.role === 'admin';
+  const [activeTab, setActiveTab] = useState(isAdmin ? 'oral_exams' : 'homework');
+
+  useEffect(() => {
+    if (isAdmin) {
+      setActiveTab('oral_exams');
+    }
+  }, [isAdmin]);
 
   // State for Homework
   const [sessions, setSessions] = useState([]);
   const [allSessions, setAllSessionsRaw] = useState([]);
-  const [isLoadingHomework, setIsLoadingHomework] = useState(true);
+  const [isLoadingHomework, setIsLoadingHomework] = useState(!isAdmin);
   const [selectedSession, setSelectedSession] = useState(null);
   const [submissions, setSubmissions] = useState(null);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
@@ -56,7 +63,7 @@ export default function TeacherReviewCenterPage() {
   // State for Recordings
   const [recordings, setRecordings] = useState([]);
   const [sessionsWithoutRecording, setSessionsWithoutRecording] = useState([]);
-  const [isLoadingRecordings, setIsLoadingRecordings] = useState(true);
+  const [isLoadingRecordings, setIsLoadingRecordings] = useState(!isAdmin);
   const [showAddRecordingModal, setShowAddRecordingModal] = useState(false);
   const [addRecordingForm, setAddRecordingForm] = useState({ sessionId: '', url: '' });
   const [savingRecording, setSavingRecording] = useState(false);
@@ -66,19 +73,25 @@ export default function TeacherReviewCenterPage() {
   const recordingsPagination = usePagination(recordings, 8);
 
   useEffect(() => {
+    if (isAdmin) return;
     if (user?.role === 'admin') {
       fetchAllGroups();
     } else {
       fetchAllGroups({ teacher: user?._id });
     }
-  }, []);
+  }, [isAdmin, user?._id]);
 
   const myGroups = user?.role === 'admin'
     ? groups
     : groups.filter(g => g.teacher?._id === user?._id || g.teacher === user?._id);
 
-  // 1. Fetch Homework & Recordings Data when groups load
+  // 1. Fetch Homework & Recordings Data when groups load (only for teachers)
   useEffect(() => {
+    if (isAdmin) {
+      setIsLoadingHomework(false);
+      setIsLoadingRecordings(false);
+      return;
+    }
     if (!myGroups.length) {
       setIsLoadingHomework(false);
       setIsLoadingRecordings(false);
@@ -297,52 +310,80 @@ export default function TeacherReviewCenterPage() {
           {/* Header */}
           <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: HQ.INK, margin: '0 0 4px' }}>مركز التصحيح والمراجعة</h1>
-              <p className="text-sm" style={{ color: HQ.MUTED, margin: 0 }}>إدارة ومراجعة الواجبات، التلاوات الشفهية، وتدقيق التسجيلات في مكان واحد</p>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: HQ.INK, margin: '0 0 4px' }}>
+                {isAdmin ? 'تصحيح الامتحانات الشفهية' : 'مركز التصحيح والمراجعة'}
+              </h1>
+              <p className="text-sm" style={{ color: HQ.MUTED, margin: 0 }}>
+                {isAdmin
+                  ? 'تصحيح ومراجعة التلاوات الشفهية وتحديد المستويات واعتماد نتائج الاختبارات للطلاب'
+                  : 'إدارة ومراجعة الواجبات، التلاوات الشفهية، وتدقيق التسجيلات في مكان واحد'}
+              </p>
             </div>
-            {activeTab === 'homework' && (
+            {!isAdmin && activeTab === 'homework' && (
               <button type="button" onClick={() => setShowAddHomeworkModal(true)} style={{ ...primaryBtn, flex: 'none' }}>
                 <Plus size={16} aria-hidden /> إضافة واجب جديد
               </button>
             )}
-            {activeTab === 'recordings' && (
+            {!isAdmin && activeTab === 'recordings' && (
               <button type="button" onClick={() => setShowAddRecordingModal(true)} style={{ ...primaryBtn, flex: 'none' }}>
                 <Plus size={16} aria-hidden /> إضافة تسجيل فيديو
               </button>
             )}
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="hq-tabs" role="tablist" aria-label="أقسام المراجعة"
-            style={{ display: 'flex', width: '100%', marginBottom: 24, overflowX: 'auto' }}>
-            {[
-              { key: 'homework', label: `تسليمات الواجبات (${sessions.length})`, Icon: ClipboardList },
-              { key: 'oral_exams', label: `الاختبارات الشفهية (${pendingExams.length})`, Icon: Volume2, alert: pendingExams.length > 0 },
-              { key: 'recordings', label: `تسجيلات الجلسات (${recordings.length})`, Icon: Video },
-            ].map(t => (
-              <button
-                key={t.key}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === t.key}
-                onClick={() => setActiveTab(t.key)}
-                style={{ flex: '1 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, whiteSpace: 'nowrap' }}>
-                <t.Icon size={16} aria-hidden />
-                {t.label}
-                {t.alert && (
-                  <span aria-label={`${pendingExams.length} بانتظار التصحيح`} style={{
-                    display: 'inline-flex', alignItems: 'center', padding: '2px 10px', borderRadius: 9999,
-                    background: '#E2EFE7', color: '#0F5940', fontSize: '0.8125rem', fontWeight: 800,
-                  }}>
-                    {pendingExams.length}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          {/* Navigation Tabs (Only for teachers; admin focuses solely on oral exams) */}
+          {!isAdmin ? (
+            <div className="hq-tabs" role="tablist" aria-label="أقسام المراجعة"
+              style={{ display: 'flex', width: '100%', marginBottom: 24, overflowX: 'auto' }}>
+              {[
+                { key: 'homework', label: `تسليمات الواجبات (${sessions.length})`, Icon: ClipboardList },
+                { key: 'oral_exams', label: `الاختبارات الشفهية (${pendingExams.length})`, Icon: Volume2, alert: pendingExams.length > 0 },
+                { key: 'recordings', label: `تسجيلات الجلسات (${recordings.length})`, Icon: Video },
+              ].map(t => (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === t.key}
+                  onClick={() => setActiveTab(t.key)}
+                  style={{ flex: '1 0 auto', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+                  <t.Icon size={16} aria-hidden />
+                  {t.label}
+                  {t.alert && (
+                    <span aria-label={`${pendingExams.length} بانتظار التصحيح`} style={{
+                      display: 'inline-flex', alignItems: 'center', padding: '2px 10px', borderRadius: 9999,
+                      background: '#E2EFE7', color: '#0F5940', fontSize: '0.8125rem', fontWeight: 800,
+                    }}>
+                      {pendingExams.length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="mb-6 flex items-center justify-between p-4 rounded-2xl" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>
+              <div className="flex items-center gap-3">
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: '#E2EFE7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Volume2 size={20} color="#0F5940" aria-hidden />
+                </div>
+                <div>
+                  <h2 className="font-bold text-sm" style={{ color: HQ.INK, margin: 0 }}>الاختبارات الشفهية والتلاوات المسجلة</h2>
+                  <p className="text-xs" style={{ color: HQ.MUTED, margin: 0 }}>مراجعة تسجيلات الطلاب واعتماد الدرجات ونقاط الضعف</p>
+                </div>
+              </div>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', padding: '4px 14px', borderRadius: 9999,
+                background: pendingExams.length > 0 ? '#E2EFE7' : HQ.PAPER,
+                color: pendingExams.length > 0 ? '#0F5940' : HQ.MUTED,
+                fontSize: '0.8125rem', fontWeight: 800,
+              }}>
+                {pendingExams.length} بانتظار التصحيح
+              </span>
+            </div>
+          )}
 
-          {/* ─── TAB 1: Homework ─── */}
-          {activeTab === 'homework' && (
+          {/* ─── TAB 1: Homework (Teachers only) ─── */}
+          {!isAdmin && activeTab === 'homework' && (
             isLoadingHomework ? (
               <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
             ) : sessions.length === 0 ? (
@@ -706,8 +747,8 @@ export default function TeacherReviewCenterPage() {
           )
         )}
 
-          {/* ─── TAB 3: Recordings ─── */}
-          {activeTab === 'recordings' && (
+          {/* ─── TAB 3: Recordings (Teachers only) ─── */}
+          {!isAdmin && activeTab === 'recordings' && (
             isLoadingRecordings ? (
               <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
             ) : (
