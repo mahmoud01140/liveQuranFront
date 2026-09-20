@@ -1,19 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, BookOpen, Clock, Video, ClipboardList, FileText, ChevronLeft, RotateCcw } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import PageLayout from '../../components/shared/PageLayout';
 import api from '../../services/api';
 import '../../components/halaqa/halaqa.css';
 import { HQ } from '../../components/halaqa/primitives';
 
-/* لوحة الإدارة — clarity, honest density, fast action.
-   Same analytics endpoints and fallback; charts keep recharts. */
+/* لوحة الإدارة — clarity, honest density, fast action. */
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ users: 0, groups: 0, pending: 0, attendance: '0%' });
-  const [levelData, setLevelData] = useState([]);
-  const [weekData, setWeekData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
 
@@ -30,8 +26,6 @@ export default function AdminDashboard() {
           pending: data.summary.pendingApproval || 0,
           attendance: data.summary.attendanceRate || '0%',
         });
-        setLevelData(data.levelDistribution || []);
-        setWeekData(data.monthlyTrends || []);
       } catch (_) {
         try {
           const [usersRes, groupsRes, pendingRes] = await Promise.all([
@@ -97,47 +91,6 @@ export default function AdminDashboard() {
                 </Link>
               )}
             </section>
-
-            {/* Charts — disciplined grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 16, marginBottom: 16 }}>
-              <section aria-label="نمو الجلسات والطلاب" className="lg:col-span-2"
-                style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 20 }}>
-                <h2 style={{ margin: '0 0 12px', fontSize: 17, fontWeight: 800, color: HQ.INK }}>النمو الشهري</h2>
-                <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={weekData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E8E2D4" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="students" stroke="#177B58" fill="#E2EFE7" name="الطلاب النشطون" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </section>
-
-              <section aria-label="توزيع المستويات"
-                style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 20 }}>
-                <h2 style={{ margin: '0 0 12px', fontSize: 17, fontWeight: 800, color: HQ.INK }}>المستويات</h2>
-                <ResponsiveContainer width="100%" height={160}>
-                  <PieChart>
-                    <Pie data={levelData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={65} innerRadius={35}>
-                      {levelData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color || '#177B58'} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 12 }}>
-                  {levelData.map((d, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                      <span aria-hidden style={{ width: 10, height: 10, borderRadius: 9999, background: d.color || '#177B58', flex: 'none' }} />
-                      <span style={{ color: HQ.MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
-                      <strong style={{ color: HQ.INK, marginRight: 'auto' }}>{d.value}</strong>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
 
             {/* Fast actions */}
             <section aria-label="إجراءات سريعة">
