@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import {
   BookOpen, Plus, Trash2, Edit2, Clock, Radio, ArrowRight,
-  FileText, Eye, X, CheckCircle, Check,
+  FileText, Eye, X, CheckCircle, Check, Users, User,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
@@ -60,7 +60,7 @@ export default function AdminGroupCurriculumPage() {
   // Exam modal
   const [showExamModal, setShowExamModal] = useState(false);
   const [examLesson, setExamLesson] = useState(null);
-  const [examForm, setExamForm] = useState({ title: '', duration: 30, passingScore: 60, questions: [] });
+  const [examForm, setExamForm] = useState({ title: '', duration: 30, passingScore: 60, questions: [], targetType: 'group', targetStudent: '' });
   const [savingExam, setSavingExam] = useState(false);
   const [lessonExams, setLessonExams] = useState({});
 
@@ -130,7 +130,7 @@ export default function AdminGroupCurriculumPage() {
   // Exam handlers
   const openCreateExam = (lesson) => {
     setExamLesson(lesson);
-    setExamForm({ title: 'امتحان ' + lesson.title, duration: 30, passingScore: 60, questions: [{ ...EMPTY_Q }] });
+    setExamForm({ title: 'امتحان ' + lesson.title, duration: 30, passingScore: 60, questions: [{ ...EMPTY_Q }], targetType: 'group', targetStudent: '' });
     setShowExamModal(true);
   };
   const addQuestion = () => setExamForm(p => ({ ...p, questions: [...p.questions, { ...EMPTY_Q }] }));
@@ -141,14 +141,20 @@ export default function AdminGroupCurriculumPage() {
   const handleSaveExam = async () => {
     if (!examForm.title.trim()) { toast.error('أدخل عنوان الامتحان'); return; }
     if (examForm.questions.length === 0) { toast.error('أضف سؤالاً على الأقل'); return; }
+    if (examForm.targetType === 'individual' && !examForm.targetStudent) { toast.error('اختر الطالب المستهدف'); return; }
     setSavingExam(true);
     try {
-      const exam = await createGroupExam({
+      const payload = {
         title: examForm.title, type: 'lesson', group: groupId,
         lessonId: examLesson._id, lessonTitle: examLesson.title,
         duration: examForm.duration, passingScore: examForm.passingScore,
         questions: examForm.questions,
-      });
+        targetType: examForm.targetType,
+      };
+      if (examForm.targetType === 'individual') {
+        payload.targetStudent = examForm.targetStudent;
+      }
+      const exam = await createGroupExam(payload);
       setLessonExams(p => ({ ...p, [examLesson._id]: [...(p[examLesson._id] || []), exam] }));
       setShowExamModal(false); toast.success('تم إنشاء الامتحان');
     } catch (e) { toast.error(e?.response?.data?.message || 'خطأ في الحفظ'); }
@@ -460,6 +466,66 @@ export default function AdminGroupCurriculumPage() {
                       <div className="col-span-3 md:col-span-1"><label htmlFor="ae-title" style={lbl}>عنوان الامتحان *</label><input id="ae-title" value={examForm.title} onChange={e => setExamForm(p => ({ ...p, title: e.target.value }))} className="focus:border-[#177B58] focus:outline-none" style={field} /></div>
                       <div><label htmlFor="ae-dur" style={lbl}>المدة (دقيقة)</label><input id="ae-dur" type="number" min={5} value={examForm.duration} onChange={e => setExamForm(p => ({ ...p, duration: parseInt(e.target.value) || 30 }))} className="focus:border-[#177B58] focus:outline-none" style={{ ...field, fontVariantNumeric: 'tabular-nums' }} /></div>
                       <div><label htmlFor="ae-pass" style={lbl}>درجة النجاح %</label><input id="ae-pass" type="number" min={1} max={100} value={examForm.passingScore} onChange={e => setExamForm(p => ({ ...p, passingScore: parseInt(e.target.value) || 60 }))} className="focus:border-[#177B58] focus:outline-none" style={{ ...field, fontVariantNumeric: 'tabular-nums' }} /></div>
+                    </div>
+
+                    {/* Exam Target Section */}
+                    <div className="p-4 space-y-3" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 14 }}>
+                      <label className="text-xs font-bold flex items-center gap-1.5" style={{ color: HQ.INK, margin: 0 }}>
+                        توجيه الامتحان
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setExamForm(p => ({ ...p, targetType: 'group', targetStudent: '' }))}
+                          className="flex items-center gap-2 px-4 text-xs font-bold flex-1"
+                          style={{
+                            minHeight: 48, borderRadius: 12, cursor: 'pointer',
+                            border: `2px solid ${examForm.targetType === 'group' ? HQ.MENTOR : HQ.LINE}`,
+                            background: examForm.targetType === 'group' ? '#E2EFE7' : HQ.SURFACE,
+                            color: examForm.targetType === 'group' ? '#0F5940' : HQ.MUTED,
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Users size={15} aria-hidden />
+                          جميع طلاب المجموعة
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExamForm(p => ({ ...p, targetType: 'individual' }))}
+                          className="flex items-center gap-2 px-4 text-xs font-bold flex-1"
+                          style={{
+                            minHeight: 48, borderRadius: 12, cursor: 'pointer',
+                            border: `2px solid ${examForm.targetType === 'individual' ? HQ.MENTOR : HQ.LINE}`,
+                            background: examForm.targetType === 'individual' ? '#E2EFE7' : HQ.SURFACE,
+                            color: examForm.targetType === 'individual' ? '#0F5940' : HQ.MUTED,
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <User size={15} aria-hidden />
+                          طالب محدد
+                        </button>
+                      </div>
+                      {examForm.targetType === 'individual' && (
+                        <div>
+                          <select
+                            value={examForm.targetStudent}
+                            onChange={e => setExamForm(p => ({ ...p, targetStudent: e.target.value }))}
+                            aria-label="اختر الطالب"
+                            className="focus:border-[#177B58] focus:outline-none"
+                            style={{ ...field, fontSize: 13 }}
+                          >
+                            <option value="">— اختر الطالب —</option>
+                            {(group?.students || []).map(s => (
+                              <option key={s._id} value={s._id}>
+                                {s.firstName} {s.lastName}
+                              </option>
+                            ))}
+                          </select>
+                          {(group?.students || []).length === 0 && (
+                            <p className="text-xs mt-1" style={{ color: '#C2410C', margin: '4px 0 0' }}>لا يوجد طلاب في هذه المجموعة</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="pt-4" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
                       <div className="flex items-center justify-between mb-3">

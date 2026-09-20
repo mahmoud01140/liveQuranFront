@@ -3,7 +3,6 @@ import {
   LayoutDashboard, Users, BookOpen, Video, FileText,
   BarChart2, Settings, BookMarked, ClipboardList,
   UserCheck, Book, TrendingUp, ChevronLeft, Sparkles, MessageCircle, CalendarCheck, FolderOpen, Flame, CreditCard,
-  PlusCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useAuthStore from '../../store/authStore';
@@ -26,7 +25,6 @@ const teacherLinks = [
   { to: '/teacher/daily-review', icon: CalendarCheck, label: 'مراجعة الحفظ' },
   { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والمراجعة' },
   { to: '/teacher/exams', icon: FileText, label: 'بنك وإدارة الامتحانات' },
-  { to: '/teacher/create-exam', icon: PlusCircle, label: 'إنشاء امتحان / تقييم' },
   { to: '/teacher/discussion', icon: MessageCircle, label: 'غرفة النقاش' },
   { to: '/teacher/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },
 ];
@@ -41,7 +39,6 @@ const adminLinks = [
   { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والتسجيلات' },
   { section: 'المحتوى والاختبارات' },
   { to: '/admin/exams', icon: FileText, label: 'بنك وإدارة الامتحانات' },
-  { to: '/teacher/create-exam', icon: PlusCircle, label: 'إنشاء امتحان / تقييم' },
   { section: 'الإدارة' },
   { to: '/admin/users', icon: Users, label: 'إدارة الطلاب والمستخدمين' },
   { to: '/admin/payments', icon: CreditCard, label: 'الاشتراكات والمدفوعات' },
