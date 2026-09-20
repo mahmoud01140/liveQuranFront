@@ -8,6 +8,11 @@ import ProtectedRoute from './components/shared/ProtectedRoute';
 import LoadingSpinner from './components/shared/LoadingSpinner';
 import ScrollToTop from './components/shared/ScrollToTop';
 
+// Dev-only: floating panel to fill survey & exam with test data (tree-shaken in production)
+const DevTestPanel = import.meta.env.DEV
+  ? lazy(() => import('./components/dev/DevTestPanel'))
+  : () => null;
+
 // Pages — lazy loaded (code-split per route)
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -81,6 +86,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      {import.meta.env.DEV && <Suspense fallback={null}><DevTestPanel /></Suspense>}
       <AnimatePresence mode="wait">
         <Suspense fallback={
           <div className="min-h-screen flex items-center justify-center">
