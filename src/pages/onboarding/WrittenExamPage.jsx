@@ -10,7 +10,7 @@ import './Onboarding.css';
 
 export default function WrittenExamPage() {
   const { user, updateUser } = useAuthStore();
-  const { currentExam, fetchPlacementExam, setAnswer, answers, submitWrittenExam, isLoading, isSubmitting, placementCompleted, placementResult } = useExamStore();
+  const { currentExam, fetchPlacementExam, setAnswer, answers, setWrittenAnswer, writtenAnswers, submitWrittenExam, isLoading, isSubmitting, placementCompleted, placementResult } = useExamStore();
   const navigate = useNavigate();
   const [currentQ, setCurrentQ] = useState(0);
   const [timeLeft, setTimeLeft] = useState(null);
@@ -62,9 +62,14 @@ export default function WrittenExamPage() {
     navigate('/onboarding/oral-exam', { state: { resultId: result._id, examId: currentExam._id } });
   };
 
+  // Answered = MCQ/true-false choices + non-empty written texts
+  const isAnswered = (idx) =>
+    answers[idx] !== undefined ||
+    (typeof writtenAnswers[idx] === 'string' && writtenAnswers[idx].trim() !== '');
+
   const handleSubmit = async (auto = false) => {
     if (!auto) {
-      const answeredCount = Object.keys(answers).length;
+      const answeredCount = (currentExam?.questions || []).filter((_, idx) => isAnswered(idx)).length;
       if (answeredCount < (currentExam?.questions?.length || 0)) {
         if (!window.confirm('لم تجب على جميع الأسئلة. هل تريد التسليم الآن؟')) return;
       }
@@ -143,7 +148,7 @@ export default function WrittenExamPage() {
               <span style={{ width: `${progress}%` }} />
             </div>
             <p className="mt-1 text-center" style={{ fontSize: '0.8125rem', color: '#756E85' }}>
-              السؤال {currentQ + 1} من {totalQ} — إجابة {Object.keys(answers).length} من {totalQ}
+              السؤال {currentQ + 1} من {totalQ} — إجابة {(currentExam?.questions || []).filter((_, idx) => isAnswered(idx)).length} من {totalQ}
             </p>
           </div>
 
@@ -199,6 +204,28 @@ export default function WrittenExamPage() {
                         </button>
                       );
                     })}
+                  </div>
+                ) : question.type === 'written' ? (
+                  /* Written / Fill-in Question — text input (scored from writtenAnswers slice) */
+                  <div className="space-y-3">
+                    <textarea
+                      className="onb-opt"
+                      rows={3}
+                      placeholder="اكتب إجابتك هنا..."
+                      value={writtenAnswers[currentQ] || ''}
+                      onChange={e => setWrittenAnswer(currentQ, e.target.value)}
+                      style={{
+                        width: '100%', resize: 'vertical', textAlign: 'right',
+                        fontFamily: 'inherit', fontSize: '1rem',
+                        ...(writtenAnswers[currentQ] ? { borderColor: '#177B58', background: '#E2EFE7', color: '#0F5940' } : undefined),
+                      }}
+                      aria-label="حقل الإجابة الكتابية"
+                    />
+                  </div>
+                ) : question.type === 'recitation' ? (
+                  /* Recitation Question — audio task, just display the instruction */
+                  <div className="p-4 rounded-xl text-center" style={{ background: '#E2EFE7', border: '1px solid #177B58' }}>
+                    <p className="font-bold" style={{ color: '#0F5940' }}>سيتم تقييم التلاوة من قِبل المعلم في الامتحان الشفهي.</p>
                   </div>
                 ) : (
                   /* MCQ Options */
@@ -257,9 +284,9 @@ export default function WrittenExamPage() {
           <div className="flex flex-wrap gap-2 justify-center mt-6" role="group" aria-label="التنقل بين الأسئلة">
             {currentExam.questions.map((_, i) => (
               <button key={i} onClick={() => setCurrentQ(i)}
-                aria-label={`السؤال ${i + 1}${answers[i] !== undefined ? ' (تمت الإجابة)' : ''}`}
+                aria-label={`السؤال ${i + 1}${isAnswered(i) ? ' (تمت الإجابة)' : ''}`}
                 aria-current={i === currentQ ? 'true' : undefined}
-                className={`onb-dot${i === currentQ ? ' now' : answers[i] !== undefined ? ' ans' : ''}`}
+                className={`onb-dot${i === currentQ ? ' now' : isAnswered(i) ? ' ans' : ''}`}
               >
                 {i + 1}
               </button>

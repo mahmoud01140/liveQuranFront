@@ -4,7 +4,7 @@ import {
   Settings, HelpCircle, FileCheck2, Plus, Trash2, Save,
   CheckCircle, Book, Clock, Award, Users, GraduationCap,
   HeartHandshake, ChevronDown, ChevronUp, Copy, Check, X,
-  AlertCircle, RefreshCw, Mic, PenLine,
+  RefreshCw, Mic,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
@@ -32,7 +32,6 @@ const ROLE_TONE = {
 const QUESTION_TYPES = [
   { value: 'mcq', label: 'اختيار من متعدد', Icon: CheckCircle },
   { value: 'true_false', label: 'صح / خطأ', Icon: Check },
-  { value: 'written', label: 'إكمال / كتابي', Icon: PenLine },
   { value: 'recitation', label: 'تلاوة / تجويد', Icon: Mic },
 ];
 
@@ -441,7 +440,7 @@ export default function AdminOnboardingSettingsPage() {
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
                   <h2 className="font-extrabold" style={{ fontSize: '1.25rem', color: HQ.INK, margin: 0 }}>أسئلة الامتحان التحريري</h2>
-                  <p className="text-xs" style={{ color: HQ.MUTED, margin: 0 }}>يدعم الاختيار من متعدد، صح/خطأ، إكمال كتابي، وتلاوة قرآنية</p>
+                  <p className="text-xs" style={{ color: HQ.MUTED, margin: 0 }}>يدعم الاختيار من متعدد، صح/خطأ، وتلاوة قرآنية</p>
                 </div>
                 <button
                   type="button"
@@ -660,24 +659,7 @@ export default function AdminOnboardingSettingsPage() {
                                 </div>
                               )}
 
-                              {/* 3. WRITTEN */}
-                              {q.type === 'written' && (
-                                <div className="p-4" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
-                                  <label htmlFor={`os-model-${qi}`} style={lblSm}>
-                                    الإجابة النموذجية (للتصحيح والمقارنة):
-                                  </label>
-                                  <input
-                                    id={`os-model-${qi}`}
-                                    type="text"
-                                    value={q.correctAnswerText || ''}
-                                    onChange={e => updateExamQuestion(qi, 'correctAnswerText', e.target.value)}
-                                    className="text-sm focus:border-[#177B58] focus:outline-none" style={field}
-                                    placeholder="أدخل نص الإجابة النموذجية..."
-                                  />
-                                </div>
-                              )}
 
-                              {/* 4. RECITATION */}
                               {q.type === 'recitation' && (
                                 <div className="p-4 space-y-3" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
                                   <div className="flex items-center gap-2">
