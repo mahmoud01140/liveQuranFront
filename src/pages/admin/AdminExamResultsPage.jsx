@@ -39,8 +39,12 @@ export default function AdminExamResultsPage() {
   const handleReview = async () => {
     setSaving(true);
     try {
-      await api.put(`/exams/results/${reviewModal._id}/review`, reviewForm);
-      toast.success('تم حفظ التقييم');
+      await api.put(`/exams/results/${reviewModal._id}/review`, {
+        oralScore: Number(reviewForm.oralScore),
+        teacherNotes: reviewForm.teacherNotes,
+        ...(reviewForm.assignedLevel ? { assignedLevel: reviewForm.assignedLevel } : {}),
+      });
+      toast.success('تم حفظ التقييم وتحديث المستوى');
       setReviewModal(null);
       fetchExamResults(examId);
     } catch { toast.error('خطأ في الحفظ'); }
@@ -130,11 +134,18 @@ export default function AdminExamResultsPage() {
                         {formatDateAr(result.submittedAt)}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        {isPending && result.oralRecordings?.length > 0 && (
+                        {result.oralRecordings?.length > 0 && (
                           <button type="button"
-                            onClick={() => { setReviewModal(result); setReviewForm({ oralScore: '', teacherNotes: '' }); }}
+                            onClick={() => {
+                              setReviewModal(result);
+                              setReviewForm({
+                                oralScore: result.oralScore ?? '',
+                                teacherNotes: result.teacherNotes ?? '',
+                                assignedLevel: result.student?.assignedLevel || 'foundation',
+                              });
+                            }}
                             className="hq-action" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK, padding: '0 14px', fontSize: 13 }}>
-                            <Mic size={14} /> مراجعة التسجيل
+                            <Mic size={14} /> {isPending ? 'مراجعة التسجيل' : 'عرض / تعديل التقييم'}
                           </button>
                         )}
                       </td>
@@ -177,16 +188,34 @@ export default function AdminExamResultsPage() {
                 ))}
               </div>
               <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: HQ.INK, marginBottom: 6 }} htmlFor="rev-score">الدرجة (من 100)</label>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: HQ.INK, marginBottom: 6 }} htmlFor="rev-score">الدرجة الشفهية (من 100)</label>
                 <input id="rev-score" type="number" min="0" max="100" value={reviewForm.oralScore}
                   onChange={e => setReviewForm(p => ({ ...p, oralScore: e.target.value }))}
                   style={inputStyle} placeholder="مثال: 85" />
               </div>
+              {(reviewModal.exam?.type === 'placement' || reviewModal.examType === 'placement' || exam?.type === 'placement') && (
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: HQ.INK, marginBottom: 6 }} htmlFor="rev-level">
+                    المستوى المعتمد للطالب
+                  </label>
+                  <select
+                    id="rev-level"
+                    value={reviewForm.assignedLevel || 'foundation'}
+                    onChange={e => setReviewForm(p => ({ ...p, assignedLevel: e.target.value }))}
+                    style={inputStyle}
+                  >
+                    <option value="foundation">المستوى التأسيسي</option>
+                    <option value="memorization">مستوى الحفظ والتجويد</option>
+                    <option value="teacher_prep">إعداد معلمين</option>
+                    <option value="senior">كبار السن</option>
+                  </select>
+                </div>
+              )}
               <div style={{ marginBottom: 20 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: HQ.INK, marginBottom: 6 }} htmlFor="rev-notes">ملاحظات المعلم</label>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: HQ.INK, marginBottom: 6 }} htmlFor="rev-notes">ملاحظات وتوجيهات للطالب</label>
                 <textarea id="rev-notes" value={reviewForm.teacherNotes}
                   onChange={e => setReviewForm(p => ({ ...p, teacherNotes: e.target.value }))}
-                  style={{ ...inputStyle, minHeight: 96, resize: 'vertical', paddingTop: 10 }} placeholder="أضف ملاحظاتك..." />
+                  style={{ ...inputStyle, minHeight: 96, resize: 'vertical', paddingTop: 10 }} placeholder="أضف ملاحظاتك وتوجيهاتك للطالب..." />
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" onClick={() => setReviewModal(null)} className="hq-action" style={{ flex: 1, background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK, fontSize: 14 }}>إلغاء</button>

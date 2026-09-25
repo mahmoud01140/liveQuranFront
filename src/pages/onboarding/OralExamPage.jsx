@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion, MotionConfig } from 'framer-motion';
-import { Mic, Square, CheckCircle, Upload, RotateCcw } from 'lucide-react';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
+import { Mic, Square, CheckCircle, Upload, RotateCcw, Info, Clock, Volume2, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
 import useExamStore from '../../store/examStore';
@@ -23,7 +23,6 @@ export default function OralExamPage() {
   const location = useLocation();
   const { resultId: stateResultId, examId: stateExamId } = location.state || {};
 
-  // Survive a page refresh: location.state is lost, the persisted context is not.
   const storedCtx = (() => {
     try { return JSON.parse(localStorage.getItem(`oral_context_${user?._id}`) || 'null'); }
     catch (_) { return null; }
@@ -31,7 +30,6 @@ export default function OralExamPage() {
   const resultId = stateResultId || storedCtx?.resultId;
   const contextExamId = stateExamId || storedCtx?.examId;
 
-  // Guard (in an effect, never during render): the written exam comes first.
   useEffect(() => {
     if (!resultId && !currentExam) {
       toast.error('أكمل الامتحان التحريري أولاً قبل الامتحان الشفهي');
@@ -39,7 +37,6 @@ export default function OralExamPage() {
     }
   }, [resultId, currentExam, navigate]);
 
-  // Restore the exam tasks if the store was cleared by a refresh.
   useEffect(() => {
     if (!currentExam && user?.registrationType) {
       fetchPlacementExam(user.registrationType).catch(() => {});
@@ -49,6 +46,7 @@ export default function OralExamPage() {
 
   const [currentTask, setCurrentTask] = useState(0);
   const [completed, setCompleted] = useState({});
+  const [taskSeconds, setTaskSeconds] = useState({});
 
   const {
     isRecording, duration, audioUrl, audioBlob, error,
@@ -60,14 +58,19 @@ export default function OralExamPage() {
 
   const task = tasks[currentTask];
   const allCompleted = Object.keys(completed).length === tasks.length;
-  // A fresh unsaved recording exists for the current task
   const hasUnsavedRecording = Boolean(audioBlob && !completed[currentTask]);
+
+  useEffect(() => {
+    if (!isRecording && duration > 0 && audioUrl) {
+      setTaskSeconds(prev => ({ ...prev, [currentTask]: duration }));
+    }
+  }, [isRecording, audioUrl]);
 
   const handleSaveRecording = () => {
     if (!audioBlob) return;
     addOralRecording(task._id || `task-${currentTask}`, audioBlob, audioUrl);
-    setCompleted((prev) => ({ ...prev, [currentTask]: true }));
-    toast.success('تم حفظ التسجيل!');
+    setCompleted(prev => ({ ...prev, [currentTask]: true }));
+    toast.success('تم حفظ التسجيل وسيُراجَع من قِبَل المشرف');
   };
 
   const switchTask = (next) => {
@@ -91,7 +94,7 @@ export default function OralExamPage() {
         localStorage.removeItem(`oral_pending_${user?._id}`);
         localStorage.removeItem(`oral_context_${user?._id}`);
       } catch (_) {}
-      toast.success('تم رفع جميع التسجيلات!');
+      toast.success('تم رفع جميع التسجيلات للمشرف للمراجعة');
       navigate('/onboarding/result');
     } catch {
       toast.error('خطأ في رفع التسجيلات. حاول مجدداً.');
@@ -100,18 +103,31 @@ export default function OralExamPage() {
 
   if (!resultId && !currentExam) return null;
 
+  const completedCount = Object.keys(completed).length;
+  const overallProgress = Math.round((completedCount / tasks.length) * 100);
+
   return (
     <MotionConfig reducedMotion="user">
       <div className="onb" dir="rtl">
         <div className="max-w-2xl mx-auto px-4 py-8">
+
           {/* Progress */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="onb-badge">الخطوة 4 من 5 — الامتحان الشفهي (إجباري)</span>
-              <span className="text-sm" style={{ color: '#756E85' }}>المهمة {currentTask + 1} من {tasks.length}</span>
+              <span className="onb-badge">الخطوة 4 من 5 — الامتحان الشفهي</span>
+              <span className="text-sm font-bold" style={{ color: '#177B58' }}>
+                {completedCount}/{tasks.length} مكتملة
+              </span>
             </div>
-            <div className="onb-progress" role="progressbar" aria-valuenow={Math.round(((currentTask + 1) / tasks.length) * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="تقدم الامتحان الشفهي">
-              <span style={{ width: `${((currentTask + 1) / tasks.length) * 100}%` }} />
+            <div
+              className="onb-progress"
+              role="progressbar"
+              aria-valuenow={overallProgress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="تقدم الامتحان الشفهي"
+            >
+              <span style={{ width: `${overallProgress}%`, transition: 'width 0.4s ease' }} />
             </div>
             {usingFallback && (
               <p className="mt-2 text-center" style={{ fontSize: '0.8125rem', color: '#756E85' }}>
@@ -120,8 +136,28 @@ export default function OralExamPage() {
             )}
           </div>
 
+          {/* Info Banner */}
+          <div
+            className="flex items-start gap-3 rounded-2xl p-4 mb-6"
+            style={{ background: '#E2EFE7', border: '1px solid #177B58' }}
+          >
+            <ShieldCheck className="w-5 h-5 flex-none mt-0.5" style={{ color: '#177B58' }} aria-hidden />
+            <div>
+              <p className="font-bold text-sm" style={{ color: '#0F5940' }}>
+                تسجيلاتك ترفع مباشرة للمشرف للمراجعة
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: '#177B58' }}>
+                بعد الرفع، سيستمع المشرف إلى تسجيلاتك ويحدد مستواك خلال 24 ساعة وتصلك النتيجة.
+              </p>
+            </div>
+          </div>
+
           {/* Task tabs */}
-          <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar" role="tablist" aria-label="مهام الامتحان الشفهي">
+          <div
+            className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar"
+            role="tablist"
+            aria-label="مهام الامتحان الشفهي"
+          >
             {tasks.map((t, i) => (
               <button
                 key={i}
@@ -130,124 +166,230 @@ export default function OralExamPage() {
                 onClick={() => switchTask(i)}
                 className={`onb-tab${i === currentTask ? ' on' : completed[i] ? ' done' : ''}`}
               >
-                {completed[i] && <CheckCircle className="w-3.5 h-3.5" aria-hidden />}
+                {completed[i]
+                  ? <CheckCircle className="w-3.5 h-3.5" aria-hidden />
+                  : <span
+                      className="w-3.5 h-3.5 rounded-full border-2 inline-block"
+                      style={{ borderColor: i === currentTask ? '#177B58' : '#C4B5D0' }}
+                      aria-hidden
+                    />
+                }
                 مهمة {i + 1}
               </button>
             ))}
           </div>
 
-          <div className="onb-card">
-            {/* Task instruction */}
-            <div className="mb-6">
-              <h3 className="font-extrabold mb-3" style={{ fontSize: '1.25rem', color: '#2A2438' }}>{task.instruction}</h3>
-              {task.arabicText && (
-                <div className="onb-wash">
-                  <p className="onb-quran">{task.arabicText}</p>
-                </div>
-              )}
-              {task.duration && (
-                <p className="mt-2 text-center" style={{ fontSize: '0.8125rem', color: '#756E85' }}>
-                  الوقت المقترح: {task.duration} ثانية
-                </p>
-              )}
-            </div>
+          {/* Task Card */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentTask}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.18 }}
+            >
+              <div className="onb-card">
+                {/* Task header */}
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span
+                      className="text-xs font-bold px-2.5 py-1 rounded-full"
+                      style={{ background: '#E2EFE7', color: '#0F5940' }}
+                    >
+                      المهمة {currentTask + 1} من {tasks.length}
+                    </span>
+                    {task.duration && (
+                      <span className="flex items-center gap-1 text-xs font-bold" style={{ color: '#756E85' }}>
+                        <Clock className="w-3.5 h-3.5" aria-hidden />
+                        {task.duration} ثانية مقترحة
+                      </span>
+                    )}
+                  </div>
 
-            {/* Recording controls */}
-            <div className="flex flex-col items-center gap-6">
-              {/* Big record button */}
-              <div className="relative">
-                {isRecording && (
-                  <div className="absolute inset-0 rounded-full animate-record opacity-50" aria-hidden />
-                )}
-                <button
-                  onClick={isRecording ? stopRecording : startRecording}
-                  className={`onb-record${isRecording ? ' rec' : ''}`}
-                  aria-label={isRecording ? 'إيقاف التسجيل' : 'بدء التسجيل'}
-                  aria-pressed={isRecording}
+                  <h3 className="font-extrabold mb-3" style={{ fontSize: '1.2rem', color: '#2A2438' }}>
+                    {task.instruction}
+                  </h3>
+
+                  {task.arabicText && (
+                    <div className="onb-wash">
+                      <p className="onb-quran">{task.arabicText}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Recording Controls */}
+                <div className="flex flex-col items-center gap-5">
+
+                  {/* Record / Stop Button */}
+                  <div className="relative">
+                    {isRecording && (
+                      <div className="absolute inset-0 rounded-full animate-record opacity-50" aria-hidden />
+                    )}
+                    <button
+                      onClick={isRecording ? stopRecording : startRecording}
+                      className={`onb-record${isRecording ? ' rec' : ''}`}
+                      aria-label={isRecording ? 'إيقاف التسجيل' : 'بدء التسجيل'}
+                      aria-pressed={isRecording}
+                      disabled={completed[currentTask]}
+                      style={completed[currentTask] ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                    >
+                      {isRecording
+                        ? <Square className="w-10 h-10 text-white" aria-hidden />
+                        : <Mic className="w-10 h-10 text-white" aria-hidden />
+                      }
+                    </button>
+                  </div>
+
+                  {/* Timer */}
+                  {isRecording && (
+                    <div
+                      className="flex items-center gap-2 font-bold text-lg"
+                      style={{ color: '#C2410C', fontVariantNumeric: 'tabular-nums' }}
+                      role="timer"
+                      aria-label="مدة التسجيل الحالية"
+                    >
+                      <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#C2410C' }} aria-hidden />
+                      {formatCountdown(duration)}
+                    </div>
+                  )}
+
+                  {/* Status text */}
+                  <p className="text-sm font-medium" style={{ color: '#756E85' }}>
+                    {completed[currentTask]
+                      ? 'تم حفظ هذا التسجيل وسيُرفع للمراجعة'
+                      : isRecording
+                        ? 'جارٍ التسجيل... اضغط مربع الإيقاف للانتهاء'
+                        : audioUrl
+                          ? 'تم التسجيل — استمع للمراجعة أو أعد التسجيل'
+                          : 'اضغط زر الميكروفون للبدء بالتسميع'}
+                  </p>
+
+                  {error && (
+                    <p
+                      role="alert"
+                      className="text-sm px-4 py-2 rounded-xl w-full text-center"
+                      style={{ color: '#C2410C', background: '#FFF', border: '1px solid #C2410C' }}
+                    >
+                      {error}
+                    </p>
+                  )}
+
+                  {/* Audio preview + save/redo */}
+                  {audioUrl && !isRecording && !completed[currentTask] && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="w-full space-y-3"
+                    >
+                      <div className="rounded-xl p-3" style={{ background: '#F8F5FF', border: '1px solid #C4B5D0' }}>
+                        <p className="text-xs font-bold mb-2 flex items-center gap-1" style={{ color: '#756E85' }}>
+                          <Volume2 className="w-3.5 h-3.5" aria-hidden />
+                          استمع للتسجيل قبل الحفظ:
+                        </p>
+                        <audio src={audioUrl} controls className="w-full rounded-xl" />
+                        {taskSeconds[currentTask] && (
+                          <p className="text-xs mt-1 text-center" style={{ color: '#756E85' }}>
+                            مدة التسجيل: {taskSeconds[currentTask]} ثانية
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex gap-3">
+                        <button onClick={resetRecording} className="onb-ghost flex-1 text-sm">
+                          <RotateCcw className="w-4 h-4" aria-hidden />
+                          إعادة التسجيل
+                        </button>
+                        <button onClick={handleSaveRecording} className="onb-btn flex-1 text-sm">
+                          <CheckCircle className="w-4 h-4" aria-hidden />
+                          حفظ التسجيل
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Completed indicator */}
+                  {completed[currentTask] && (
+                    <motion.div
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="flex flex-col items-center gap-2 w-full"
+                    >
+                      <div className="flex items-center gap-2 font-bold" style={{ color: '#177B58' }}>
+                        <CheckCircle className="w-5 h-5" aria-hidden />
+                        تم حفظ تسجيل هذه المهمة
+                      </div>
+                      <p className="text-xs text-center" style={{ color: '#756E85' }}>
+                        سيستمع إليه المشرف لتقييم مستواك
+                      </p>
+                      {currentTask < tasks.length - 1 && (
+                        <button
+                          onClick={() => switchTask(currentTask + 1)}
+                          className="onb-btn-outline mt-1 text-sm"
+                        >
+                          انتقل للمهمة التالية
+                        </button>
+                      )}
+                    </motion.div>
+                  )}
+
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Footer / Submit */}
+          <div className="mt-6">
+            {allCompleted ? (
+              <div className="space-y-3">
+                <div
+                  className="rounded-2xl p-4 flex items-start gap-3"
+                  style={{ background: '#E2EFE7', border: '1px solid #177B58' }}
                 >
-                  {isRecording
-                    ? <Square className="w-10 h-10 text-white" aria-hidden />
-                    : <Mic className="w-10 h-10 text-white" aria-hidden />
+                  <Info className="w-5 h-5 flex-none mt-0.5" style={{ color: '#0F5940' }} aria-hidden />
+                  <div>
+                    <p className="font-bold text-sm" style={{ color: '#0F5940' }}>
+                      أحسنت! جميع المهام مسجلة ({tasks.length}/{tasks.length})
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: '#177B58' }}>
+                      اضغط "رفع التسجيلات" لإرسالها للمشرف — ستصلك النتيجة النهائية خلال 24 ساعة.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSubmitAll}
+                  disabled={isSubmitting}
+                  className="onb-btn w-full"
+                  style={{ minHeight: 56, fontSize: '1rem' }}
+                >
+                  {isSubmitting
+                    ? <LoadingSpinner size="sm" color="white" />
+                    : (
+                      <>
+                        <Upload className="w-5 h-5" aria-hidden />
+                        رفع جميع التسجيلات للمراجعة
+                      </>
+                    )
                   }
                 </button>
               </div>
-
-              {/* Duration */}
-              {isRecording && (
-                <div className="flex items-center gap-2 font-bold text-lg" style={{ color: '#C2410C', fontVariantNumeric: 'tabular-nums' }} role="timer" aria-label="مدة التسجيل الحالية">
-                  <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#C2410C' }} aria-hidden />
-                  {formatCountdown(duration)}
-                </div>
-              )}
-
-              {/* Recording label */}
-              <p className="text-sm font-medium" style={{ color: '#756E85' }}>
-                {isRecording ? 'جارٍ التسجيل... اضغط للإيقاف' : audioUrl ? 'تم التسجيل — استمع أو أعد التسجيل' : 'اضغط للبدء بالتسجيل'}
-              </p>
-
-              {error && (
-                <p role="alert" className="text-sm px-4 py-2 rounded-xl" style={{ color: '#C2410C', background: '#FFFFFF', border: '1px solid #C2410C' }}>
-                  {error}
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm" style={{ color: '#756E85' }}>
+                  احفظ تسجيل كل مهمة ({completedCount}/{tasks.length}) لتتمكن من الرفع
                 </p>
-              )}
-
-              {/* Audio preview */}
-              {audioUrl && !isRecording && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="w-full">
-                  <audio src={audioUrl} controls className="w-full rounded-xl" />
-                  <div className="flex gap-3 mt-3">
-                    <button onClick={resetRecording} className="onb-ghost flex-1 text-sm">
-                      <RotateCcw className="w-4 h-4" aria-hidden />
-                      إعادة التسجيل
-                    </button>
-                    <button onClick={handleSaveRecording} className="onb-btn flex-1 text-sm">
-                      <CheckCircle className="w-4 h-4" aria-hidden />
-                      حفظ هذا التسجيل
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-
-              {completed[currentTask] && (
-                <div className="flex items-center gap-2 font-bold" style={{ color: '#177B58' }}>
-                  <CheckCircle className="w-5 h-5" aria-hidden />
-                  تم حفظ تسجيل هذه المهمة
-                </div>
-              )}
-            </div>
+                {currentTask < tasks.length - 1 && !isRecording && (
+                  <button
+                    onClick={() => switchTask(currentTask + 1)}
+                    className="onb-btn-outline flex-none text-sm"
+                  >
+                    المهمة التالية
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-6">
-            <p className="text-sm" style={{ color: '#756E85' }}>
-              الامتحان الشفهي إجباري — سجّل واحفظ كل مهمة للمتابعة.
-            </p>
-
-            <div className="flex gap-3">
-              {currentTask < tasks.length - 1 && (
-                <button
-                  onClick={() => switchTask(currentTask + 1)}
-                  className="onb-btn-outline"
-                >
-                  المهمة التالية
-                </button>
-              )}
-              {allCompleted ? (
-                <button onClick={handleSubmitAll} disabled={isSubmitting} className="onb-btn">
-                  {isSubmitting ? <LoadingSpinner size="sm" color="white" /> : (
-                    <>
-                      <Upload className="w-4 h-4" aria-hidden />
-                      رفع جميع التسجيلات
-                    </>
-                  )}
-                </button>
-              ) : (
-                <p className="text-sm self-center" style={{ color: '#756E85' }}>
-                  احفظ تسجيل كل مهمة ({Object.keys(completed).length}/{tasks.length}) ليظهر زر الرفع
-                </p>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </MotionConfig>

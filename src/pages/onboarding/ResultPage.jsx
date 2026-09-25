@@ -30,7 +30,7 @@ export default function ResultPage() {
   const level = user?.assignedLevel || result?.assignedLevel || 'foundation';
   const tone = LEVEL_TONES[level] || LEVEL_TONES.foundation;
   const { circumference, strokeDashoffset } = getCirclePath(score);
-  const hasOral = (oralRecordings?.length || 0) > 0 || (user?.oralExamRecordings?.length || 0) > 0;
+  const hasOral = (oralRecordings?.length || 0) > 0 || (result?.oralRecordings?.length || 0) > 0 || (user?.oralExamRecordings?.length || 0) > 0;
 
   const handleContinue = async () => {
     // Wait for the fresh user record — a stale store may still lack assignedLevel.

@@ -611,13 +611,20 @@ export default function TeacherReviewCenterPage() {
                       </button>
                     </div>
 
-                    {result.oralExamRecordings?.length > 0 && (
+                    {/* Oral recordings from ExamResult */}
+                    {result.oralRecordings?.length > 0 && (
                       <div className="mt-4 pt-3 space-y-2" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
-                        <p className="text-xs font-bold" style={{ color: HQ.MUTED }}>التسجيلات الصوتية للاختبار:</p>
-                        {result.oralExamRecordings.map((url, j) => (
+                        <p className="text-xs font-bold flex items-center gap-1.5" style={{ color: HQ.MUTED }}>
+                          <Volume2 size={13} color={HQ.MENTOR} aria-hidden />
+                          التسجيلات الصوتية للاختبار الشفهي ({result.oralRecordings.length} مهمة):
+                        </p>
+                        {result.oralRecordings.map((rec, j) => (
                           <div key={j} className="flex items-center gap-3 rounded-xl p-2.5" style={{ background: HQ.PAPER }}>
-                            <Volume2 size={15} color={HQ.MENTOR} aria-hidden className="flex-none" />
-                            <audio src={url} controls className="flex-1" style={{ height: 28 }} />
+                            <span className="text-xs font-bold flex-none px-2.5 py-1 rounded-full"
+                              style={{ background: '#E2EFE7', color: '#0F5940' }}>
+                              مهمة {j + 1}
+                            </span>
+                            <audio src={rec.audioUrl} controls className="flex-1" style={{ height: 32 }} />
                           </div>
                         ))}
                       </div>
