@@ -54,6 +54,8 @@ const useExamStore = create((set, get) => ({
 
   placementCompleted: false,
   placementResult: null,
+  // Written submitted but oral still pending (backend splits the two steps)
+  writtenCompleted: false,
 
   fetchPlacementExam: async (type) => {
     set({ isLoading: true });
@@ -64,11 +66,20 @@ const useExamStore = create((set, get) => ({
           currentExam: res.data.exam,
           placementCompleted: true,
           placementResult: res.data.result,
+          writtenCompleted: true,
           isLoading: false,
         });
         return res.data.exam;
       }
-      set({ currentExam: res.data.exam, placementCompleted: false, placementResult: null, isLoading: false });
+      set({
+        currentExam: res.data.exam,
+        placementCompleted: false,
+        // Keep the written result so the written page can forward to the oral step
+        // instead of letting the student retake (submit would 400 as duplicate).
+        placementResult: res.data.result || null,
+        writtenCompleted: !!res.data.writtenCompleted,
+        isLoading: false,
+      });
       return res.data.exam;
     } catch (error) {
       set({ isLoading: false });
@@ -111,7 +122,12 @@ const useExamStore = create((set, get) => ({
       const res = await api.post(`/exams/${examId}/submit-oral`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      set({ isSubmitting: false });
+      set({
+        isSubmitting: false,
+        result: res.data.result,
+        placementResult: res.data.result,
+        placementCompleted: true,
+      });
       return res.data.result;
     } catch (error) {
       set({ isSubmitting: false });

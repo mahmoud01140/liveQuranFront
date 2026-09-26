@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { Mic, Square, CheckCircle, Upload, RotateCcw, Info, Clock, Volume2, ShieldCheck } from 'lucide-react';
@@ -11,14 +11,29 @@ import { formatCountdown } from '../../utils/helpers';
 import './Onboarding.css';
 
 const FALLBACK_TASKS = [
-  { taskNumber: 1, instruction: 'اقرأ سورة الفاتحة بصوت واضح', arabicText: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ', duration: 60 },
-  { taskNumber: 2, instruction: 'تهجأ الكلمات القرآنية التالية', arabicText: 'كِتَابٌ - رَحْمَةٌ - قُرْآنٌ', duration: 45 },
-  { taskNumber: 3, instruction: 'ميّز الحركات في الآية الكريمة', arabicText: 'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ', duration: 45 },
+  {
+    taskNumber: 1,
+    instruction: 'تسميع سورة الفاتحة كاملة بصوت واضح مع مراعاة الترتيل والتجويد',
+    arabicText: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ﴿١﴾ الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ ﴿٢﴾ الرَّحْمَٰنِ الرَّحِيمِ ﴿٣﴾ مَالِكِ يَوْمِ الدِّينِ ﴿٤﴾ إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ ﴿٥﴾ اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ ﴿٦﴾ صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ ﴿٧﴾',
+    duration: 60,
+  },
+  {
+    taskNumber: 2,
+    instruction: 'قراءة وضبط أحكام التجويد للكلمات القرآنية التالية مع بيان الحركات والمدود',
+    arabicText: 'كِتَابٌ أَنزَلْنَاهُ - رَحْمَةً لِّلْعَالَمِينَ - الطَّامَّةُ الْكُبْرَىٰ - قُرْآنٌ مَّجِيدٌ',
+    duration: 45,
+  },
+  {
+    taskNumber: 3,
+    instruction: 'تلاوة الآية الكريمة مع تطبيق أحكام النون الساكنة والتنوين والمدود',
+    arabicText: 'وَمِنَ النَّاسِ مَن يَقُولُ آمَنَّا بِاللَّهِ وَبِالْيَوْمِ الْآخِرِ وَمَا هُم بِمُؤْمِنِينَ',
+    duration: 60,
+  },
 ];
 
 export default function OralExamPage() {
   const { user } = useAuthStore();
-  const { currentExam, fetchPlacementExam, addOralRecording, submitOralExam, isSubmitting } = useExamStore();
+  const { currentExam, fetchPlacementExam, addOralRecording, submitOralExam, isSubmitting, placementResult, result } = useExamStore();
   const navigate = useNavigate();
   const location = useLocation();
   const { resultId: stateResultId, examId: stateExamId } = location.state || {};
@@ -27,15 +42,15 @@ export default function OralExamPage() {
     try { return JSON.parse(localStorage.getItem(`oral_context_${user?._id}`) || 'null'); }
     catch (_) { return null; }
   })();
-  const resultId = stateResultId || storedCtx?.resultId;
-  const contextExamId = stateExamId || storedCtx?.examId;
+  const resultId = stateResultId || storedCtx?.resultId || placementResult?._id || result?._id;
+  const contextExamId = stateExamId || storedCtx?.examId || placementResult?.exam || result?.exam;
 
   useEffect(() => {
-    if (!resultId && !currentExam) {
+    if (!resultId && !currentExam && !placementResult && !result) {
       toast.error('أكمل الامتحان التحريري أولاً قبل الامتحان الشفهي');
       navigate('/onboarding/written-exam', { replace: true });
     }
-  }, [resultId, currentExam, navigate]);
+  }, [resultId, currentExam, placementResult, result, navigate]);
 
   useEffect(() => {
     if (!currentExam && user?.registrationType) {
@@ -70,7 +85,7 @@ export default function OralExamPage() {
     if (!audioBlob) return;
     addOralRecording(task._id || `task-${currentTask}`, audioBlob, audioUrl);
     setCompleted(prev => ({ ...prev, [currentTask]: true }));
-    toast.success('تم حفظ التسجيل وسيُراجَع من قِبَل المشرف');
+    toast.success('تم حفظ تسجيل المهمة بنجاح وسيُرسل للإدارة');
   };
 
   const switchTask = (next) => {
@@ -88,14 +103,15 @@ export default function OralExamPage() {
       toast.error('تعذر تحديد الامتحان. أعد تحميل الصفحة وحاول مجدداً.');
       return;
     }
+    const finalResultId = resultId || placementResult?._id || result?._id;
     try {
-      await submitOralExam(examId, resultId);
+      await submitOralExam(examId, finalResultId);
       try {
         localStorage.removeItem(`oral_pending_${user?._id}`);
         localStorage.removeItem(`oral_context_${user?._id}`);
       } catch (_) {}
-      toast.success('تم رفع جميع التسجيلات للمشرف للمراجعة');
-      navigate('/onboarding/result');
+      toast.success('تم رفع التلاوات بنجاح إلى الإدارة للمراجعة والتصحيح!');
+      navigate('/onboarding/result', { state: { resultId: finalResultId } });
     } catch {
       toast.error('خطأ في رفع التسجيلات. حاول مجدداً.');
     }

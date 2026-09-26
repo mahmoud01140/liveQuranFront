@@ -10,7 +10,7 @@ import './Onboarding.css';
 
 export default function WrittenExamPage() {
   const { user, updateUser } = useAuthStore();
-  const { currentExam, fetchPlacementExam, setAnswer, answers, setWrittenAnswer, writtenAnswers, submitWrittenExam, isLoading, isSubmitting, placementCompleted, placementResult } = useExamStore();
+  const { currentExam, fetchPlacementExam, setAnswer, answers, setWrittenAnswer, writtenAnswers, submitWrittenExam, isLoading, isSubmitting, placementCompleted, placementResult, writtenCompleted } = useExamStore();
   const navigate = useNavigate();
   const [currentQ, setCurrentQ] = useState(0);
   const [timeLeft, setTimeLeft] = useState(null);
@@ -22,13 +22,27 @@ export default function WrittenExamPage() {
     fetchPlacementExam(regType);
   }, [regType]);
 
-  // Redirect if already completed
+  // Redirect if already completed — or if written is done and only the
+  // mandatory oral remains (retaking would 400 as duplicate on submit).
   useEffect(() => {
     if (placementCompleted && placementResult) {
-      toast('لقد أجريت امتحان التحديد مسبقاً');
-      navigate('/onboarding/result', { state: { resultId: placementResult._id }, replace: true });
+      const hasOral = (placementResult.oralRecordings?.length > 0) || placementResult.status === 'reviewed';
+      if (!hasOral) {
+        navigate('/onboarding/oral-exam', {
+          state: { resultId: placementResult._id, examId: currentExam?._id },
+          replace: true,
+        });
+      } else {
+        toast('لقد أجريت امتحان التحديد مسبقاً');
+        navigate('/onboarding/result', { state: { resultId: placementResult._id }, replace: true });
+      }
+    } else if (writtenCompleted && placementResult && !placementCompleted) {
+      navigate('/onboarding/oral-exam', {
+        state: { resultId: placementResult._id, examId: currentExam?._id },
+        replace: true,
+      });
     }
-  }, [placementCompleted, placementResult]);
+  }, [placementCompleted, placementResult, writtenCompleted, currentExam, navigate]);
 
   useEffect(() => {
     if (currentExam?.duration) {

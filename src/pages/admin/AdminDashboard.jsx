@@ -13,12 +13,17 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
 
+  const [pendingOralCount, setPendingOralCount] = useState(0);
+
   const load = () => {
     setLoading(true);
     setLoadFailed(false);
     const fetchAnalytics = async () => {
       try {
-        const res = await api.get('/reports/analytics');
+        const [res, oralRes] = await Promise.all([
+          api.get('/reports/analytics'),
+          api.get('/exams/results/pending-review').catch(() => ({ data: { results: [] } })),
+        ]);
         const data = res.data;
         setStats({
           users: data.summary.totalUsers || 0,
@@ -26,6 +31,7 @@ export default function AdminDashboard() {
           pending: data.summary.pendingApproval || 0,
           attendance: data.summary.attendanceRate || '0%',
         });
+        setPendingOralCount(oralRes.data?.results?.length || 0);
       } catch (_) {
         try {
           const [usersRes, groupsRes, pendingRes] = await Promise.all([
@@ -96,7 +102,13 @@ export default function AdminDashboard() {
             <section aria-label="إجراءات سريعة">
               {[
                 { label: 'إدارة وتسكين الحلقات', hint: 'المجموعات والطلاب الجدد', path: '/admin/groups', icon: BookOpen, primary: true },
-                { label: 'تصحيح الامتحانات الشفهية', hint: 'تقييم التلاوات الشفهية', path: '/admin/review', icon: Volume2 },
+                {
+                  label: 'تصحيح الامتحانات الشفهية',
+                  hint: pendingOralCount > 0 ? `${pendingOralCount} اختبار بانتظار تصحيحك الآن` : 'تقييم التلاوات الشفهية',
+                  path: '/admin/review',
+                  icon: Volume2,
+                  badge: pendingOralCount > 0 ? pendingOralCount : null,
+                },
                 { label: 'بنك الامتحانات', hint: 'إدارة ونتائج', path: '/admin/exams', icon: FileText },
                 { label: 'المدفوعات', hint: 'الإيصالات والاشتراكات', path: '/admin/payments', icon: Users },
                 { label: 'البث المباشر', hint: 'بدء حصة', path: '/admin/groups', icon: Video },
@@ -113,6 +125,14 @@ export default function AdminDashboard() {
                     <strong style={{ display: 'block', fontSize: 15 }}>{a.label}</strong>
                     <span style={{ display: 'block', fontSize: 13, opacity: 0.75 }}>{a.hint}</span>
                   </span>
+                  {a.badge && (
+                    <span style={{
+                      padding: '4px 10px', borderRadius: 9999,
+                      background: '#C2410C', color: '#fff', fontSize: 12, fontWeight: 900,
+                    }}>
+                      {a.badge}
+                    </span>
+                  )}
                   <ChevronLeft size={18} style={{ opacity: 0.6 }} />
                 </Link>
               ))}

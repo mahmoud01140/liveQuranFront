@@ -178,11 +178,41 @@ export default function AdminOnboardingSettingsPage() {
     });
   };
 
+  const addOralTask = () => {
+    setPlacementExam(prev => ({
+      ...prev,
+      oralTasks: [
+        ...(prev.oralTasks || []),
+        {
+          taskNumber: (prev.oralTasks?.length || 0) + 1,
+          instruction: 'اقرأ الآيات التالية بصوت واضح مع مراعاة التجويد',
+          arabicText: '',
+          duration: 60,
+        },
+      ],
+    }));
+  };
+
+  const updateOralTask = (idx, fieldName, value) => {
+    setPlacementExam(prev => {
+      const list = [...(prev.oralTasks || [])];
+      list[idx] = { ...list[idx], [fieldName]: value };
+      return { ...prev, oralTasks: list };
+    });
+  };
+
+  const removeOralTask = (idx) => {
+    setPlacementExam(prev => ({
+      ...prev,
+      oralTasks: (prev.oralTasks || []).filter((_, i) => i !== idx),
+    }));
+  };
+
   const savePlacementExam = async () => {
     try {
       setSaving(true);
       await api.put(`/exams/admin/placement/${selectedRole}`, placementExam);
-      toast.success('تم حفظ امتحان تحديد المستوى بنجاح!');
+      toast.success('تم حفظ امتحان تحديد المستوى ومهام التسميع بنجاح!');
     } catch (err) {
       toast.error(err.response?.data?.message || 'خطأ في حفظ الامتحان');
     } finally {
@@ -717,6 +747,103 @@ export default function AdminOnboardingSettingsPage() {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Oral Tasks Card */}
+              <div style={panel} className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-extrabold flex items-center gap-2" style={{ fontSize: '1rem', color: HQ.INK, margin: 0 }}>
+                      <Mic size={18} color={HQ.MENTOR} aria-hidden />
+                      مهام التسميع والاختبار الشفهي ({placementExam.oralTasks?.length || 0})
+                    </h2>
+                    <p className="text-xs mt-1" style={{ color: HQ.MUTED, margin: 0 }}>
+                      المهام والآيات التي يسجلها الطالب بصوته لترفع للإدارة لتصحيحها وتحديد مستواه
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addOralTask}
+                    className="hq-action"
+                    style={{ background: '#E2EFE7', color: '#0F5940', border: '1px solid #177B58', fontSize: 13 }}
+                  >
+                    <Plus size={14} aria-hidden />
+                    إضافة مهمة تسميع
+                  </button>
+                </div>
+
+                {(!placementExam.oralTasks || placementExam.oralTasks.length === 0) ? (
+                  <div className="text-center py-6 border border-dashed rounded-xl" style={{ borderColor: HQ.LINE }}>
+                    <p className="text-sm font-medium" style={{ color: HQ.MUTED, margin: '0 0 8px' }}>
+                      لم تُضف مهام شفهية مخصصة بعد (سيتم استخدام المهام الافتراضية مثل سورة الفاتحة وأحكام التجويد)
+                    </p>
+                    <button
+                      type="button"
+                      onClick={addOralTask}
+                      className="hq-action"
+                      style={{ background: HQ.MENTOR, color: '#fff', fontSize: 13 }}
+                    >
+                      <Plus size={14} aria-hidden />
+                      إضافة أول مهمة تسميع
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {placementExam.oralTasks.map((ot, oti) => (
+                      <div key={oti} className="p-4 rounded-xl space-y-3 border" style={{ background: HQ.PAPER, borderColor: HQ.LINE }}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: '#E2EFE7', color: '#0F5940' }}>
+                            مهمة التسميع {oti + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeOralTask(oti)}
+                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50"
+                            aria-label={`حذف مهمة التسميع ${oti + 1}`}
+                          >
+                            <Trash2 size={16} aria-hidden />
+                          </button>
+                        </div>
+
+                        <div>
+                          <label style={lblSm}>تعليمات المهمة (ما يطلب من الطالب)</label>
+                          <input
+                            type="text"
+                            value={ot.instruction || ''}
+                            onChange={e => updateOralTask(oti, 'instruction', e.target.value)}
+                            className="text-sm focus:border-[#177B58] focus:outline-none"
+                            style={field}
+                            placeholder="مثال: اقرأ سورة الفاتحة بصوت واضح مع مراعاة التجويد"
+                          />
+                        </div>
+
+                        <div>
+                          <label style={lblSm}>النص القرآني المطلوب قراءته (اختياري)</label>
+                          <textarea
+                            value={ot.arabicText || ''}
+                            onChange={e => updateOralTask(oti, 'arabicText', e.target.value)}
+                            className="text-sm resize-none focus:border-[#177B58] focus:outline-none"
+                            style={{ ...field, minHeight: 64, direction: 'rtl' }}
+                            placeholder="اكتب الآيات أو الكلمات القرآنية المطلوب تسميعها..."
+                          />
+                        </div>
+
+                        <div className="w-44">
+                          <label style={lblSm}>المدة المقترحة (بالثواني)</label>
+                          <input
+                            type="number"
+                            min={10}
+                            max={300}
+                            value={ot.duration || 60}
+                            onChange={e => updateOralTask(oti, 'duration', parseInt(e.target.value) || 60)}
+                            className="text-sm focus:border-[#177B58] focus:outline-none"
+                            style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Save Bar */}

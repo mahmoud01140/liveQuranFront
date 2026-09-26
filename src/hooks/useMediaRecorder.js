@@ -39,7 +39,8 @@ export default function useMediaRecorder({ onDataAvailable, mimeType = 'audio/we
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const actualMime = recorder.mimeType || mimeType;
+        const blob = new Blob(chunksRef.current, { type: actualMime });
         const url = URL.createObjectURL(blob);
         setAudioBlob(blob);
         setAudioUrl(url);

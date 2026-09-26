@@ -58,6 +58,8 @@ export default function TeacherReviewCenterPage() {
   const [examScores, setExamScores] = useState({});
   const [examNotes, setExamNotes] = useState({});
   const [examLevels, setExamLevels] = useState({});
+  const [examApprovals, setExamApprovals] = useState({});
+  const [flaggedVerseForms, setFlaggedVerseForms] = useState({});
   const [submittingExam, setSubmittingExam] = useState(false);
 
   // State for Recordings
@@ -216,11 +218,9 @@ export default function TeacherReviewCenterPage() {
   };
 
   // Handlers for Oral Exams
-  const [flaggedVerseForms, setFlaggedVerseForms] = useState({}); // { [resultId]: { surahNumber: 1, verseNumber: 1, errorType: 'hifz', notes: '' } }
-
   const handleReviewExam = async (resultId) => {
     const oralScore = examScores[resultId];
-    if (oralScore === undefined) { toast.error('أدخل درجة التقييم الشفهي'); return; }
+    if (oralScore === undefined || oralScore === '') { toast.error('أدخل درجة التقييم الشفهي (0-100)'); return; }
     setSubmittingExam(true);
     try {
       const flaggedItem = flaggedVerseForms[resultId];
@@ -239,8 +239,9 @@ export default function TeacherReviewCenterPage() {
         teacherNotes: examNotes[resultId] || '',
         flaggedVerses,
         ...(examLevels[resultId] ? { assignedLevel: examLevels[resultId] } : {}),
+        isApproved: examApprovals[resultId] !== false,
       });
-      toast.success('تم الحفظ، وإضافة نقاط الضعف لبنك مراجعة الطالب، وإرسال الإشعار!');
+      toast.success('تم اعتماد التقييم الشفهي بنجاح وتحديث بيانات الطالب!');
       setReviewingExamId(null);
       setPendingExams(prev => prev.filter(r => r._id !== resultId));
     } catch { toast.error('خطأ في التقييم'); }
@@ -613,20 +614,30 @@ export default function TeacherReviewCenterPage() {
 
                     {/* Oral recordings from ExamResult */}
                     {result.oralRecordings?.length > 0 && (
-                      <div className="mt-4 pt-3 space-y-2" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
+                      <div className="mt-4 pt-3 space-y-3" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
                         <p className="text-xs font-bold flex items-center gap-1.5" style={{ color: HQ.MUTED }}>
-                          <Volume2 size={13} color={HQ.MENTOR} aria-hidden />
-                          التسجيلات الصوتية للاختبار الشفهي ({result.oralRecordings.length} مهمة):
+                          <Volume2 size={14} color={HQ.MENTOR} aria-hidden />
+                          التسجيلات الصوتية المرفوعة من الطالب ({result.oralRecordings.length} تلاوة):
                         </p>
-                        {result.oralRecordings.map((rec, j) => (
-                          <div key={j} className="flex items-center gap-3 rounded-xl p-2.5" style={{ background: HQ.PAPER }}>
-                            <span className="text-xs font-bold flex-none px-2.5 py-1 rounded-full"
-                              style={{ background: '#E2EFE7', color: '#0F5940' }}>
-                              مهمة {j + 1}
-                            </span>
-                            <audio src={rec.audioUrl} controls className="flex-1" style={{ height: 32 }} />
-                          </div>
-                        ))}
+                        {result.oralRecordings.map((rec, j) => {
+                          const taskData = result.exam?.oralTasks?.[j];
+                          return (
+                            <div key={j} className="rounded-xl p-3 space-y-2" style={{ background: HQ.PAPER }}>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                                  style={{ background: '#E2EFE7', color: '#0F5940' }}>
+                                  مهمة {j + 1}: {taskData?.instruction || `تلاوة رقم ${j + 1}`}
+                                </span>
+                              </div>
+                              {taskData?.arabicText && (
+                                <p className="text-sm font-semibold p-2.5 rounded-lg border leading-relaxed" style={{ background: '#fff', borderColor: HQ.LINE, color: '#177B58', direction: 'rtl' }}>
+                                  {taskData.arabicText}
+                                </p>
+                              )}
+                              <audio src={rec.audioUrl} controls className="w-full" style={{ height: 36 }} />
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
 
@@ -664,6 +675,21 @@ export default function TeacherReviewCenterPage() {
                             className="text-sm resize-none focus:border-[#177B58] focus:outline-none" style={{ ...field, minHeight: 80 }}
                             placeholder="أدخل الملاحظات والتصويبات..." />
                         </div>
+
+                        {/* Admin approval checkbox */}
+                        {isAdmin && !result.student?.isApproved && (
+                          <label className="flex items-center gap-2.5 p-3 rounded-xl cursor-pointer" style={{ background: '#E2EFE7', border: '1px solid #177B58' }}>
+                            <input
+                              type="checkbox"
+                              checked={examApprovals[result._id] !== false}
+                              onChange={e => setExamApprovals(p => ({ ...p, [result._id]: e.target.checked }))}
+                              className="w-4 h-4 text-[#177B58] rounded"
+                            />
+                            <span className="text-xs font-extrabold" style={{ color: '#0F5940' }}>
+                              الموافقة على قبول وتفعيل حساب الطالب فور اعتماد النتيجة
+                            </span>
+                          </label>
+                        )}
 
                         {/* Weak Point Flagging Box */}
                         <div className="p-3.5 rounded-xl space-y-3" style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}` }}>

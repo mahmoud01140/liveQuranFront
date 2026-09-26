@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, MotionConfig } from 'framer-motion';
 import { CheckCircle, BookOpen, Clock, ChevronLeft, Star } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useExamStore from '../../store/examStore';
+import api from '../../services/api';
 import { getLevelLabel, getCirclePath } from '../../utils/helpers';
 import './Onboarding.css';
 
@@ -18,19 +19,34 @@ const LEVEL_TONES = {
 
 export default function ResultPage() {
   const { user, checkAuth, refreshUser } = useAuthStore();
-  const { result, oralRecordings } = useExamStore();
+  const { result, oralRecordings, placementResult } = useExamStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [currentResult, setCurrentResult] = useState(result || placementResult || null);
 
   useEffect(() => {
-    checkAuth(); // Refresh user data with new assignedLevel
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    checkAuth();
+    const fetchLatestResult = async () => {
+      try {
+        const resId = location.state?.resultId || result?._id || placementResult?._id;
+        if (resId) {
+          const res = await api.get(`/exams/results/${resId}`);
+          if (res.data?.result) setCurrentResult(res.data.result);
+        } else if (user?._id) {
+          const res = await api.get(`/exams/results/student/${user._id}`);
+          if (res.data?.results?.length) setCurrentResult(res.data.results[0]);
+        }
+      } catch (_) {}
+    };
+    fetchLatestResult();
+  }, [user?._id]);
 
-  const score = result?.totalPercentage ?? result?.writtenPercentage ?? 0;
-  const level = user?.assignedLevel || result?.assignedLevel || 'foundation';
+  const displayResult = currentResult || result || placementResult;
+  const score = displayResult?.totalPercentage ?? displayResult?.writtenPercentage ?? 0;
+  const level = user?.assignedLevel || displayResult?.assignedLevel || 'foundation';
   const tone = LEVEL_TONES[level] || LEVEL_TONES.foundation;
   const { circumference, strokeDashoffset } = getCirclePath(score);
-  const hasOral = (oralRecordings?.length || 0) > 0 || (result?.oralRecordings?.length || 0) > 0 || (user?.oralExamRecordings?.length || 0) > 0;
+  const hasOral = (oralRecordings?.length || 0) > 0 || (displayResult?.oralRecordings?.length || 0) > 0 || (user?.oralExamRecordings?.length || 0) > 0;
 
   const handleContinue = async () => {
     // Wait for the fresh user record — a stale store may still lack assignedLevel.
