@@ -1,40 +1,178 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Clock, ChevronLeft, Check, X } from 'lucide-react';
+import { Clock, ChevronLeft, Check, X, Mic, Square, CheckCircle, RotateCcw, Volume2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
 import useExamStore from '../../store/examStore';
+import useMediaRecorder from '../../hooks/useMediaRecorder';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
+import { formatCountdown } from '../../utils/helpers';
 import './Onboarding.css';
+
+/* ─── Inline recorder for a single recitation question ─── */
+function RecitationRecorder({ questionIndex, questionId, onSaved }) {
+  const { addOralRecording } = useExamStore();
+  const {
+    isRecording, duration, audioUrl, audioBlob, error,
+    startRecording, stopRecording, resetRecording,
+  } = useMediaRecorder();
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    if (!audioBlob) return;
+    addOralRecording(questionId || `recitation-q-${questionIndex}`, audioBlob, audioUrl);
+    setSaved(true);
+    if (onSaved) onSaved();
+    toast.success('تم حفظ التسجيل وسيُرسل للمشرف مع تسليم الامتحان');
+  };
+
+  const handleRedo = () => {
+    setSaved(false);
+    resetRecording();
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      {/* Record / Stop Button */}
+      <div className="relative">
+        {isRecording && (
+          <div className="absolute inset-0 rounded-full animate-record opacity-50" aria-hidden />
+        )}
+        <button
+          onClick={isRecording ? stopRecording : (saved ? handleRedo : startRecording)}
+          className={`onb-record${isRecording ? ' rec' : ''}`}
+          aria-label={isRecording ? 'إيقاف التسجيل' : saved ? 'إعادة التسجيل' : 'بدء التسجيل'}
+          aria-pressed={isRecording}
+          style={saved ? { background: '#177B58' } : undefined}
+        >
+          {isRecording
+            ? <Square className="w-8 h-8 text-white" aria-hidden />
+            : saved
+              ? <CheckCircle className="w-8 h-8 text-white" aria-hidden />
+              : <Mic className="w-8 h-8 text-white" aria-hidden />
+          }
+        </button>
+      </div>
+
+      {/* Live timer while recording */}
+      {isRecording && (
+        <div
+          className="flex items-center gap-2 font-bold text-lg"
+          style={{ color: '#C2410C', fontVariantNumeric: 'tabular-nums' }}
+          role="timer"
+          aria-label="مدة التسجيل"
+        >
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#C2410C' }} aria-hidden />
+          {formatCountdown(duration)}
+        </div>
+      )}
+
+      {/* Status text */}
+      <p className="text-sm font-medium text-center" style={{ color: '#756E85' }}>
+        {saved
+          ? '✅ تم حفظ التسجيل — سيُرفع تلقائياً مع تسليم الامتحان'
+          : isRecording
+            ? 'جارٍ التسجيل... اضغط مربع الإيقاف للانتهاء'
+            : audioUrl
+              ? 'تم التسجيل — استمع للمراجعة ثم احفظ أو أعد التسجيل'
+              : 'اضغط زر الميكروفون لتسجيل التلاوة بصوتك'}
+      </p>
+
+      {/* Mic permission error */}
+      {error && (
+        <p
+          role="alert"
+          className="text-sm px-4 py-2 rounded-xl w-full text-center"
+          style={{ color: '#C2410C', background: '#FFF', border: '1px solid #C2410C' }}
+        >
+          {error}
+        </p>
+      )}
+
+      {/* Audio preview + save / redo — shown after stopping & before saving */}
+      {audioUrl && !isRecording && !saved && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="w-full space-y-3"
+        >
+          <div className="rounded-xl p-3" style={{ background: '#F8F5FF', border: '1px solid #C4B5D0' }}>
+            <p className="text-xs font-bold mb-2 flex items-center gap-1" style={{ color: '#756E85' }}>
+              <Volume2 className="w-3.5 h-3.5" aria-hidden />
+              استمع للتسجيل قبل الحفظ:
+            </p>
+            <audio src={audioUrl} controls className="w-full rounded-xl" />
+          </div>
+          <div className="flex gap-3">
+            <button onClick={resetRecording} className="onb-ghost flex-1 text-sm">
+              <RotateCcw className="w-4 h-4" aria-hidden />
+              إعادة التسجيل
+            </button>
+            <button onClick={handleSave} className="onb-btn flex-1 text-sm">
+              <CheckCircle className="w-4 h-4" aria-hidden />
+              حفظ التسجيل
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Saved — allow redo */}
+      {saved && (
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="w-full"
+        >
+          <div className="flex items-center justify-center gap-2 font-bold mb-2" style={{ color: '#177B58' }}>
+            <CheckCircle className="w-5 h-5" aria-hidden />
+            تم حفظ التسجيل بنجاح
+          </div>
+          <button onClick={handleRedo} className="onb-ghost w-full text-sm">
+            <RotateCcw className="w-4 h-4" aria-hidden />
+            إعادة التسجيل من جديد
+          </button>
+        </motion.div>
+      )}
+    </div>
+  );
+}
 
 export default function WrittenExamPage() {
   const { user, updateUser } = useAuthStore();
-  const { currentExam, fetchPlacementExam, setAnswer, answers, setWrittenAnswer, writtenAnswers, submitWrittenExam, isLoading, isSubmitting, placementCompleted, placementResult, writtenCompleted } = useExamStore();
+  const { currentExam, fetchPlacementExam, setAnswer, answers, setWrittenAnswer, writtenAnswers, oralRecordings, submitWrittenExam, submitOralExam, isLoading, isSubmitting, placementCompleted, placementResult, writtenCompleted } = useExamStore();
   const navigate = useNavigate();
   const [currentQ, setCurrentQ] = useState(0);
   const [timeLeft, setTimeLeft] = useState(null);
   const autoSubmittedRef = useRef(false);
+  // Track which recitation questions have been recorded
+  const [recitationSaved, setRecitationSaved] = useState({});
 
   const regType = user?.registrationType || 'student';
+
+  // Check if exam has recitation questions
+  const hasRecitationQuestions = currentExam?.questions?.some(q => q.type === 'recitation');
 
   useEffect(() => {
     fetchPlacementExam(regType);
   }, [regType]);
 
-  // Redirect if already completed — or if written is done and only the
-  // mandatory oral remains (retaking would 400 as duplicate on submit).
+  // Redirect if already completed — or if written is done and the oral
+  // step is still open (retaking would 400 as duplicate on submit).
+  // This applies to inline-recitation exams too: missing recordings must
+  // recover on the oral page, never strand the student on a retake.
   useEffect(() => {
     if (placementCompleted && placementResult) {
       const hasOral = (placementResult.oralRecordings?.length > 0) || placementResult.status === 'reviewed';
-      if (!hasOral) {
+      if (hasOral) {
+        toast('لقد أجريت امتحان التحديد مسبقاً');
+        navigate('/onboarding/result', { state: { resultId: placementResult._id }, replace: true });
+      } else {
         navigate('/onboarding/oral-exam', {
           state: { resultId: placementResult._id, examId: currentExam?._id },
           replace: true,
         });
-      } else {
-        toast('لقد أجريت امتحان التحديد مسبقاً');
-        navigate('/onboarding/result', { state: { resultId: placementResult._id }, replace: true });
       }
     } else if (writtenCompleted && placementResult && !placementCompleted) {
       navigate('/onboarding/oral-exam', {
@@ -64,28 +202,68 @@ export default function WrittenExamPage() {
 
   const doSubmit = async () => {
     const result = await submitWrittenExam(currentExam._id);
-    // Mark placement exam as taken in local state + flag the mandatory oral step
+
+    // If there are inline recitation recordings, submit them directly.
+    // A failed upload must NOT clear the recovery flags — the student
+    // finishes on the oral page instead of losing the recordings silently.
+    const hasInlineRecordings = hasRecitationQuestions && oralRecordings.length > 0;
+    let oralUploaded = false;
+    if (hasInlineRecordings) {
+      try {
+        await submitOralExam(currentExam._id, result._id);
+        oralUploaded = true;
+      } catch (_) {
+        console.error('Oral submission alongside written failed, will retry on oral page');
+      }
+    }
+
+    // Mark placement exam as taken in local state
     updateUser({ placementExamTaken: true });
     try {
-      localStorage.setItem(`oral_pending_${user?._id}`, '1');
-      // Persist the oral context so a refresh on the oral page never strands the student
-      localStorage.setItem(`oral_context_${user?._id}`, JSON.stringify({ resultId: result._id, examId: currentExam._id }));
       localStorage.removeItem(`survey_answers_${user?._id}_${regType}`);
+      if (oralUploaded) {
+        // Recordings safely stored — no separate oral step needed
+        localStorage.removeItem(`oral_pending_${user?._id}`);
+        localStorage.removeItem(`oral_context_${user?._id}`);
+      } else {
+        localStorage.setItem(`oral_pending_${user?._id}`, '1');
+        localStorage.setItem(`oral_context_${user?._id}`, JSON.stringify({ resultId: result._id, examId: currentExam._id }));
+      }
     } catch (_) {}
-    toast.success('تم تسليم الامتحان!');
-    navigate('/onboarding/oral-exam', { state: { resultId: result._id, examId: currentExam._id } });
+
+    if (oralUploaded) {
+      toast.success('تم تسليم الامتحان!');
+      navigate('/onboarding/result', { state: { resultId: result._id } });
+    } else if (hasInlineRecordings) {
+      toast.error('سُلم التحريري لكن تعذر رفع التسجيلات — أكملها في الخطوة التالية');
+      navigate('/onboarding/oral-exam', { state: { resultId: result._id, examId: currentExam._id } });
+    } else {
+      toast.success('تم تسليم الامتحان!');
+      navigate('/onboarding/oral-exam', { state: { resultId: result._id, examId: currentExam._id } });
+    }
   };
 
-  // Answered = MCQ/true-false choices + non-empty written texts
-  const isAnswered = (idx) =>
-    answers[idx] !== undefined ||
-    (typeof writtenAnswers[idx] === 'string' && writtenAnswers[idx].trim() !== '');
+  // Answered = MCQ/true-false choices + non-empty written texts + saved recitation recordings
+  const isAnswered = (idx) => {
+    const q = currentExam?.questions?.[idx];
+    if (q?.type === 'recitation') return !!recitationSaved[idx];
+    return answers[idx] !== undefined ||
+      (typeof writtenAnswers[idx] === 'string' && writtenAnswers[idx].trim() !== '');
+  };
 
   const handleSubmit = async (auto = false) => {
     if (!auto) {
       const answeredCount = (currentExam?.questions || []).filter((_, idx) => isAnswered(idx)).length;
       if (answeredCount < (currentExam?.questions?.length || 0)) {
-        if (!window.confirm('لم تجب على جميع الأسئلة. هل تريد التسليم الآن؟')) return;
+        // Check specifically for unrecorded recitation questions
+        const unrecordedRecitations = (currentExam?.questions || []).filter(
+          (q, idx) => q.type === 'recitation' && !recitationSaved[idx]
+        );
+        if (unrecordedRecitations.length > 0) {
+          if (!window.confirm(`لديك ${unrecordedRecitations.length} سؤال/أسئلة شفهية لم تسجل لها صوتاً بعد. هل تريد التسليم بدون تسجيل؟`)) return;
+        } else {
+          if (!window.confirm('لم تجب على جميع الأسئلة. هل تريد التسليم الآن؟')) return;
+        }
       }
     }
     try {
@@ -237,9 +415,30 @@ export default function WrittenExamPage() {
                     />
                   </div>
                 ) : question.type === 'recitation' ? (
-                  /* Recitation Question — audio task, just display the instruction */
-                  <div className="p-4 rounded-xl text-center" style={{ background: '#E2EFE7', border: '1px solid #177B58' }}>
-                    <p className="font-bold" style={{ color: '#0F5940' }}>سيتم تقييم التلاوة من قِبل المعلم في الامتحان الشفهي.</p>
+                  /* Recitation Question — inline audio recording */
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-3 rounded-2xl p-3 mb-2" style={{ background: '#E2EFE7', border: '1px solid #177B58' }}>
+                      <Mic className="w-5 h-5 flex-none mt-0.5" style={{ color: '#177B58' }} aria-hidden />
+                      <div>
+                        <p className="font-bold text-sm" style={{ color: '#0F5940' }}>
+                          سؤال شفهي — سجّل تلاوتك بصوتك
+                        </p>
+                        <p className="text-xs mt-0.5" style={{ color: '#177B58' }}>
+                          سيستمع المشرف إلى تسجيلك ويقيّم مستواك. اضغط الميكروفون للبدء.
+                        </p>
+                      </div>
+                    </div>
+                    {question.instruction && (
+                      <p className="text-sm font-medium text-center" style={{ color: '#2A2438' }}>
+                        {question.instruction}
+                      </p>
+                    )}
+                    <RecitationRecorder
+                      key={question._id || `q-${currentQ}`}
+                      questionIndex={currentQ}
+                      questionId={question._id}
+                      onSaved={() => setRecitationSaved(prev => ({ ...prev, [currentQ]: true }))}
+                    />
                   </div>
                 ) : (
                   /* MCQ Options */
@@ -296,13 +495,13 @@ export default function WrittenExamPage() {
 
           {/* Question dots */}
           <div className="flex flex-wrap gap-2 justify-center mt-6" role="group" aria-label="التنقل بين الأسئلة">
-            {currentExam.questions.map((_, i) => (
+            {currentExam.questions.map((q, i) => (
               <button key={i} onClick={() => setCurrentQ(i)}
-                aria-label={`السؤال ${i + 1}${isAnswered(i) ? ' (تمت الإجابة)' : ''}`}
+                aria-label={`السؤال ${i + 1}${isAnswered(i) ? ' (تمت الإجابة)' : ''}${q.type === 'recitation' ? ' (شفهي)' : ''}`}
                 aria-current={i === currentQ ? 'true' : undefined}
-                className={`onb-dot${i === currentQ ? ' now' : isAnswered(i) ? ' ans' : ''}`}
+                className={`onb-dot${i === currentQ ? ' now' : isAnswered(i) ? ' ans' : ''}${q.type === 'recitation' ? ' oral' : ''}`}
               >
-                {i + 1}
+                {q.type === 'recitation' ? '🎙' : i + 1}
               </button>
             ))}
           </div>
@@ -311,3 +510,4 @@ export default function WrittenExamPage() {
     </MotionConfig>
   );
 }
+
