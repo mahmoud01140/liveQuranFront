@@ -32,13 +32,14 @@ const ROLE_TONE = {
 const QUESTION_TYPES = [
   { value: 'mcq', label: 'اختيار من متعدد', Icon: CheckCircle },
   { value: 'true_false', label: 'صح / خطأ', Icon: Check },
-  { value: 'recitation', label: 'تلاوة / تجويد', Icon: Mic },
+  { value: 'recitation', label: 'تلاوة / شفهي', Icon: Mic },
 ];
 
 const EMPTY_EXAM_Q = {
   type: 'mcq',
   text: '',
   arabicText: '',
+  instruction: '',
   options: ['', '', '', ''],
   correctAnswer: 0,
   correctAnswerBool: true,
@@ -178,41 +179,11 @@ export default function AdminOnboardingSettingsPage() {
     });
   };
 
-  const addOralTask = () => {
-    setPlacementExam(prev => ({
-      ...prev,
-      oralTasks: [
-        ...(prev.oralTasks || []),
-        {
-          taskNumber: (prev.oralTasks?.length || 0) + 1,
-          instruction: 'اقرأ الآيات التالية بصوت واضح مع مراعاة التجويد',
-          arabicText: '',
-          duration: 60,
-        },
-      ],
-    }));
-  };
-
-  const updateOralTask = (idx, fieldName, value) => {
-    setPlacementExam(prev => {
-      const list = [...(prev.oralTasks || [])];
-      list[idx] = { ...list[idx], [fieldName]: value };
-      return { ...prev, oralTasks: list };
-    });
-  };
-
-  const removeOralTask = (idx) => {
-    setPlacementExam(prev => ({
-      ...prev,
-      oralTasks: (prev.oralTasks || []).filter((_, i) => i !== idx),
-    }));
-  };
-
   const savePlacementExam = async () => {
     try {
       setSaving(true);
       await api.put(`/exams/admin/placement/${selectedRole}`, placementExam);
-      toast.success('تم حفظ امتحان تحديد المستوى ومهام التسميع بنجاح!');
+      toast.success('تم حفظ امتحان تحديد المستوى بنجاح!');
     } catch (err) {
       toast.error(err.response?.data?.message || 'خطأ في حفظ الامتحان');
     } finally {
@@ -469,8 +440,8 @@ export default function AdminOnboardingSettingsPage() {
               {/* Questions Header & Add Button */}
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div>
-                  <h2 className="font-extrabold" style={{ fontSize: '1.25rem', color: HQ.INK, margin: 0 }}>أسئلة الامتحان التحريري</h2>
-                  <p className="text-xs" style={{ color: HQ.MUTED, margin: 0 }}>يدعم الاختيار من متعدد، صح/خطأ، وتلاوة قرآنية</p>
+                  <h2 className="font-extrabold" style={{ fontSize: '1.25rem', color: HQ.INK, margin: 0 }}>أسئلة امتحان تحديد المستوى</h2>
+                  <p className="text-xs" style={{ color: HQ.MUTED, margin: 0 }}>تشمل الأسئلة التحريرية (اختيار من متعدد، صح/خطأ) والأسئلة الشفهية (تلاوة وتسميع صوتي)</p>
                 </div>
                 <button
                   type="button"
@@ -691,11 +662,12 @@ export default function AdminOnboardingSettingsPage() {
 
 
                               {q.type === 'recitation' && (
-                                <div className="p-4 space-y-3" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
+                                <div className="p-4 space-y-4" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12 }}>
                                   <div className="flex items-center gap-2">
-                                    <Book size={15} color={HQ.MENTOR} aria-hidden />
-                                    <span className="text-xs font-bold" style={{ color: HQ.INK }}>تحديد الآيات المطلوبة للتلاوة</span>
+                                    <Mic size={16} color={HQ.MENTOR} aria-hidden />
+                                    <span className="text-xs font-bold" style={{ color: HQ.INK }}>إعدادات سؤال التلاوة والتسميع الشفهي</span>
                                   </div>
+
                                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div>
                                       <label htmlFor={`os-surah-${qi}`} style={lblSm}>السورة</label>
@@ -705,7 +677,7 @@ export default function AdminOnboardingSettingsPage() {
                                         onChange={e => updateExamQuestion(qi, 'surahNumber', e.target.value)}
                                         className="text-sm focus:border-[#177B58] focus:outline-none" style={field}
                                       >
-                                        <option value="">اختر السورة</option>
+                                        <option value="">اختر السورة (اختياري)</option>
                                         {QURAN_SURAHS.map((s) => (
                                           <option key={s.number} value={s.number}>
                                             {s.number}. {s.name}
@@ -738,6 +710,31 @@ export default function AdminOnboardingSettingsPage() {
                                       />
                                     </div>
                                   </div>
+
+                                  <div>
+                                    <label htmlFor={`os-inst-${qi}`} style={lblSm}>تعليمات التسميع للطالب (تظهر للطالب مع السؤال)</label>
+                                    <input
+                                      id={`os-inst-${qi}`}
+                                      type="text"
+                                      value={q.instruction || ''}
+                                      onChange={e => updateExamQuestion(qi, 'instruction', e.target.value)}
+                                      className="text-sm focus:border-[#177B58] focus:outline-none"
+                                      style={field}
+                                      placeholder="مثال: سجّل تلاوتك بصوت واضح مع مراعاة الترتيل وأحكام التجويد"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label htmlFor={`os-ar-${qi}`} style={lblSm}>النص القرآني المطلوب تلاوته (اختياري - يظهر للطالب كمرجع أثناء التسجيل)</label>
+                                    <textarea
+                                      id={`os-ar-${qi}`}
+                                      value={q.arabicText || ''}
+                                      onChange={e => updateExamQuestion(qi, 'arabicText', e.target.value)}
+                                      className="text-sm resize-none focus:border-[#177B58] focus:outline-none"
+                                      style={{ ...field, minHeight: 64, direction: 'rtl' }}
+                                      placeholder="اكتب الآيات أو الكلمات القرآنية المطلوب تسميعها إذا رغبت في عرضها للطالب..."
+                                    />
+                                  </div>
                                 </div>
                               )}
                             </div>
@@ -747,103 +744,6 @@ export default function AdminOnboardingSettingsPage() {
                     </div>
                   );
                 })}
-              </div>
-
-              {/* Oral Tasks Card */}
-              <div style={panel} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="font-extrabold flex items-center gap-2" style={{ fontSize: '1rem', color: HQ.INK, margin: 0 }}>
-                      <Mic size={18} color={HQ.MENTOR} aria-hidden />
-                      مهام التسميع والاختبار الشفهي ({placementExam.oralTasks?.length || 0})
-                    </h2>
-                    <p className="text-xs mt-1" style={{ color: HQ.MUTED, margin: 0 }}>
-                      المهام والآيات التي يسجلها الطالب بصوته لترفع للإدارة لتصحيحها وتحديد مستواه
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addOralTask}
-                    className="hq-action"
-                    style={{ background: '#E2EFE7', color: '#0F5940', border: '1px solid #177B58', fontSize: 13 }}
-                  >
-                    <Plus size={14} aria-hidden />
-                    إضافة مهمة تسميع
-                  </button>
-                </div>
-
-                {(!placementExam.oralTasks || placementExam.oralTasks.length === 0) ? (
-                  <div className="text-center py-6 border border-dashed rounded-xl" style={{ borderColor: HQ.LINE }}>
-                    <p className="text-sm font-medium" style={{ color: HQ.MUTED, margin: '0 0 8px' }}>
-                      لم تُضف مهام شفهية مخصصة بعد (سيتم استخدام المهام الافتراضية مثل سورة الفاتحة وأحكام التجويد)
-                    </p>
-                    <button
-                      type="button"
-                      onClick={addOralTask}
-                      className="hq-action"
-                      style={{ background: HQ.MENTOR, color: '#fff', fontSize: 13 }}
-                    >
-                      <Plus size={14} aria-hidden />
-                      إضافة أول مهمة تسميع
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {placementExam.oralTasks.map((ot, oti) => (
-                      <div key={oti} className="p-4 rounded-xl space-y-3 border" style={{ background: HQ.PAPER, borderColor: HQ.LINE }}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold px-2.5 py-1 rounded-full" style={{ background: '#E2EFE7', color: '#0F5940' }}>
-                            مهمة التسميع {oti + 1}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => removeOralTask(oti)}
-                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50"
-                            aria-label={`حذف مهمة التسميع ${oti + 1}`}
-                          >
-                            <Trash2 size={16} aria-hidden />
-                          </button>
-                        </div>
-
-                        <div>
-                          <label style={lblSm}>تعليمات المهمة (ما يطلب من الطالب)</label>
-                          <input
-                            type="text"
-                            value={ot.instruction || ''}
-                            onChange={e => updateOralTask(oti, 'instruction', e.target.value)}
-                            className="text-sm focus:border-[#177B58] focus:outline-none"
-                            style={field}
-                            placeholder="مثال: اقرأ سورة الفاتحة بصوت واضح مع مراعاة التجويد"
-                          />
-                        </div>
-
-                        <div>
-                          <label style={lblSm}>النص القرآني المطلوب قراءته (اختياري)</label>
-                          <textarea
-                            value={ot.arabicText || ''}
-                            onChange={e => updateOralTask(oti, 'arabicText', e.target.value)}
-                            className="text-sm resize-none focus:border-[#177B58] focus:outline-none"
-                            style={{ ...field, minHeight: 64, direction: 'rtl' }}
-                            placeholder="اكتب الآيات أو الكلمات القرآنية المطلوب تسميعها..."
-                          />
-                        </div>
-
-                        <div className="w-44">
-                          <label style={lblSm}>المدة المقترحة (بالثواني)</label>
-                          <input
-                            type="number"
-                            min={10}
-                            max={300}
-                            value={ot.duration || 60}
-                            onChange={e => updateOralTask(oti, 'duration', parseInt(e.target.value) || 60)}
-                            className="text-sm focus:border-[#177B58] focus:outline-none"
-                            style={{ ...field, fontVariantNumeric: 'tabular-nums' }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Save Bar */}

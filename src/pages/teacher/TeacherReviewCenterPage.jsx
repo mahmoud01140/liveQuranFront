@@ -612,6 +612,39 @@ export default function TeacherReviewCenterPage() {
                       </button>
                     </div>
 
+                    {/* Written Answers Breakdown */}
+                    {result.writtenAnswers?.length > 0 && result.exam?.questions?.length > 0 && (
+                      <div className="mt-4 pt-3 space-y-2" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
+                        <p className="text-xs font-bold flex items-center gap-1.5 mb-2" style={{ color: HQ.MUTED }}>
+                          <FileText size={14} color={HQ.MENTOR} aria-hidden />
+                          نتائج الأسئلة التحريرية ({result.writtenAnswers.filter(a => a.isCorrect).length}/{result.writtenAnswers.length} صحيحة — {result.writtenPercentage || 0}%):
+                        </p>
+                        <div className="space-y-1.5">
+                          {result.writtenAnswers.map((ans, idx) => {
+                            const q = result.exam.questions[idx];
+                            if (!q || q.type === 'recitation') return null;
+                            return (
+                              <div key={idx} className="rounded-lg p-2.5 flex items-start gap-2" style={{ background: ans.isCorrect ? '#E2EFE7' : '#FEF2F2', border: `1px solid ${ans.isCorrect ? '#177B58' : '#EF4444'}22` }}>
+                                <span style={{ color: ans.isCorrect ? '#177B58' : '#EF4444', marginTop: 2, flexShrink: 0 }}>
+                                  {ans.isCorrect ? <Check size={14} /> : <X size={14} />}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-bold" style={{ color: HQ.INK, margin: 0 }}>
+                                    س{idx + 1}: {q.text || q.arabicText || '—'}
+                                  </p>
+                                  <p className="text-xs mt-0.5" style={{ color: HQ.MUTED, margin: 0 }}>
+                                    {q.type === 'mcq' && `الإجابة: ${q.options?.[ans.selectedAnswer] ?? '—'} | الصحيحة: ${q.options?.[q.correctAnswer] ?? '—'}`}
+                                    {q.type === 'true_false' && `الإجابة: ${ans.selectedAnswer === true ? 'صحيح' : ans.selectedAnswer === false ? 'خطأ' : '—'} | الصحيحة: ${q.correctAnswerBool ? 'صحيح' : 'خطأ'}`}
+                                    {q.type === 'written' && `الإجابة: ${ans.writtenAnswer || '—'}`}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Oral recordings from ExamResult */}
                     {result.oralRecordings?.length > 0 && (
                       <div className="mt-4 pt-3 space-y-3" style={{ borderTop: `1px solid ${HQ.LINE}` }}>
@@ -621,17 +654,19 @@ export default function TeacherReviewCenterPage() {
                         </p>
                         {result.oralRecordings.map((rec, j) => {
                           const taskData = result.exam?.oralTasks?.[j];
+                          // Try to find the matching recitation question if no oralTask exists
+                          const recitationQ = !taskData ? result.exam?.questions?.filter(q => q.type === 'recitation')?.[j] : null;
                           return (
                             <div key={j} className="rounded-xl p-3 space-y-2" style={{ background: HQ.PAPER }}>
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-xs font-bold px-2.5 py-1 rounded-full"
                                   style={{ background: '#E2EFE7', color: '#0F5940' }}>
-                                  مهمة {j + 1}: {taskData?.instruction || `تلاوة رقم ${j + 1}`}
+                                  مهمة {j + 1}: {taskData?.instruction || recitationQ?.instruction || recitationQ?.text || `تلاوة رقم ${j + 1}`}
                                 </span>
                               </div>
-                              {taskData?.arabicText && (
+                              {(taskData?.arabicText || recitationQ?.arabicText) && (
                                 <p className="text-sm font-semibold p-2.5 rounded-lg border leading-relaxed" style={{ background: '#fff', borderColor: HQ.LINE, color: '#177B58', direction: 'rtl' }}>
-                                  {taskData.arabicText}
+                                  {taskData?.arabicText || recitationQ?.arabicText}
                                 </p>
                               )}
                               <audio src={rec.audioUrl} controls className="w-full" style={{ height: 36 }} />
