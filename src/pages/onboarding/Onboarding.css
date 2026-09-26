@@ -259,6 +259,18 @@
   color: #FFFFFF;
 }
 
+.onb-dot.oral {
+  border-color: #C2410C;
+  font-size: 0.75rem;
+}
+
+.onb-dot.oral.ans {
+  background: #FFF7ED;
+  border-color: #C2410C;
+  color: #C2410C;
+}
+
+
 /* Task tabs (oral exam) */
 .onb-tab {
   flex: none;
