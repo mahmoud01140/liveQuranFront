@@ -25,7 +25,7 @@ const teacherNavItems = [
 const adminNavItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'الرئيسية', end: true },
   { to: '/admin/groups', icon: BookMarked, label: 'الحلقات' },
-  { to: '/admin/review', icon: Volume2, label: 'الامتحانات الشفهية' },
+  { to: '/admin/exams', icon: FileText, label: 'الامتحانات' },
   { to: '/admin/users', icon: Users, label: 'الطلاب' },
 ];
 

@@ -146,7 +146,7 @@ export default function App() {
 
             {/* Admin routes */}
             <Route path="/admin" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/admin/review" element={<ProtectedRoute role="admin"><TeacherReviewCenterPage /></ProtectedRoute>} />
+            <Route path="/admin/review" element={<ProtectedRoute role="admin"><Navigate to="/admin/groups" replace /></ProtectedRoute>} />
             <Route path="/admin/onboarding-settings" element={<ProtectedRoute role="admin"><AdminOnboardingSettingsPage /></ProtectedRoute>} />
             <Route path="/admin/payments" element={<ProtectedRoute role="admin"><AdminPaymentsPage /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute role="admin"><UsersManagement /></ProtectedRoute>} />

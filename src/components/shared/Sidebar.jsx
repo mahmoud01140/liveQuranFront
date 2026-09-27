@@ -36,7 +36,6 @@ const adminLinks = [
   { to: '/admin', icon: LayoutDashboard, label: 'الرئيسية (لوحة التحكم)', end: true },
   { section: 'التشغيل اليومي' },
   { to: '/admin/groups', icon: BookMarked, label: 'إدارة وتسكين الحلقات' },
-  { to: '/admin/review', icon: Volume2, label: 'تصحيح الامتحانات الشفهية' },
   { section: 'المحتوى والاختبارات' },
   { to: '/admin/exams', icon: FileText, label: 'بنك وإدارة الامتحانات' },
   { section: 'الإدارة' },

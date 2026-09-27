@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, BookOpen, Video, ClipboardList, FileText, ChevronLeft, RotateCcw, Volume2 } from 'lucide-react';
+import { Users, BookOpen, Video, FileText, ChevronLeft, RotateCcw } from 'lucide-react';
 import PageLayout from '../../components/shared/PageLayout';
 import api from '../../services/api';
 import '../../components/halaqa/halaqa.css';
@@ -13,17 +13,12 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
 
-  const [pendingOralCount, setPendingOralCount] = useState(0);
-
   const load = () => {
     setLoading(true);
     setLoadFailed(false);
     const fetchAnalytics = async () => {
       try {
-        const [res, oralRes] = await Promise.all([
-          api.get('/reports/analytics'),
-          api.get('/exams/results/pending-review').catch(() => ({ data: { results: [] } })),
-        ]);
+        const res = await api.get('/reports/analytics');
         const data = res.data;
         setStats({
           users: data.summary.totalUsers || 0,
@@ -31,7 +26,6 @@ export default function AdminDashboard() {
           pending: data.summary.pendingApproval || 0,
           attendance: data.summary.attendanceRate || '0%',
         });
-        setPendingOralCount(oralRes.data?.results?.length || 0);
       } catch (_) {
         try {
           const [usersRes, groupsRes, pendingRes] = await Promise.all([
@@ -102,13 +96,7 @@ export default function AdminDashboard() {
             <section aria-label="إجراءات سريعة">
               {[
                 { label: 'إدارة وتسكين الحلقات', hint: 'المجموعات والطلاب الجدد', path: '/admin/groups', icon: BookOpen, primary: true },
-                {
-                  label: 'تصحيح الامتحانات الشفهية',
-                  hint: pendingOralCount > 0 ? `${pendingOralCount} اختبار بانتظار تصحيحك الآن` : 'تقييم التلاوات الشفهية',
-                  path: '/admin/review',
-                  icon: Volume2,
-                  badge: pendingOralCount > 0 ? pendingOralCount : null,
-                },
+                { label: 'إدارة الطلاب والمستخدمين', hint: 'الاعتماد وتفاصيل الحسابات', path: '/admin/users', icon: Users },
                 { label: 'بنك الامتحانات', hint: 'إدارة ونتائج', path: '/admin/exams', icon: FileText },
                 { label: 'المدفوعات', hint: 'الإيصالات والاشتراكات', path: '/admin/payments', icon: Users },
                 { label: 'البث المباشر', hint: 'بدء حصة', path: '/admin/groups', icon: Video },
