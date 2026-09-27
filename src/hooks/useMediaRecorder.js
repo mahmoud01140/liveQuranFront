@@ -61,40 +61,61 @@ export default function useMediaRecorder({ onDataAvailable, mimeType = 'audio/we
   }, [mimeType, onDataAvailable]);
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      setIsPaused(false);
-      clearInterval(timerRef.current);
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') {
+      try {
+        recorder.stop();
+      } catch (err) {
+        console.error('Error stopping recorder:', err);
+      }
     }
-  }, [isRecording]);
+    setIsRecording(false);
+    setIsPaused(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
 
   const pauseRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording && !isPaused) {
-      mediaRecorderRef.current.pause();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === 'recording') {
+      try {
+        recorder.pause();
+      } catch (err) {
+        console.error('Error pausing recorder:', err);
+      }
       setIsPaused(true);
-      clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     }
-  }, [isRecording, isPaused]);
+  }, []);
 
   const resumeRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isPaused) {
-      mediaRecorderRef.current.resume();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state === 'paused') {
+      try {
+        recorder.resume();
+      } catch (err) {
+        console.error('Error resuming recorder:', err);
+      }
       setIsPaused(false);
       timerRef.current = setInterval(() => {
         setDuration((d) => d + 1);
       }, 1000);
     }
-  }, [isPaused]);
+  }, []);
 
   const resetRecording = useCallback(() => {
-    if (isRecording) stopRecording();
+    stopRecording();
     setAudioUrl(null);
     setAudioBlob(null);
     setDuration(0);
     setError(null);
     chunksRef.current = [];
-  }, [isRecording, stopRecording]);
+  }, [stopRecording]);
 
   return {
     isRecording,

@@ -67,17 +67,17 @@ function RecitationRecorder({ questionIndex, questionId, onSaved }) {
         <div className="flex flex-col items-center gap-4 w-full">
           <div className="relative">
             {isRecording && (
-              <div className="absolute inset-0 rounded-full animate-record opacity-50" aria-hidden />
+              <div className="absolute inset-0 rounded-full animate-record opacity-50 pointer-events-none" aria-hidden />
             )}
             <button
               type="button"
               onClick={isRecording ? stopRecording : startRecording}
-              className={`onb-record${isRecording ? ' rec' : ''}`}
+              className={`onb-record${isRecording ? ' rec' : ''} relative z-10 cursor-pointer`}
               aria-label={isRecording ? 'إيقاف التسجيل' : 'بدء التسجيل'}
               aria-pressed={isRecording}
             >
               {isRecording
-                ? <Square className="w-8 h-8 text-white" aria-hidden />
+                ? <Square className="w-8 h-8 text-white fill-white" aria-hidden />
                 : <Mic className="w-8 h-8 text-white" aria-hidden />
               }
             </button>
@@ -96,10 +96,23 @@ function RecitationRecorder({ questionIndex, questionId, onSaved }) {
             </div>
           )}
 
+          {/* Direct Stop Button during recording */}
+          {isRecording && (
+            <button
+              type="button"
+              onClick={stopRecording}
+              className="text-sm flex items-center gap-2 py-2.5 px-6 rounded-xl font-extrabold text-white cursor-pointer z-10 transition-transform active:scale-95 shadow-md"
+              style={{ background: '#DC2626', border: 'none' }}
+            >
+              <Square className="w-4 h-4 fill-white text-white" aria-hidden />
+              <span>إيقاف التسجيل وحفظ الصوت</span>
+            </button>
+          )}
+
           {/* Status text */}
           <p className="text-sm font-medium text-center" style={{ color: '#756E85' }}>
             {isRecording
-              ? 'جارٍ التسجيل... اضغط مربع الإيقاف للانتهاء'
+              ? 'جارٍ التسجيل... اضغط المربع أو الزر أعلاه لإيقاف التسجيل'
               : 'اضغط الميكروفون لتسجيل تلاوتك بصوتك'}
           </p>
 

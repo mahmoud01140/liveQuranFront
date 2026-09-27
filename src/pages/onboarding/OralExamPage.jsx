@@ -239,11 +239,12 @@ export default function OralExamPage() {
                   {/* Record / Stop Button */}
                   <div className="relative">
                     {isRecording && (
-                      <div className="absolute inset-0 rounded-full animate-record opacity-50" aria-hidden />
+                      <div className="absolute inset-0 rounded-full animate-record opacity-50 pointer-events-none" aria-hidden />
                     )}
                     <button
+                      type="button"
                       onClick={isRecording ? stopRecording : startRecording}
-                      className={`onb-record${isRecording ? ' rec' : ''}`}
+                      className={`onb-record${isRecording ? ' rec' : ''} relative z-10 cursor-pointer`}
                       aria-label={isRecording ? 'إيقاف التسجيل' : 'بدء التسجيل'}
                       aria-pressed={isRecording}
                       disabled={completed[currentTask]}
