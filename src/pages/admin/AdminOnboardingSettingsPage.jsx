@@ -43,7 +43,6 @@ const EMPTY_EXAM_Q = {
   options: ['', '', '', ''],
   correctAnswer: 0,
   correctAnswerBool: true,
-  correctAnswerText: '',
   points: 1,
   surahNumber: '',
   fromVerse: '',

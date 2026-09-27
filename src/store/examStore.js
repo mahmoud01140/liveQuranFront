@@ -116,7 +116,10 @@ const useExamStore = create((set, get) => ({
       const formData = new FormData();
       if (resultId) formData.append('resultId', resultId);
       oralRecordings.forEach((rec, idx) => {
-        if (rec.audioBlob) formData.append('recordings', rec.audioBlob, `recording-${idx}.webm`);
+        if (rec.audioBlob) {
+          const filename = rec.audioBlob.name || `recording-${idx}.webm`;
+          formData.append('recordings', rec.audioBlob, filename);
+        }
         if (rec.taskId) formData.append(`taskId_${idx}`, rec.taskId);
       });
       const res = await api.post(`/exams/${examId}/submit-oral`, formData, {

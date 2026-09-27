@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Users, BookOpen, CalendarDays, UserPlus, Check, RefreshCw, AlertCircle, Shield, RotateCcw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users, BookOpen, CalendarDays, UserPlus, Check, RefreshCw, AlertCircle, Shield, RotateCcw, Mic, MicOff, Award, Volume2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
 import useGroupStore from '../../store/groupStore';
@@ -60,7 +60,15 @@ export default function GroupsManagement() {
     setIsLoadingStudents(true);
     try {
       const res = await api.get('/users/students/unassigned', { params: levelFilter ? { level: levelFilter } : {} });
-      setUnassignedStudents(res.data.students || []);
+      const list = res.data.students || [];
+      setUnassignedStudents(list);
+
+      // Prepopulate level state with assignedLevel or default to foundation
+      const initialLevels = {};
+      list.forEach(s => {
+        initialLevels[s._id] = s.assignedLevel || 'foundation';
+      });
+      setAssignLevelState(prev => ({ ...initialLevels, ...prev }));
     } catch {
       toast.error('خطأ في جلب الطلاب المنتظرين');
     } finally {
@@ -72,16 +80,15 @@ export default function GroupsManagement() {
     const groupId = assignGroupState[student._id];
     if (!groupId) { toast.error('الرجاء اختيار مجموعة'); return; }
 
-    const level = student.assignedLevel || assignLevelState[student._id];
-    if (!level) { toast.error('الرجاء تحديد مستوى الطالب أولاً'); return; }
+    const level = assignLevelState[student._id] || student.assignedLevel || 'foundation';
 
     setAssigningId(student._id);
     try {
-      if (!student.isApproved || !student.assignedLevel) {
+      if (!student.isApproved || student.assignedLevel !== level) {
         await api.put(`/users/${student._id}/approve`, { assignedLevel: level });
       }
       await api.post(`/groups/${groupId}/add-student`, { studentId: student._id });
-      toast.success(`تم تعيين ${student.firstName} في المجموعة بنجاح`);
+      toast.success(`تم تسكين ${student.firstName} في المجموعة بنجاح`);
       fetchUnassignedStudents();
       fetchAllGroups();
     } catch (error) {
@@ -308,50 +315,199 @@ export default function GroupsManagement() {
               <div>
                 <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                   {studentsPagination.paginatedItems.map((student) => {
-                    const level = student.assignedLevel || assignLevelState[student._id] || '';
-                    const availableGroups = groupsForLevel(level);
+                    const currentLevel = assignLevelState[student._id] || student.assignedLevel || 'foundation';
+                    const availableGroups = groupsForLevel(currentLevel);
                     const isPending = !student.isApproved;
+                    const pInfo = student.placementExamInfo;
+                    const hasTakenExam = Boolean(pInfo?.hasTakenExam ?? student.placementExamTaken);
+                    const writtenScorePct = pInfo?.writtenPercentage ?? student.placementExamScore ?? null;
+                    const audioList = pInfo?.audioRecordings || student.oralExamRecordings || [];
+                    const hasOral = audioList.length > 0 || Boolean(pInfo?.hasOral);
+
                     return (
-                      <li key={student._id} style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, marginBottom: 12, padding: 16 }}>
+                      <li key={student._id} style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, marginBottom: 14, padding: 18 }}>
+                        {/* Student Info Header */}
                         <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 12 }}>
-                          <HqAvatar firstName={student.firstName} lastName={student.lastName} size={44} />
+                          <HqAvatar firstName={student.firstName} lastName={student.lastName} size={48} />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                               <strong style={{ fontSize: 16, color: HQ.INK }}>{student.firstName} {student.lastName}</strong>
                               <HqBadge tone={isPending ? 'gold' : 'mentor'}>
-                                {isPending ? 'بانتظار الموافقة' : 'موافق عليه'}
+                                {isPending ? 'بانتظار الموافقة والتسكين' : 'موافق عليه'}
                               </HqBadge>
                               {student.assignedLevel && (
-                                <HqBadge tone={LEVEL_TONE[student.assignedLevel] || 'neutral'}>{getLevelLabel(student.assignedLevel)}</HqBadge>
+                                <HqBadge tone={LEVEL_TONE[student.assignedLevel] || 'neutral'}>
+                                  المستوى المقترح: {getLevelLabel(student.assignedLevel)}
+                                </HqBadge>
                               )}
                             </div>
                             <p style={{ margin: '2px 0 0', fontSize: 13, color: HQ.MUTED, direction: 'ltr', textAlign: 'right' }}>{student.email}</p>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          {!student.assignedLevel && (
-                            <select value={assignLevelState[student._id] || ''}
-                              onChange={e => setAssignLevelState(prev => ({ ...prev, [student._id]: e.target.value }))}
-                              aria-label={`مستوى ${student.firstName}`} style={{ ...selectStyle, flex: '1 1 140px' }}>
-                              <option value="">المستوى...</option>
-                              {LEVELS.map(l => <option key={l} value={l}>{getLevelLabel(l)}</option>)}
-                            </select>
+
+                        {/* Placement Exam Details Card */}
+                        <div style={{
+                          background: HQ.PAPER,
+                          border: `1px solid ${HQ.LINE}`,
+                          borderRadius: 14,
+                          padding: '12px 14px',
+                          marginBottom: 14,
+                        }}>
+                          {!hasTakenExam ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#C2410C' }}>
+                              <AlertCircle size={18} />
+                              <span style={{ fontSize: 13, fontWeight: 800 }}>لم يؤدِ امتحان تحديد المستوى بعد</span>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                                {/* Written score */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    width: 28, height: 28, borderRadius: 8, background: '#E2EFE7', color: '#0F5940',
+                                  }}>
+                                    <Award size={15} />
+                                  </span>
+                                  <div>
+                                    <span style={{ fontSize: 13, fontWeight: 800, color: HQ.INK }}>
+                                      نتيجة التحريري (اختياري وصح/خطأ):
+                                    </span>
+                                    <span style={{
+                                      marginRight: 6, fontSize: 14, fontWeight: 900,
+                                      color: (writtenScorePct ?? 0) >= 60 ? '#177B58' : '#C2410C',
+                                      fontVariantNumeric: 'tabular-nums',
+                                    }}>
+                                      {writtenScorePct !== null ? `${writtenScorePct}%` : '—'}
+                                    </span>
+                                    {pInfo?.writtenScore !== null && pInfo?.writtenScore !== undefined && (
+                                      <span style={{ fontSize: 12, color: HQ.MUTED, marginRight: 4 }}>
+                                        ({pInfo.writtenScore} نقطة)
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Oral status badge */}
+                                {hasOral ? (
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    background: '#E2EFE7', color: '#0F5940', padding: '4px 10px',
+                                    borderRadius: 9999, fontSize: 12, fontWeight: 800,
+                                  }}>
+                                    <Mic size={14} />
+                                    تم تسليم التلاوة الشفهية ({audioList.length} تسجيل)
+                                  </span>
+                                ) : (
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                                    background: '#FFF1EE', color: '#C2410C', padding: '4px 10px',
+                                    borderRadius: 9999, fontSize: 12, fontWeight: 800,
+                                  }}>
+                                    <MicOff size={14} />
+                                    لم يؤدِ الامتحان الشفهي
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Audio Player for oral recordings */}
+                              {hasOral && audioList.length > 0 && (
+                                <div style={{
+                                  borderTop: `1px solid ${HQ.LINE}`,
+                                  paddingTop: 8,
+                                  marginTop: 2,
+                                  display: 'flex', flexDirection: 'column', gap: 8,
+                                }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: HQ.MUTED, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <Volume2 size={14} color={HQ.MENTOR} />
+                                    استمع لتسجيل صوت الطالب لتقييم مستواه:
+                                  </span>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    {audioList.map((url, recIdx) => (
+                                      <div key={recIdx} style={{
+                                        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                                        background: HQ.SURFACE, padding: '6px 12px', borderRadius: 10,
+                                        border: `1px solid ${HQ.LINE}`,
+                                      }}>
+                                        <span style={{ fontSize: 12, fontWeight: 800, color: HQ.INK, flex: 'none' }}>
+                                          {audioList.length > 1 ? `تسجيل ${recIdx + 1}:` : 'التسجيل الصوتي:'}
+                                        </span>
+                                        <audio
+                                          controls
+                                          src={url}
+                                          preload="none"
+                                          style={{ flex: 1, height: 32, minWidth: 220 }}
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           )}
-                          <select value={assignGroupState[student._id] || ''}
-                            onChange={e => setAssignGroupState(prev => ({ ...prev, [student._id]: e.target.value }))}
-                            aria-label={`مجموعة ${student.firstName}`} style={{ ...selectStyle, flex: '2 1 180px' }}>
-                            <option value="">المجموعة...</option>
-                            {availableGroups.map(g => (
-                              <option key={g._id} value={g._id} disabled={(g.students?.length || 0) >= g.maxStudents}>
-                                {g.name} ({g.students?.length || 0}/{g.maxStudents})
-                              </option>
-                            ))}
-                          </select>
-                          <button type="button" onClick={() => handleAssignStudent(student)}
-                            disabled={assigningId === student._id || !assignGroupState[student._id]}
-                            className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', padding: '0 20px', fontSize: 14, flex: '1 1 120px', opacity: (assigningId === student._id || !assignGroupState[student._id]) ? 0.5 : 1 }}>
-                            {assigningId === student._id ? <LoadingSpinner size="sm" color="white" /> : <><UserPlus size={16} /> {isPending ? 'موافقة وتسكين' : 'تسكين'}</>}
-                          </button>
+                        </div>
+
+                        {/* Level and Group Assignment Controls */}
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                          <div style={{ flex: '1 1 150px' }}>
+                            <label style={{ fontSize: 12, fontWeight: 800, color: HQ.MUTED, marginBottom: 4, display: 'block' }}>
+                              المستوى:
+                            </label>
+                            <select
+                              value={currentLevel}
+                              onChange={e => setAssignLevelState(prev => ({ ...prev, [student._id]: e.target.value }))}
+                              aria-label={`مستوى ${student.firstName}`}
+                              style={{ ...selectStyle, width: '100%' }}
+                            >
+                              {LEVELS.map(l => (
+                                <option key={l} value={l}>{getLevelLabel(l)}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div style={{ flex: '2 1 200px' }}>
+                            <label style={{ fontSize: 12, fontWeight: 800, color: HQ.MUTED, marginBottom: 4, display: 'block' }}>
+                              المجموعة الدراسية:
+                            </label>
+                            <select
+                              value={assignGroupState[student._id] || ''}
+                              onChange={e => setAssignGroupState(prev => ({ ...prev, [student._id]: e.target.value }))}
+                              aria-label={`مجموعة ${student.firstName}`}
+                              style={{ ...selectStyle, width: '100%' }}
+                            >
+                              <option value="">اختر المجموعة...</option>
+                              {availableGroups.map(g => (
+                                <option key={g._id} value={g._id} disabled={(g.students?.length || 0) >= g.maxStudents}>
+                                  {g.name} ({g.students?.length || 0}/{g.maxStudents})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div style={{ flex: '1 1 130px' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleAssignStudent(student)}
+                              disabled={assigningId === student._id || !assignGroupState[student._id]}
+                              className="hq-action"
+                              style={{
+                                width: '100%',
+                                background: HQ.MENTOR,
+                                color: '#fff',
+                                padding: '0 20px',
+                                fontSize: 14,
+                                opacity: (assigningId === student._id || !assignGroupState[student._id]) ? 0.5 : 1,
+                              }}
+                            >
+                              {assigningId === student._id ? (
+                                <LoadingSpinner size="sm" color="white" />
+                              ) : (
+                                <>
+                                  <UserPlus size={16} /> {isPending ? 'موافقة وتسكين' : 'تسكين'}
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </li>
                     );

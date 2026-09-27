@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
-import { Clock, ChevronLeft, Check, X, Mic, Square, CheckCircle, RotateCcw, Volume2 } from 'lucide-react';
+import { Clock, ChevronLeft, Check, X, Mic, Square, CheckCircle, RotateCcw, Volume2, Upload, FileAudio } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '../../store/authStore';
 import useExamStore from '../../store/examStore';
@@ -10,88 +10,137 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import { formatCountdown } from '../../utils/helpers';
 import './Onboarding.css';
 
-/* ─── Inline recorder for a single recitation question ─── */
+/* ─── Inline recorder for a single oral question (Mic recording OR File upload) ─── */
 function RecitationRecorder({ questionIndex, questionId, onSaved }) {
   const { addOralRecording } = useExamStore();
   const {
-    isRecording, duration, audioUrl, audioBlob, error,
-    startRecording, stopRecording, resetRecording,
+    isRecording, duration, audioUrl: recAudioUrl, audioBlob: recAudioBlob, error: recError,
+    startRecording, stopRecording, resetRecording: resetMediaRecorder,
   } = useMediaRecorder();
+
+  const [fileAudioBlob, setFileAudioBlob] = useState(null);
+  const [fileAudioUrl, setFileAudioUrl] = useState(null);
+  const [fileName, setFileName] = useState('');
   const [saved, setSaved] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const activeAudioUrl = fileAudioUrl || recAudioUrl;
+  const activeAudioBlob = fileAudioBlob || recAudioBlob;
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('audio/')) {
+      toast.error('يرجى اختيار ملف صوتي صالح (MP3, WAV, M4A, إلخ)');
+      return;
+    }
+    resetMediaRecorder();
+    setSaved(false);
+    setFileAudioBlob(file);
+    setFileName(file.name);
+    const objUrl = URL.createObjectURL(file);
+    setFileAudioUrl(objUrl);
+    toast.success(`تم اختيار ملف: ${file.name}`);
+  };
 
   const handleSave = () => {
-    if (!audioBlob) return;
-    addOralRecording(questionId || `recitation-q-${questionIndex}`, audioBlob, audioUrl);
+    if (!activeAudioBlob) return;
+    addOralRecording(questionId || `recitation-q-${questionIndex}`, activeAudioBlob, activeAudioUrl);
     setSaved(true);
     if (onSaved) onSaved();
-    toast.success('تم حفظ التسجيل وسيُرسل للمشرف مع تسليم الامتحان');
+    toast.success('تم حفظ التسجيل وسيُرسل للإدارة مع تسليم الامتحان');
   };
 
   const handleRedo = () => {
     setSaved(false);
-    resetRecording();
+    setFileAudioBlob(null);
+    setFileAudioUrl(null);
+    setFileName('');
+    resetMediaRecorder();
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      {/* Record / Stop Button */}
-      <div className="relative">
-        {isRecording && (
-          <div className="absolute inset-0 rounded-full animate-record opacity-50" aria-hidden />
-        )}
-        <button
-          onClick={isRecording ? stopRecording : (saved ? handleRedo : startRecording)}
-          className={`onb-record${isRecording ? ' rec' : ''}`}
-          aria-label={isRecording ? 'إيقاف التسجيل' : saved ? 'إعادة التسجيل' : 'بدء التسجيل'}
-          aria-pressed={isRecording}
-          style={saved ? { background: '#177B58' } : undefined}
-        >
-          {isRecording
-            ? <Square className="w-8 h-8 text-white" aria-hidden />
-            : saved
-              ? <CheckCircle className="w-8 h-8 text-white" aria-hidden />
-              : <Mic className="w-8 h-8 text-white" aria-hidden />
-          }
-        </button>
-      </div>
+    <div className="flex flex-col items-center gap-4 w-full">
+      {/* Record / Stop Button & Upload Option */}
+      {!saved && !activeAudioUrl && (
+        <div className="flex flex-col items-center gap-4 w-full">
+          <div className="relative">
+            {isRecording && (
+              <div className="absolute inset-0 rounded-full animate-record opacity-50" aria-hidden />
+            )}
+            <button
+              type="button"
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`onb-record${isRecording ? ' rec' : ''}`}
+              aria-label={isRecording ? 'إيقاف التسجيل' : 'بدء التسجيل'}
+              aria-pressed={isRecording}
+            >
+              {isRecording
+                ? <Square className="w-8 h-8 text-white" aria-hidden />
+                : <Mic className="w-8 h-8 text-white" aria-hidden />
+              }
+            </button>
+          </div>
 
-      {/* Live timer while recording */}
-      {isRecording && (
-        <div
-          className="flex items-center gap-2 font-bold text-lg"
-          style={{ color: '#C2410C', fontVariantNumeric: 'tabular-nums' }}
-          role="timer"
-          aria-label="مدة التسجيل"
-        >
-          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#C2410C' }} aria-hidden />
-          {formatCountdown(duration)}
+          {/* Live timer while recording */}
+          {isRecording && (
+            <div
+              className="flex items-center gap-2 font-bold text-lg"
+              style={{ color: '#C2410C', fontVariantNumeric: 'tabular-nums' }}
+              role="timer"
+              aria-label="مدة التسجيل"
+            >
+              <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#C2410C' }} aria-hidden />
+              {formatCountdown(duration)}
+            </div>
+          )}
+
+          {/* Status text */}
+          <p className="text-sm font-medium text-center" style={{ color: '#756E85' }}>
+            {isRecording
+              ? 'جارٍ التسجيل... اضغط مربع الإيقاف للانتهاء'
+              : 'اضغط الميكروفون لتسجيل تلاوتك بصوتك'}
+          </p>
+
+          {/* Mic permission error */}
+          {recError && (
+            <p
+              role="alert"
+              className="text-sm px-4 py-2 rounded-xl w-full text-center"
+              style={{ color: '#C2410C', background: '#FFF', border: '1px solid #C2410C' }}
+            >
+              {recError}
+            </p>
+          )}
+
+          {/* File Upload Alternative */}
+          {!isRecording && (
+            <div className="w-full pt-2 flex flex-col items-center">
+              <span className="text-xs text-muted-foreground mb-2" style={{ color: '#756E85' }}>— أو يمكنك رفع ملف صوتي جاهز من جهازك —</span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="audio/*"
+                onChange={handleFileUpload}
+                className="hidden"
+                id={`oral-upload-${questionIndex}`}
+              />
+              <label
+                htmlFor={`oral-upload-${questionIndex}`}
+                className="onb-ghost cursor-pointer text-xs flex items-center gap-2 py-2 px-4 rounded-xl border border-dashed hover:bg-emerald-50 transition-colors"
+                style={{ borderColor: '#177B58', color: '#177B58' }}
+              >
+                <Upload className="w-4 h-4" aria-hidden />
+                <span>رفع ملف صوتي (MP3 / WAV / M4A)</span>
+              </label>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Status text */}
-      <p className="text-sm font-medium text-center" style={{ color: '#756E85' }}>
-        {saved
-          ? '✅ تم حفظ التسجيل — سيُرفع تلقائياً مع تسليم الامتحان'
-          : isRecording
-            ? 'جارٍ التسجيل... اضغط مربع الإيقاف للانتهاء'
-            : audioUrl
-              ? 'تم التسجيل — استمع للمراجعة ثم احفظ أو أعد التسجيل'
-              : 'اضغط زر الميكروفون لتسجيل التلاوة بصوتك'}
-      </p>
-
-      {/* Mic permission error */}
-      {error && (
-        <p
-          role="alert"
-          className="text-sm px-4 py-2 rounded-xl w-full text-center"
-          style={{ color: '#C2410C', background: '#FFF', border: '1px solid #C2410C' }}
-        >
-          {error}
-        </p>
-      )}
-
-      {/* Audio preview + save / redo — shown after stopping & before saving */}
-      {audioUrl && !isRecording && !saved && (
+      {/* Audio preview + save / redo — shown after recording or file selection & before saving */}
+      {activeAudioUrl && !isRecording && !saved && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -99,18 +148,20 @@ function RecitationRecorder({ questionIndex, questionId, onSaved }) {
           className="w-full space-y-3"
         >
           <div className="rounded-xl p-3" style={{ background: '#F8F5FF', border: '1px solid #C4B5D0' }}>
-            <p className="text-xs font-bold mb-2 flex items-center gap-1" style={{ color: '#756E85' }}>
-              <Volume2 className="w-3.5 h-3.5" aria-hidden />
-              استمع للتسجيل قبل الحفظ:
+            <p className="text-xs font-bold mb-2 flex items-center justify-between gap-1" style={{ color: '#756E85' }}>
+              <span className="flex items-center gap-1.5">
+                {fileAudioBlob ? <FileAudio className="w-4 h-4 text-emerald-600" /> : <Volume2 className="w-3.5 h-3.5" />}
+                {fileAudioBlob ? `الملف الصوتي: ${fileName}` : 'استمع للتسجيل قبل الحفظ:'}
+              </span>
             </p>
-            <audio src={audioUrl} controls className="w-full rounded-xl" />
+            <audio src={activeAudioUrl} controls className="w-full rounded-xl" />
           </div>
           <div className="flex gap-3">
-            <button onClick={resetRecording} className="onb-ghost flex-1 text-sm">
+            <button type="button" onClick={handleRedo} className="onb-ghost flex-1 text-sm">
               <RotateCcw className="w-4 h-4" aria-hidden />
-              إعادة التسجيل
+              إعادة التسجيل / الرفع
             </button>
-            <button onClick={handleSave} className="onb-btn flex-1 text-sm">
+            <button type="button" onClick={handleSave} className="onb-btn flex-1 text-sm">
               <CheckCircle className="w-4 h-4" aria-hidden />
               حفظ التسجيل
             </button>
@@ -123,15 +174,20 @@ function RecitationRecorder({ questionIndex, questionId, onSaved }) {
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="w-full"
+          className="w-full space-y-3"
         >
-          <div className="flex items-center justify-center gap-2 font-bold mb-2" style={{ color: '#177B58' }}>
-            <CheckCircle className="w-5 h-5" aria-hidden />
-            تم حفظ التسجيل بنجاح
+          <div className="rounded-xl p-3" style={{ background: '#E2EFE7', border: '1px solid #177B58' }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="flex items-center gap-2 font-bold text-sm" style={{ color: '#177B58' }}>
+                <CheckCircle className="w-5 h-5" aria-hidden />
+                {fileAudioBlob ? `تم حفظ الملف: ${fileName}` : 'تم حفظ التسجيل الصوتي بنجاح'}
+              </span>
+            </div>
+            {activeAudioUrl && <audio src={activeAudioUrl} controls className="w-full rounded-xl" />}
           </div>
-          <button onClick={handleRedo} className="onb-ghost w-full text-sm">
+          <button type="button" onClick={handleRedo} className="onb-ghost w-full text-sm">
             <RotateCcw className="w-4 h-4" aria-hidden />
-            إعادة التسجيل من جديد
+            إعادة التسجيل أو تغيير الملف
           </button>
         </motion.div>
       )}
@@ -141,7 +197,11 @@ function RecitationRecorder({ questionIndex, questionId, onSaved }) {
 
 export default function WrittenExamPage() {
   const { user, updateUser } = useAuthStore();
-  const { currentExam, fetchPlacementExam, setAnswer, answers, setWrittenAnswer, writtenAnswers, oralRecordings, submitWrittenExam, submitOralExam, isLoading, isSubmitting, placementCompleted, placementResult, writtenCompleted } = useExamStore();
+  const {
+    currentExam, fetchPlacementExam, setAnswer, answers,
+    oralRecordings, submitWrittenExam, submitOralExam, isLoading, isSubmitting,
+    placementCompleted, placementResult
+  } = useExamStore();
   const navigate = useNavigate();
   const [currentQ, setCurrentQ] = useState(0);
   const [timeLeft, setTimeLeft] = useState(null);
@@ -158,29 +218,12 @@ export default function WrittenExamPage() {
     fetchPlacementExam(regType);
   }, [regType]);
 
-  // Redirect if already completed — or if written is done and the oral
-  // step is still open (retaking would 400 as duplicate on submit).
-  // This applies to inline-recitation exams too: missing recordings must
-  // recover on the oral page, never strand the student on a retake.
+  // Redirect if already completed
   useEffect(() => {
     if (placementCompleted && placementResult) {
-      const hasOral = (placementResult.oralRecordings?.length > 0) || placementResult.status === 'reviewed';
-      if (hasOral) {
-        toast('لقد أجريت امتحان التحديد مسبقاً');
-        navigate('/onboarding/result', { state: { resultId: placementResult._id }, replace: true });
-      } else {
-        navigate('/onboarding/oral-exam', {
-          state: { resultId: placementResult._id, examId: currentExam?._id },
-          replace: true,
-        });
-      }
-    } else if (writtenCompleted && placementResult && !placementCompleted) {
-      navigate('/onboarding/oral-exam', {
-        state: { resultId: placementResult._id, examId: currentExam?._id },
-        replace: true,
-      });
+      navigate('/onboarding/result', { state: { resultId: placementResult._id }, replace: true });
     }
-  }, [placementCompleted, placementResult, writtenCompleted, currentExam, navigate]);
+  }, [placementCompleted, placementResult, navigate]);
 
   useEffect(() => {
     if (currentExam?.duration) {
@@ -194,8 +237,6 @@ export default function WrittenExamPage() {
     return () => clearInterval(timer);
   }, [timeLeft]);
 
-  // The correct answer is never revealed during the exam — the student
-  // may freely change their choice until they submit.
   const handleAnswer = (qIdx, aIdx) => {
     setAnswer(qIdx, aIdx);
   };
@@ -203,17 +244,13 @@ export default function WrittenExamPage() {
   const doSubmit = async () => {
     const result = await submitWrittenExam(currentExam._id);
 
-    // If there are inline recitation recordings, submit them directly.
-    // A failed upload must NOT clear the recovery flags — the student
-    // finishes on the oral page instead of losing the recordings silently.
+    // If there are oral recordings, submit them directly
     const hasInlineRecordings = hasRecitationQuestions && oralRecordings.length > 0;
-    let oralUploaded = false;
     if (hasInlineRecordings) {
       try {
         await submitOralExam(currentExam._id, result._id);
-        oralUploaded = true;
-      } catch (_) {
-        console.error('Oral submission alongside written failed, will retry on oral page');
+      } catch (err) {
+        console.error('Oral upload error:', err);
       }
     }
 
@@ -221,34 +258,19 @@ export default function WrittenExamPage() {
     updateUser({ placementExamTaken: true });
     try {
       localStorage.removeItem(`survey_answers_${user?._id}_${regType}`);
-      if (oralUploaded) {
-        // Recordings safely stored — no separate oral step needed
-        localStorage.removeItem(`oral_pending_${user?._id}`);
-        localStorage.removeItem(`oral_context_${user?._id}`);
-      } else {
-        localStorage.setItem(`oral_pending_${user?._id}`, '1');
-        localStorage.setItem(`oral_context_${user?._id}`, JSON.stringify({ resultId: result._id, examId: currentExam._id }));
-      }
+      localStorage.removeItem(`oral_pending_${user?._id}`);
+      localStorage.removeItem(`oral_context_${user?._id}`);
     } catch (_) {}
 
-    if (oralUploaded) {
-      toast.success('تم تسليم الامتحان!');
-      navigate('/onboarding/result', { state: { resultId: result._id } });
-    } else if (hasInlineRecordings) {
-      toast.error('سُلم التحريري لكن تعذر رفع التسجيلات — أكملها في الخطوة التالية');
-      navigate('/onboarding/oral-exam', { state: { resultId: result._id, examId: currentExam._id } });
-    } else {
-      toast.success('تم تسليم الامتحان!');
-      navigate('/onboarding/oral-exam', { state: { resultId: result._id, examId: currentExam._id } });
-    }
+    toast.success('تم تسليم الامتحان بنجاح!');
+    navigate('/onboarding/result', { state: { resultId: result._id } });
   };
 
-  // Answered = MCQ/true-false choices + non-empty written texts + saved recitation recordings
+  // Answered = MCQ/true-false choices + saved recitation recordings
   const isAnswered = (idx) => {
     const q = currentExam?.questions?.[idx];
     if (q?.type === 'recitation') return !!recitationSaved[idx];
-    return answers[idx] !== undefined ||
-      (typeof writtenAnswers[idx] === 'string' && writtenAnswers[idx].trim() !== '');
+    return answers[idx] !== undefined;
   };
 
   const handleSubmit = async (auto = false) => {
@@ -397,25 +419,8 @@ export default function WrittenExamPage() {
                       );
                     })}
                   </div>
-                ) : question.type === 'written' ? (
-                  /* Written / Fill-in Question — text input (scored from writtenAnswers slice) */
-                  <div className="space-y-3">
-                    <textarea
-                      className="onb-opt"
-                      rows={3}
-                      placeholder="اكتب إجابتك هنا..."
-                      value={writtenAnswers[currentQ] || ''}
-                      onChange={e => setWrittenAnswer(currentQ, e.target.value)}
-                      style={{
-                        width: '100%', resize: 'vertical', textAlign: 'right',
-                        fontFamily: 'inherit', fontSize: '1rem',
-                        ...(writtenAnswers[currentQ] ? { borderColor: '#177B58', background: '#E2EFE7', color: '#0F5940' } : undefined),
-                      }}
-                      aria-label="حقل الإجابة الكتابية"
-                    />
-                  </div>
                 ) : question.type === 'recitation' ? (
-                  /* Recitation Question — inline audio recording */
+                  /* Oral Question — inline audio recording or file upload */
                   <div className="space-y-4">
                     <div className="flex items-start gap-3 rounded-2xl p-3 mb-2" style={{ background: '#E2EFE7', border: '1px solid #177B58' }}>
                       <Mic className="w-5 h-5 flex-none mt-0.5" style={{ color: '#177B58' }} aria-hidden />
