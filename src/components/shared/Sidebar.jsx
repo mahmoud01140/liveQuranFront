@@ -2,7 +2,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen, Video, FileText,
   BarChart2, Settings, BookMarked, ClipboardList,
-  UserCheck, Book, TrendingUp, ChevronLeft, Sparkles, MessageCircle, CalendarCheck, FolderOpen, Flame, CreditCard,
+  UserCheck, Book, TrendingUp, ChevronLeft, Sparkles,
+  CalendarCheck, FolderOpen, Flame, CreditCard,
   Volume2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,7 +16,6 @@ const studentLinks = [
   { to: '/student', icon: LayoutDashboard, label: 'المطلوب مني اليوم', end: true },
   { to: '/student/curriculum', icon: BookOpen, label: 'المنهج والمجموعة' },
   { to: '/student/quran', icon: BookMarked, label: 'المصحف الإلكتروني والمعلم' },
-  { to: '/student/discussion', icon: MessageCircle, label: 'غرفة النقاش' },
   { to: '/student/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },
   { to: '/student/subscription', icon: CreditCard, label: 'الاشتراك' },
 ];
@@ -26,7 +26,6 @@ const teacherLinks = [
   { to: '/teacher/daily-review', icon: CalendarCheck, label: 'مراجعة الحفظ' },
   { to: '/teacher/review', icon: ClipboardList, label: 'مركز التصحيح والمراجعة' },
   { to: '/teacher/exams', icon: FileText, label: 'بنك وإدارة الامتحانات' },
-  { to: '/teacher/discussion', icon: MessageCircle, label: 'غرفة النقاش' },
   { to: '/teacher/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },
 ];
 
@@ -43,7 +42,6 @@ const adminLinks = [
   { to: '/admin/payments', icon: CreditCard, label: 'الاشتراكات والمدفوعات' },
   { to: '/admin/reports', icon: BarChart2, label: 'التقارير والإحصاءات' },
   { section: 'النظام' },
-  { to: '/admin/discussions', icon: MessageCircle, label: 'غرفة النقاش' },
   { to: '/admin/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },
   { to: '/admin/onboarding-settings', icon: Settings, label: 'إعدادات تحديد المستوى' },
 ];

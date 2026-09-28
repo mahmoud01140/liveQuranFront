@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard, BookOpen, Video, FileText, TrendingUp,
-  Users, ClipboardList, MessageCircle, BarChart2, BookMarked, Volume2,
+  Users, ClipboardList, BarChart2, BookMarked, Volume2,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import '../../components/halaqa/halaqa.css';
@@ -12,14 +12,12 @@ const studentNavItems = [
   { to: '/student', icon: LayoutDashboard, label: 'المطلوب اليوم', end: true },
   { to: '/student/curriculum', icon: BookOpen, label: 'المنهج والدروس' },
   { to: '/student/quran', icon: BookMarked, label: 'المصحف' },
-  { to: '/student/discussion', icon: MessageCircle, label: 'النقاش' },
 ];
 
 const teacherNavItems = [
   { to: '/teacher', icon: LayoutDashboard, label: 'الرئيسية', end: true },
   { to: '/teacher/groups', icon: Users, label: 'مجموعاتي' },
   { to: '/teacher/review', icon: ClipboardList, label: 'التصحيح' },
-  { to: '/teacher/discussion', icon: MessageCircle, label: 'النقاش' },
 ];
 
 const adminNavItems = [

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   CheckCircle, BookOpen, ExternalLink, Video,
-  Lock, Award, PenTool, Users, Calendar,
+  Lock, Award, PenTool, Users, Calendar, MessageCircle,
 } from 'lucide-react';
 import Navbar from '../../components/shared/Navbar';
 import Sidebar from '../../components/shared/Sidebar';
@@ -420,6 +420,17 @@ export default function CurriculumPage() {
                                     padding: '0 16px', fontSize: 13, textDecoration: 'none',
                                   }}>
                                   {isDone ? 'مراجعة' : 'ابدأ'}
+                                </Link>
+                              )}
+                              {unlocked && (
+                                <Link to={`/student/lessons/${lid}/discussion`} className="hq-action"
+                                  aria-label={`نقاش درس ${lesson.title}`}
+                                  style={{
+                                    background: HQ.PAPER, color: HQ.MENTOR,
+                                    border: `1.5px solid ${HQ.LINE}`,
+                                    padding: '0 16px', fontSize: 13, textDecoration: 'none',
+                                  }}>
+                                  <MessageCircle size={15} /> نقاش الدرس
                                 </Link>
                               )}
                             </span>

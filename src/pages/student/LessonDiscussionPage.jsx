@@ -1,24 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageCircle, Send, Pin, Trash2, Reply, ChevronDown, X, AlertCircle, Loader2 } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { MessageCircle, Send, Pin, Trash2, Reply, ChevronDown, X, AlertCircle, Loader2, ArrowRight, RefreshCw } from 'lucide-react';
 import PageLayout from '../../components/shared/PageLayout';
 import useAuthStore from '../../store/authStore';
 import useDiscussionStore from '../../store/discussionStore';
-import { getSocket } from '../../services/socket';
-import { timeAgoAr, NO_GROUP_TITLE, NO_GROUP_HINT } from '../../utils/helpers';
+import { timeAgoAr } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 import '../../components/halaqa/halaqa.css';
 import { HQ, HqAvatar, HqBadge } from '../../components/halaqa/primitives';
 
-/* غرفة النقاش — talk to the circle without complexity.
-   Same socket events, grouping, reply/pin/delete, typing, scroll logic.
-   Fix: actions always visible (never hover-only), calmer bubbles. */
+/* غرفة نقاش الدرس — room per lesson, visible to that lesson's group.
+   Pure HTTP polling (6s), no socket.io — Vercel-safe. */
 
-export default function DiscussionPage() {
+const POLL_MS = 6000;
+
+export default function LessonDiscussionPage() {
+  const { lessonId } = useParams();
   const { user } = useAuthStore();
   const {
-    messages, pinnedMessages, isLoading, onlineCount, typingUsers, groupName,
-    fetchDiscussion, addMessage, removeMessage, togglePin, setOnlineCount,
-    addTypingUser, removeTypingUser, pinMessage, deleteMessage, reset,
+    lessonTitle, groupName, messages, pinnedMessages, isLoading,
+    fetchLessonDiscussion, sendLessonMessage, pinLessonMessage,
+    deleteLessonMessage, reset,
   } = useDiscussionStore();
 
   const [input, setInput] = useState('');
@@ -27,69 +29,42 @@ export default function DiscussionPage() {
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendFailed, setSendFailed] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const inputRef = useRef(null);
-  const typingTimeout = useRef(null);
 
-  const groupId = user?.group?._id || user?.group;
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
-  const isAdmin = user?.role === 'admin';
-  const canModerate = isTeacher || isAdmin;
+  const canModerate = isTeacher;
+  const backTo = user?.role === 'teacher' ? '/teacher/groups' : '/student/curriculum';
 
-  // Fetch discussion data (unchanged)
-  useEffect(() => {
-    if (groupId) {
-      fetchDiscussion(groupId);
+  const load = useCallback(async (silent = false) => {
+    if (!lessonId) return;
+    try {
+      setLoadFailed(false);
+      await fetchLessonDiscussion(lessonId, { silent });
+    } catch {
+      if (!silent) setLoadFailed(true);
     }
-    return () => reset();
-  }, [groupId]);
+  }, [lessonId, fetchLessonDiscussion]);
 
-  // Socket setup (unchanged)
+  // Initial load + polling (paused when tab hidden)
   useEffect(() => {
-    if (!groupId) return;
-    const socket = getSocket();
-
-    socket.emit('join-discussion', { groupId });
-
-    socket.on('discussion-message', ({ message }) => {
-      addMessage(message);
-    });
-
-    socket.on('discussion-message-deleted', ({ messageId }) => {
-      removeMessage(messageId);
-    });
-
-    socket.on('discussion-pin-toggled', ({ messageId, isPinned }) => {
-      togglePin(messageId, isPinned);
-    });
-
-    socket.on('discussion-online-count', ({ count }) => {
-      setOnlineCount(count);
-    });
-
-    socket.on('discussion-typing', ({ userId, userName, isTyping }) => {
-      if (userId === user?._id) return;
-      if (isTyping) {
-        addTypingUser(userId, userName);
-        setTimeout(() => removeTypingUser(userId), 3000);
-      } else {
-        removeTypingUser(userId);
-      }
-    });
-
+    load(false);
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') load(true);
+    }, POLL_MS);
+    const onVis = () => { if (document.visibilityState === 'visible') load(true); };
+    document.addEventListener('visibilitychange', onVis);
     return () => {
-      socket.emit('leave-discussion', { groupId });
-      socket.off('discussion-message');
-      socket.off('discussion-message-deleted');
-      socket.off('discussion-pin-toggled');
-      socket.off('discussion-online-count');
-      socket.off('discussion-typing');
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+      reset();
     };
-  }, [groupId]);
+  }, [load, reset]);
 
-  // Auto-scroll (unchanged)
+  // Auto-scroll when near bottom
   useEffect(() => {
     const container = chatContainerRef.current;
     if (!container) return;
@@ -99,7 +74,6 @@ export default function DiscussionPage() {
     }
   }, [messages]);
 
-  // Scroll detection (unchanged)
   const handleScroll = useCallback(() => {
     const container = chatContainerRef.current;
     if (!container) return;
@@ -111,24 +85,16 @@ export default function DiscussionPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Send message (unchanged transport + failed state)
   const handleSend = async () => {
     if (!input.trim() || isSending) return;
     setIsSending(true);
     setSendFailed(false);
     try {
-      const socket = getSocket();
-      socket.emit('send-discussion-message', {
-        groupId,
-        content: input.trim(),
-        type: 'text',
-        replyTo: replyTo?._id || null,
-        senderName: `${user.firstName} ${user.lastName}`,
-      });
+      await sendLessonMessage(lessonId, input.trim(), replyTo?._id || null);
       setInput('');
       setReplyTo(null);
       inputRef.current?.focus();
-      socket.emit('discussion-typing', { groupId, userName: user.firstName, isTyping: false });
+      scrollToBottom();
     } catch {
       setSendFailed(true);
     } finally {
@@ -143,48 +109,35 @@ export default function DiscussionPage() {
     }
   };
 
-  // Typing indicator (unchanged)
-  const handleTyping = () => {
-    const socket = getSocket();
-    socket.emit('discussion-typing', { groupId, userName: user.firstName, isTyping: true });
-    clearTimeout(typingTimeout.current);
-    typingTimeout.current = setTimeout(() => {
-      socket.emit('discussion-typing', { groupId, userName: user.firstName, isTyping: false });
-    }, 2000);
-  };
-
-  // Pin message (unchanged)
   const handlePin = async (msgId) => {
     try {
-      await pinMessage(groupId, msgId);
+      await pinLessonMessage(lessonId, msgId);
     } catch {
       toast.error('فشل في تثبيت الرسالة');
     }
   };
 
-  // Delete message (unchanged)
   const handleDelete = async (msgId) => {
     try {
-      await deleteMessage(groupId, msgId);
+      await deleteLessonMessage(lessonId, msgId);
     } catch {
       toast.error('فشل في حذف الرسالة');
     }
   };
 
-  // No group assigned
-  if (!groupId) {
+  if (!lessonId) {
     return (
       <PageLayout>
         <div className="halaqa" style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: 48, textAlign: 'center', maxWidth: 520, margin: '0 auto' }}>
           <AlertCircle size={40} color={HQ.MUTED} style={{ margin: '0 auto 12px' }} />
-          <p style={{ fontSize: 18, fontWeight: 900, color: HQ.INK, margin: '0 0 4px' }}>{NO_GROUP_TITLE}</p>
-          <p style={{ fontSize: 14, color: HQ.MUTED, margin: 0 }}>{NO_GROUP_HINT}</p>
+          <p style={{ fontSize: 18, fontWeight: 900, color: HQ.INK, margin: '0 0 4px' }}>لم يتم تحديد الدرس</p>
+          <p style={{ fontSize: 14, color: HQ.MUTED, margin: 0 }}>افتح النقاش من زر النقاش داخل الدرس.</p>
         </div>
       </PageLayout>
     );
   }
 
-  const activePinned = pinnedMessages.filter(m => m && !m.isDeleted);
+  const activePinned = (pinnedMessages || []).filter(m => m && !m.isDeleted);
   const iconBtn = {
     background: 'none', border: 'none', cursor: 'pointer', minWidth: 44, minHeight: 44,
     borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -196,19 +149,25 @@ export default function DiscussionPage() {
         {/* Header */}
         <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, padding: '12px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flex: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <Link to={backTo} aria-label="رجوع للدروس" style={{ ...iconBtn, flex: 'none' }}>
+              <ArrowRight size={19} color={HQ.MENTOR} />
+            </Link>
             <span style={{ width: 40, height: 40, borderRadius: 12, background: HQ.MENTOR, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
               <MessageCircle size={19} color="#fff" />
             </span>
             <div style={{ minWidth: 0 }}>
-              <h1 style={{ margin: 0, fontWeight: 900, color: HQ.INK, fontSize: 18, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>نقاش الحلقة</h1>
-              <p style={{ margin: 0, fontSize: 12, color: HQ.MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{groupName || 'مجموعتي'}</p>
+              <h1 style={{ margin: 0, fontWeight: 900, color: HQ.INK, fontSize: 18, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                نقاش: {lessonTitle || 'الدرس'}
+              </h1>
+              <p style={{ margin: 0, fontSize: 12, color: HQ.MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {groupName || 'مجموعتي'} · مرئي لطلاب المجموعة فقط
+              </p>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, padding: '6px 12px', borderRadius: 9999, fontSize: 12, fontWeight: 800, color: HQ.MENTOR }}>
-              <span className="hq-live-dot" aria-hidden style={{ background: HQ.MENTOR, animation: 'none', opacity: 1 }} />
-              {onlineCount} متصل
-            </span>
+            <button type="button" onClick={() => load(false)} aria-label="تحديث النقاش" style={{ ...iconBtn }}>
+              <RefreshCw size={17} color={HQ.MUTED} />
+            </button>
             {activePinned.length > 0 && (
               <button type="button" onClick={() => setShowPinned(!showPinned)} aria-expanded={showPinned}
                 style={{ ...iconBtn, width: 'auto', padding: '0 14px', gap: 6, background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, fontSize: 12, fontWeight: 800, color: HQ.INK }}>
@@ -247,16 +206,26 @@ export default function DiscussionPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 8, color: HQ.MUTED, fontSize: 14, fontWeight: 700 }}>
               <Loader2 size={20} className="animate-spin" /> جارٍ تحميل النقاش...
             </div>
+          ) : loadFailed && messages.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: HQ.MUTED }}>
+              <AlertCircle size={40} color={HQ.LINE} style={{ marginBottom: 12 }} />
+              <p style={{ fontWeight: 800, fontSize: 16, color: HQ.INK, margin: '0 0 4px' }}>تعذّر تحميل النقاش</p>
+              <p style={{ fontSize: 14, margin: '0 0 12px' }}>تحقق من الاتصال أو من انتمائك لمجموعة هذا الدرس.</p>
+              <button type="button" onClick={() => load(false)} className="hq-action"
+                style={{ background: HQ.MENTOR, color: '#fff', padding: '0 20px', fontSize: 14 }}>
+                <RefreshCw size={15} /> إعادة المحاولة
+              </button>
+            </div>
           ) : messages.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: HQ.MUTED }}>
               <MessageCircle size={52} color={HQ.LINE} style={{ marginBottom: 12 }} />
-              <p style={{ fontWeight: 800, fontSize: 16, color: HQ.INK, margin: '0 0 4px' }}>لا رسائل بعد</p>
-              <p style={{ fontSize: 14, margin: 0 }}>كن أول من يبدأ النقاش مع حلقتك</p>
+              <p style={{ fontWeight: 800, fontSize: 16, color: HQ.INK, margin: '0 0 4px' }}>لا رسائل بعد في نقاش هذا الدرس</p>
+              <p style={{ fontSize: 14, margin: 0 }}>كن أول من يسأل أو يشارك زملاء مجموعتك</p>
             </div>
           ) : (
             <>
               {messages.map((msg, idx) => {
-                const isMine = msg.sender?._id === user._id;
+                const isMine = msg.sender?._id === user?._id;
                 const prevMsg = messages[idx - 1];
                 const sameUser = prevMsg?.sender?._id === msg.sender?._id;
                 const timeDiff = prevMsg
@@ -339,13 +308,6 @@ export default function DiscussionPage() {
           )}
         </div>
 
-        {/* Typing */}
-        {typingUsers.length > 0 && (
-          <p style={{ margin: '6px 2px 0', fontSize: 12, color: HQ.MUTED }}>
-            {typingUsers.map(u => u.userName).join('، ')} يكتب...
-          </p>
-        )}
-
         {/* Reply banner */}
         {replyTo && (
           <div style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '8px 12px', marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -368,9 +330,9 @@ export default function DiscussionPage() {
         {/* Input */}
         <div style={{ background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 18, marginTop: 8, padding: 10, display: 'flex', alignItems: 'flex-end', gap: 8, flex: 'none' }}>
           <textarea ref={inputRef} value={input} rows={1} aria-label="اكتب رسالتك"
-            onChange={(e) => { setInput(e.target.value); handleTyping(); }}
+            onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="اكتب رسالتك لحلقتك..."
+            placeholder="اكتب سؤالك أو مشاركتك عن هذا الدرس..."
             style={{ flex: 1, resize: 'none', background: HQ.PAPER, borderRadius: 12, border: 'none', padding: '12px 14px', fontSize: 14, color: HQ.INK, fontFamily: 'inherit', minHeight: 48, maxHeight: 120 }} />
           <button type="button" onClick={handleSend} disabled={!input.trim() || isSending} aria-label="إرسال"
             style={{

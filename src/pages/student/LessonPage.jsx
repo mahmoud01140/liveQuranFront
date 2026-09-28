@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowRight, BookOpen, Video, Award, PenTool, Lock,
-  FileText, Plus, Trash2, Check, ChevronLeft, ChevronRight,
+  FileText, Plus, Trash2, Check, ChevronLeft, ChevronRight, MessageCircle,
 } from 'lucide-react';
 
 import Navbar from '../../components/shared/Navbar';
@@ -281,7 +281,13 @@ export default function LessonPage() {
         <Link to="/student/curriculum" style={{ fontSize: 14, color: HQ.MENTOR, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
           <ArrowRight size={16} /> المنهج
         </Link>
-        <span style={{ fontSize: 13, fontWeight: 700, color: HQ.MUTED }}>الدرس {currentLesson.lessonNumber}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Link to={`/student/lessons/${lessonId}/discussion`}
+            style={{ fontSize: 13, color: HQ.MENTOR, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', background: '#E2EFE7', borderRadius: 9999, padding: '8px 14px', minHeight: 44 }}>
+            <MessageCircle size={15} /> نقاش هذا الدرس
+          </Link>
+          <span style={{ fontSize: 13, fontWeight: 700, color: HQ.MUTED }}>الدرس {currentLesson.lessonNumber}</span>
+        </div>
       </div>
 
       {/* Locked notice — human language */}

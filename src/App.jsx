@@ -37,7 +37,7 @@ const ExamsPage = lazy(() => import('./pages/student/ExamsPage'));
 const ProgressPage = lazy(() => import('./pages/student/ProgressPage'));
 const HomeworkPage = lazy(() => import('./pages/student/HomeworkPage'));
 const TakeExamPage = lazy(() => import('./pages/student/TakeExamPage'));
-const DiscussionPage = lazy(() => import('./pages/student/DiscussionPage'));
+const LessonDiscussionPage = lazy(() => import('./pages/student/LessonDiscussionPage'));
 const StudentResourcesPage = lazy(() => import('./pages/student/StudentResourcesPage'));
 const LessonPage = lazy(() => import('./pages/student/LessonPage'));
 const QuranViewerPage = lazy(() => import('./pages/student/QuranViewerPage'));
@@ -126,7 +126,7 @@ export default function App() {
             <Route path="/student/subscription" element={<ProtectedRoute role="student"><SubscriptionPage /></ProtectedRoute>} />
             <Route path="/student/homework" element={<ProtectedRoute role="student"><Navigate to="/student?tab=homework" replace /></ProtectedRoute>} />
             <Route path="/student/exams/:examId/take" element={<ProtectedRoute role="student"><TakeExamPage /></ProtectedRoute>} />
-            <Route path="/student/discussion" element={<ProtectedRoute role="student"><DiscussionPage /></ProtectedRoute>} />
+            <Route path="/student/lessons/:lessonId/discussion" element={<ProtectedRoute role="student"><LessonDiscussionPage /></ProtectedRoute>} />
             <Route path="/student/daily-tracker" element={<ProtectedRoute role="student"><Navigate to="/student?tab=wird" replace /></ProtectedRoute>} />
             <Route path="/student/resources" element={<ProtectedRoute role="student"><StudentResourcesPage /></ProtectedRoute>} />
             <Route path="/student/quran" element={<ProtectedRoute role="student"><QuranViewerPage /></ProtectedRoute>} />
@@ -140,7 +140,7 @@ export default function App() {
             <Route path="/teacher/homework" element={<ProtectedRoute role="teacher"><Navigate to="/teacher/review" replace /></ProtectedRoute>} />
             <Route path="/teacher/recordings" element={<ProtectedRoute role="teacher"><Navigate to="/teacher/review" replace /></ProtectedRoute>} />
             <Route path="/teacher/create-exam" element={<ProtectedRoute role="teacher"><CreateExamPage /></ProtectedRoute>} />
-            <Route path="/teacher/discussion" element={<ProtectedRoute role="teacher"><DiscussionPage /></ProtectedRoute>} />
+            <Route path="/teacher/lessons/:lessonId/discussion" element={<ProtectedRoute role="teacher"><LessonDiscussionPage /></ProtectedRoute>} />
             <Route path="/teacher/resources" element={<ProtectedRoute role="teacher"><StudentResourcesPage /></ProtectedRoute>} />
             <Route path="/teacher/daily-review" element={<ProtectedRoute role="teacher"><TeacherDailyReviewPage /></ProtectedRoute>} />
 
@@ -158,7 +158,6 @@ export default function App() {
             <Route path="/admin/exams" element={<ProtectedRoute role="admin"><AdminExamsPage /></ProtectedRoute>} />
             <Route path="/admin/exams/:examId/results" element={<ProtectedRoute role="admin"><AdminExamResultsPage /></ProtectedRoute>} />
             <Route path="/teacher/exams" element={<ProtectedRoute role="teacher"><AdminExamsPage /></ProtectedRoute>} />
-            <Route path="/admin/discussions" element={<ProtectedRoute role="admin"><DiscussionPage /></ProtectedRoute>} />
             <Route path="/admin/resources" element={<ProtectedRoute role="admin"><AdminResourcesPage /></ProtectedRoute>} />
 
             {/* Parent routes */}
