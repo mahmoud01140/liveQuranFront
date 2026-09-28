@@ -40,7 +40,7 @@ const adminLinks = [
   { section: 'الإدارة' },
   { to: '/admin/users', icon: Users, label: 'إدارة الطلاب والمستخدمين' },
   { to: '/admin/payments', icon: CreditCard, label: 'الاشتراكات والمدفوعات' },
-  { to: '/admin/reports', icon: BarChart2, label: 'التقارير والإحصاءات' },
+  { to: '/admin/reports', icon: BarChart2, label: 'كشوف الحضور والغياب' },
   { section: 'النظام' },
   { to: '/admin/resources', icon: FolderOpen, label: 'المكتبة التعليمية' },
   { to: '/admin/onboarding-settings', icon: Settings, label: 'إعدادات تحديد المستوى' },

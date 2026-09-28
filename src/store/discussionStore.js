@@ -5,6 +5,7 @@ import api from '../services/api';
 const useDiscussionStore = create((set, get) => ({
   lessonId: null,
   lessonTitle: '',
+  groupId: null,
   groupName: '',
   messages: [],
   pinnedMessages: [],
@@ -21,6 +22,7 @@ const useDiscussionStore = create((set, get) => ({
       set({
         lessonId,
         lessonTitle: d.lessonTitle || '',
+        groupId: d.group || null,
         groupName: d.groupName || '',
         messages: d.messages || [],
         pinnedMessages: d.pinnedMessages || [],
@@ -85,6 +87,7 @@ const useDiscussionStore = create((set, get) => ({
   reset: () => set({
     lessonId: null,
     lessonTitle: '',
+    groupId: null,
     groupName: '',
     messages: [],
     pinnedMessages: [],

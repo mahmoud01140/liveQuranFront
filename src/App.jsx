@@ -158,6 +158,7 @@ export default function App() {
             <Route path="/admin/exams" element={<ProtectedRoute role="admin"><AdminExamsPage /></ProtectedRoute>} />
             <Route path="/admin/exams/:examId/results" element={<ProtectedRoute role="admin"><AdminExamResultsPage /></ProtectedRoute>} />
             <Route path="/teacher/exams" element={<ProtectedRoute role="teacher"><AdminExamsPage /></ProtectedRoute>} />
+            <Route path="/admin/lessons/:lessonId/discussion" element={<ProtectedRoute role="admin"><LessonDiscussionPage /></ProtectedRoute>} />
             <Route path="/admin/resources" element={<ProtectedRoute role="admin"><AdminResourcesPage /></ProtectedRoute>} />
 
             {/* Parent routes */}

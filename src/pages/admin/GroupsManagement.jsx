@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
 import useGroupStore from '../../store/groupStore';
 import api from '../../services/api';
-import { getLevelLabel } from '../../utils/helpers';
+import { getLevelLabel, formatTime } from '../../utils/helpers';
 import { DAYS_AR } from '../../utils/constants';
 import LoadingSpinner from '../../components/shared/LoadingSpinner';
 import Pagination from '../../components/shared/Pagination';
@@ -21,7 +21,7 @@ const LEVELS = ['foundation', 'memorization', 'teacher_prep', 'senior'];
 const LEVEL_TONE = { foundation: 'mentor', memorization: 'guide', teacher_prep: 'gold', senior: 'neutral' };
 
 export default function GroupsManagement() {
-  const { groups, fetchAllGroups, deleteGroup, updateDays, isLoading } = useGroupStore();
+  const { groups, fetchAllGroups, deleteGroup, updateDays, updateSchedule, isLoading } = useGroupStore();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('groups');
 
@@ -32,6 +32,7 @@ export default function GroupsManagement() {
   const [editGroup, setEditGroup] = useState(null);
   const [form, setForm] = useState({ name: '', description: '', level: 'foundation', maxStudents: 15 });
   const [selectedDays, setSelectedDays] = useState([]);
+  const [dayTimes, setDayTimes] = useState({});
   const [saving, setSaving] = useState(false);
 
   // Student Assignment State (logic unchanged)
@@ -115,15 +116,41 @@ export default function GroupsManagement() {
   const openDaysModal = (group) => {
     setSelectedGroup(group);
     setSelectedDays(group.days || []);
+    // Prefill times from the saved schedule; new days start empty (required)
+    const times = {};
+    (group.schedule || []).forEach(s => {
+      if (s.dayOfWeek && (s.startTime || s.endTime)) {
+        times[s.dayOfWeek] = { start: s.startTime || '', end: s.endTime || '' };
+      }
+    });
+    setDayTimes(times);
     setShowDaysModal(true);
   };
 
   const handleSaveDays = async () => {
+    // Every selected day needs a valid time range
+    for (const day of selectedDays) {
+      const t = dayTimes[day] || {};
+      if (!t.start || !t.end) {
+        toast.error(`حدد ساعة البدء والانتهاء ليوم ${DAYS_AR[day] || day}`);
+        return;
+      }
+      if (t.start >= t.end) {
+        toast.error(`وقت البدء يجب أن يسبق وقت الانتهاء (${DAYS_AR[day] || day})`);
+        return;
+      }
+    }
     setSaving(true);
     try {
+      const schedule = selectedDays.map(day => ({
+        dayOfWeek: day,
+        startTime: dayTimes[day].start,
+        endTime: dayTimes[day].end,
+      }));
       await updateDays(selectedGroup._id, selectedDays);
+      await updateSchedule(selectedGroup._id, schedule);
       await fetchAllGroups();
-      toast.success('تم تحديث أيام الدراسة للمجموعة');
+      toast.success('تم تحديث أيام الدراسة ومواعيدها للمجموعة');
       setShowDaysModal(false);
     } catch {
       toast.error('خطأ في تحديث الأيام');
@@ -133,9 +160,21 @@ export default function GroupsManagement() {
   };
 
   const toggleDay = (day) => {
-    setSelectedDays(prev =>
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
+    setSelectedDays(prev => {
+      const next = prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day];
+      // Drop times of deselected days; init empty times for newly added ones
+      setDayTimes(prevTimes => {
+        const t = { ...prevTimes };
+        if (!next.includes(day)) delete t[day];
+        else if (!t[day]) t[day] = { start: '', end: '' };
+        return t;
+      });
+      return next;
+    });
+  };
+
+  const setDayTime = (day, field, value) => {
+    setDayTimes(prev => ({ ...prev, [day]: { ...(prev[day] || {}), [field]: value } }));
   };
 
   const handleSave = async () => {
@@ -237,9 +276,21 @@ export default function GroupsManagement() {
                             </span>
                           </p>
                           {group.days?.length > 0 && (
-                            <p style={{ margin: 0, fontSize: 13, color: HQ.MUTED }}>
-                              {group.days.map(day => DAYS_AR[day]).filter(Boolean).join(' · ')}
-                            </p>
+                            <div style={{ margin: '8px 0 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {group.days.map((day, i) => {
+                                const sched = (group.schedule || []).find(s => s.dayOfWeek === day);
+                                return (
+                                  <p key={i} style={{ margin: 0, fontSize: 13, color: HQ.MUTED }}>
+                                    {DAYS_AR[day] || day}
+                                    {sched?.startTime && sched?.endTime && (
+                                      <span style={{ fontWeight: 800, color: HQ.INK, fontVariantNumeric: 'tabular-nums' }}>
+                                        {' '}· {formatTime(sched.startTime)} — {formatTime(sched.endTime)}
+                                      </span>
+                                    )}
+                                  </p>
+                                );
+                              })}
+                            </div>
                           )}
                         </div>
                         <div style={{ display: 'flex', gap: 2, flex: 'none' }}>
@@ -255,7 +306,7 @@ export default function GroupsManagement() {
                       <div style={{ display: 'flex', gap: 8, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${HQ.LINE}`, flexWrap: 'wrap' }}>
                         <button type="button" onClick={() => openDaysModal(group)} className="hq-action"
                           style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK, padding: '0 16px', fontSize: 13, flex: 1 }}>
-                          <CalendarDays size={15} /> الأيام
+                          <CalendarDays size={15} /> الأيام والمواعيد
                         </button>
                         <button type="button" onClick={() => navigate(`/admin/groups/${group._id}/curriculum`)} className="hq-action"
                           style={{ background: HQ.MENTOR, color: '#fff', padding: '0 16px', fontSize: 13, flex: 1 }}>
@@ -553,14 +604,14 @@ export default function GroupsManagement() {
           </div>
         )}
 
-        {/* Days Selection Modal */}
+        {/* Days & Hours Selection Modal */}
         {showDaysModal && selectedGroup && (
           <div dir="rtl" style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(12,12,29,0.72)' }}>
-            <div role="dialog" aria-modal="true" aria-label="أيام الدراسة"
-              style={{ background: HQ.SURFACE, borderRadius: 18, padding: 24, width: '100%', maxWidth: 440, border: `1px solid ${HQ.LINE}` }}>
-              <h2 style={{ margin: '0 0 4px', fontSize: 19, fontWeight: 900, color: HQ.INK }}>أيام الدراسة</h2>
+            <div role="dialog" aria-modal="true" aria-label="أيام الدراسة ومواعيدها"
+              style={{ background: HQ.SURFACE, borderRadius: 18, padding: 24, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${HQ.LINE}` }}>
+              <h2 style={{ margin: '0 0 4px', fontSize: 19, fontWeight: 900, color: HQ.INK }}>أيام الدراسة ومواعيدها</h2>
               <p style={{ margin: '0 0 12px', fontSize: 14, color: HQ.MUTED }}>{selectedGroup.name}</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }} role="group" aria-label="اختيار الأيام">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }} role="group" aria-label="اختيار الأيام">
                 {ALL_DAYS.map(day => (
                   <button key={day} type="button" aria-pressed={selectedDays.includes(day)} onClick={() => toggleDay(day)}
                     style={{
@@ -573,10 +624,34 @@ export default function GroupsManagement() {
                   </button>
                 ))}
               </div>
+              {selectedDays.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 800, color: HQ.INK }}>ساعة كل يوم (إجبارية)</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {ALL_DAYS.filter(d => selectedDays.includes(d)).map(day => (
+                      <div key={day} style={{ display: 'flex', alignItems: 'center', gap: 8, background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, borderRadius: 12, padding: '8px 12px' }}>
+                        <span style={{ flex: 1, fontSize: 14, fontWeight: 800, color: HQ.INK }}>{DAYS_AR[day]}</span>
+                        <label style={{ fontSize: 12, color: HQ.MUTED }} htmlFor={`start-${day}`}>من</label>
+                        <input id={`start-${day}`} type="time" required
+                          value={dayTimes[day]?.start || ''}
+                          onChange={e => setDayTime(day, 'start', e.target.value)}
+                          aria-label={`ساعة بدء ${DAYS_AR[day]}`}
+                          style={{ minHeight: 44, border: `1px solid ${HQ.LINE}`, borderRadius: 10, padding: '0 8px', fontSize: 14, color: HQ.INK, background: HQ.SURFACE, fontFamily: 'inherit' }} />
+                        <label style={{ fontSize: 12, color: HQ.MUTED }} htmlFor={`end-${day}`}>إلى</label>
+                        <input id={`end-${day}`} type="time" required
+                          value={dayTimes[day]?.end || ''}
+                          onChange={e => setDayTime(day, 'end', e.target.value)}
+                          aria-label={`ساعة انتهاء ${DAYS_AR[day]}`}
+                          style={{ minHeight: 44, border: `1px solid ${HQ.LINE}`, borderRadius: 10, padding: '0 8px', fontSize: 14, color: HQ.INK, background: HQ.SURFACE, fontFamily: 'inherit' }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" onClick={() => setShowDaysModal(false)} className="hq-action" style={{ flex: 1, background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK, fontSize: 14 }}>إلغاء</button>
                 <button type="button" onClick={handleSaveDays} disabled={saving} className="hq-action" style={{ flex: 1, background: HQ.MENTOR, color: '#fff', fontSize: 14, opacity: saving ? 0.5 : 1 }}>
-                  {saving ? <LoadingSpinner size="sm" color="white" /> : 'حفظ الأيام'}
+                  {saving ? <LoadingSpinner size="sm" color="white" /> : 'حفظ الأيام والمواعيد'}
                 </button>
               </div>
             </div>

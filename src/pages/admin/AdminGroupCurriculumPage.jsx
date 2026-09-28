@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import {
   BookOpen, Plus, Trash2, Edit2, Clock, Radio, ArrowRight,
-  FileText, Eye, X, CheckCircle, Check, Users, User,
+  FileText, Eye, X, CheckCircle, Check, Users, User, MessageCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PageLayout from '../../components/shared/PageLayout';
@@ -313,6 +313,10 @@ export default function AdminGroupCurriculumPage() {
                               <button type="button" onClick={() => openCreateExam(lesson)} title="إنشاء امتحان"
                                 className="text-xs flex items-center gap-1" style={{ ...iconBtn, color: HQ.MENTOR }}>
                                 <FileText size={15} aria-hidden />امتحان
+                              </button>
+                              <button type="button" onClick={() => navigate(`/admin/lessons/${lesson._id}/discussion`)} title="غرفة نقاش هذا الدرس" aria-label="غرفة نقاش هذا الدرس"
+                                className="text-xs flex items-center gap-1" style={{ ...iconBtn, color: HQ.MENTOR }}>
+                                <MessageCircle size={15} aria-hidden />النقاش
                               </button>
                               {lesson.status !== 'completed' ? (
                                 <button type="button" onClick={() => navigate('/admin/live', { state: { groupId, groupName: group?.name, lessonTitle: lesson.title, lessonId: lesson._id } })}

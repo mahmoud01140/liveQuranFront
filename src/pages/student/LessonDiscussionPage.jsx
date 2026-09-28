@@ -18,7 +18,7 @@ export default function LessonDiscussionPage() {
   const { lessonId } = useParams();
   const { user } = useAuthStore();
   const {
-    lessonTitle, groupName, messages, pinnedMessages, isLoading,
+    lessonTitle, groupId, groupName, messages, pinnedMessages, isLoading,
     fetchLessonDiscussion, sendLessonMessage, pinLessonMessage,
     deleteLessonMessage, reset,
   } = useDiscussionStore();
@@ -37,7 +37,11 @@ export default function LessonDiscussionPage() {
 
   const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
   const canModerate = isTeacher;
-  const backTo = user?.role === 'teacher' ? '/teacher/groups' : '/student/curriculum';
+  const backTo = user?.role === 'admin'
+    ? (groupId ? `/admin/groups/${groupId}/curriculum` : '/admin/groups')
+    : user?.role === 'teacher'
+      ? '/teacher/groups'
+      : '/student/curriculum';
 
   const load = useCallback(async (silent = false) => {
     if (!lessonId) return;
