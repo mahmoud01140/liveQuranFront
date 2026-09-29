@@ -452,6 +452,7 @@ export default function LiveClassPage() {
                 roomName={session?.liveRoomName || `QuranPlatform_${session._id}`}
                 displayName={`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'طالب'}
                 userEmail={user?.email}
+                allowVideo={session?.allowStudentVideo === true}
                 onLeave={handleLeave}
               />
             )}

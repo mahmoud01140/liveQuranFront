@@ -3,7 +3,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Radio, ClipboardList, PhoneOff, UserCheck, Mic, BookOpen,
-  CheckCircle, AlertCircle, ArrowRight
+  CheckCircle, AlertCircle, ArrowRight, Video, VideoOff
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Navbar from '../../components/shared/Navbar';
@@ -37,6 +37,7 @@ export default function LiveBroadcastPage() {
   const [selectedLessonData, setSelectedLessonData] = useState(null);
   const [homeworkText, setHomeworkText] = useState('');
   const [homeworkDeadline, setHomeworkDeadline] = useState('');
+  const [allowStudentVideo, setAllowStudentVideo] = useState(false);
   const [showAttendanceDrawer, setShowAttendanceDrawer] = useState(false);
   const [showRecitationDrawer, setShowRecitationDrawer] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -129,9 +130,11 @@ export default function LiveBroadcastPage() {
         scheduledAt: new Date(),
         homework: homeworkText || undefined,
         homeworkDeadline: homeworkDeadline || undefined,
+        allowStudentVideo,
       });
       const newSession = res.data.session;
       setSession(newSession);
+      setAllowStudentVideo(newSession.allowStudentVideo === true);
 
       // Start session & notify via socket
       await api.put(`/live/${newSession._id}/start`, { teacherSocketId: socket?.id || '' });
@@ -141,6 +144,21 @@ export default function LiveBroadcastPage() {
       toast.success('انطلق البث المباشر!');
     } catch (err) {
       toast.error(err?.response?.data?.message || 'خطأ في بدء البث');
+    }
+  };
+
+  // Toggle student cameras mid-broadcast (admin / session teacher)
+  const handleToggleStudentVideo = async () => {
+    if (!session?._id) return;
+    const next = !allowStudentVideo;
+    setAllowStudentVideo(next);
+    try {
+      const res = await api.put(`/live/${session._id}/settings`, { allowStudentVideo: next });
+      if (res.data?.session) setSession(res.data.session);
+      toast.success(next ? 'تم السماح بكاميرات الطلاب' : 'تم إيقاف كاميرات الطلاب — صوت فقط');
+    } catch (err) {
+      setAllowStudentVideo(!next);
+      toast.error(err?.response?.data?.message || 'تعذر تحديث إعداد الكاميرا');
     }
   };
 
@@ -292,6 +310,22 @@ export default function LiveBroadcastPage() {
                   min={new Date().toISOString().split('T')[0]}
                 />
               </div>
+              <button type="button" onClick={() => setAllowStudentVideo(v => !v)} aria-pressed={allowStudentVideo}
+                style={{
+                  width: '100%', minHeight: 56, borderRadius: 12, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px',
+                  background: allowStudentVideo ? '#E2EFE7' : HQ.SURFACE,
+                  border: allowStudentVideo ? '2px solid #177B58' : `1px solid ${HQ.LINE}`,
+                  color: HQ.INK, fontSize: 15, fontWeight: 800,
+                }}>
+                {allowStudentVideo ? <Video size={19} color="#177B58" /> : <VideoOff size={19} color={HQ.MUTED} />}
+                <span style={{ flex: 1, textAlign: 'right' }}>
+                  السماح بكاميرات الطلاب
+                  <span style={{ display: 'block', fontSize: 12, fontWeight: 500, color: HQ.MUTED }}>
+                    {allowStudentVideo ? 'يستطيع الطلاب تشغيل الكاميرا' : 'الطلاب صوت فقط (الوضع الحالي)'}
+                  </span>
+                </span>
+              </button>
               <button onClick={handleStartBroadcast} className="hq-action" style={{ background: HQ.MENTOR, color: '#fff', fontSize: 16, width: '100%' }}>
                 <Radio size={20} />
                 انطلق — ابدأ البث الآن
@@ -344,6 +378,23 @@ export default function LiveBroadcastPage() {
           >
             <UserCheck size={16} />
             <span className="hidden sm:inline">كشف الحضور</span>
+          </button>
+
+          {/* Student camera toggle — effective immediately */}
+          <button
+            onClick={handleToggleStudentVideo}
+            className="hq-action"
+            aria-pressed={allowStudentVideo}
+            title={allowStudentVideo ? 'إيقاف كاميرات الطلاب' : 'السماح بكاميرات الطلاب'}
+            style={{
+              background: allowStudentVideo ? '#E2EFE7' : HQ.PAPER,
+              border: allowStudentVideo ? '2px solid #177B58' : `1px solid ${HQ.LINE}`,
+              color: allowStudentVideo ? '#0F5940' : HQ.INK,
+              padding: '0 14px', fontSize: 13,
+            }}
+          >
+            {allowStudentVideo ? <Video size={16} /> : <VideoOff size={16} />}
+            <span className="hidden sm:inline">{allowStudentVideo ? 'الكاميرا مسموحة' : 'كاميرا الطلاب'}</span>
           </button>
 
 
