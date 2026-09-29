@@ -43,6 +43,7 @@ export default function LiveClassPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const queuePollingRef = useRef(null);
   const wasRecitingRef = useRef(false);
+  const jitsiApiRef = useRef(null);
 
   useSocket({
     'broadcast-started': async ({ sessionId, groupId }) => {
@@ -223,6 +224,14 @@ export default function LiveClassPage() {
           osc.stop(audioCtx.currentTime + 0.4);
         } catch (_) {}
         toast.success('حان دورك في التسميع الآن مع المعلم!');
+        // Auto-enable the reciter's camera (only if currently muted)
+        try {
+          const api = jitsiApiRef.current;
+          if (api?.getVideoMutedState?.()) {
+            api.executeCommand('toggleVideo');
+            toast.success('تم تشغيل الكاميرا تلقائياً لدور تسميعك');
+          }
+        } catch (_) {}
       } else if (!isMyTurnReciting) {
         wasRecitingRef.current = false;
       }
@@ -453,6 +462,7 @@ export default function LiveClassPage() {
                 displayName={`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'طالب'}
                 userEmail={user?.email}
                 onLeave={handleLeave}
+                onApiReady={(api) => { jitsiApiRef.current = api; }}
               />
             )}
           </div>

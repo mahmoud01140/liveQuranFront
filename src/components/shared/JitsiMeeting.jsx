@@ -9,7 +9,9 @@ import { AlertTriangle } from 'lucide-react';
  * 1. Students join audio-muted by default
  * 2. Auto-pin reciting student via onApiReady (exposes pinParticipantByName)
  * 3. Noise suppression enabled by default for clear recitation
- * 4. Students join video-off with no camera controls (audio-only experience)
+ * 4. Students join video-off but may enable their camera freely (camera button
+ *    always visible); the broadcaster can mute everyone's video except one
+ *    via the exposed muteAllVideoExcept helper (moderator-only).
  */
 export default function JitsiMeeting({
   roomName,
@@ -24,6 +26,8 @@ export default function JitsiMeeting({
   const containerRef = useRef(null);
   const jitsiApiRef = useRef(null);
   const isDisposingRef = useRef(false);
+  const videoMutedRef = useRef(true);
+  const isModeratorRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -52,9 +56,10 @@ export default function JitsiMeeting({
     'videoquality',
   ];
 
-  // أزرار الطالب: صوت فقط مخصصة للهواتف بدون زحمة
+  // أزرار الطالب: صوت + كاميرا اختيارية (تبدأ مطفأة، والطالب يشغلها بنفسه)
   const studentToolbarButtons = [
     'microphone',
+    'camera',
     'raisehand',
     'chat',
     'fullscreen',
@@ -113,7 +118,7 @@ export default function JitsiMeeting({
           configOverwrite: {
             // تحسين 1: الطلاب يدخلون صامتين
             startWithAudioMuted: !isTeacher,
-            // تحسين 4: الطلاب بدون كاميرا (صوت فقط)
+            // تحسين 4: دخول الكاميرا مطفأة دائماً، والتشغيل اليدوي حر للطالب
             startWithVideoMuted: !isTeacher,
             disableDeepLinking: true,
             disableThirdPartyRequests: true,
@@ -144,11 +149,6 @@ export default function JitsiMeeting({
             noiseSuppression: {
               enabled: true,
             },
-
-            // تحسين 4: منع الطلاب من تفعيل الكاميرا
-            ...(!isTeacher && {
-              videoMuted: true,
-            }),
 
             // أزرار مختلفة حسب الدور
             toolbarButtons: isTeacher ? teacherToolbarButtons : studentToolbarButtons,
@@ -186,6 +186,14 @@ export default function JitsiMeeting({
               break;
             }
           }
+        });
+
+        // تتبع حالة الكاميرا المحلية + دور المشرف (لأدوات البث)
+        api.addEventListener('videoMuteStatusChanged', ({ muted }) => {
+          videoMutedRef.current = muted;
+        });
+        api.addEventListener('participantRoleChanged', ({ role }) => {
+          isModeratorRef.current = role === 'moderator';
         });
 
         // Expose enhanced API with helper methods
@@ -229,6 +237,33 @@ export default function JitsiMeeting({
               return true;
             }
             return false;
+          };
+
+          // حالة الكاميرا المحلية (للتفعيل التلقائي عند دور التسميع)
+          api.getVideoMutedState = () => videoMutedRef.current;
+
+          // هل أنا مشرف الغرفة؟ (أوامر الكتم الجماعي للمشرف فقط)
+          api.isModerator = () => isModeratorRef.current;
+
+          // أسماء الحاضرين المعروفين (لقائمة الاستثناء)
+          api.getParticipantNames = () => [...participantsMap.keys()];
+
+          const matchesName = (pName, name) =>
+            pName === name || pName.includes(name) || name.includes(pName);
+
+          // كتم كاميرات الجميع ما عدا المستثنى — لا يخرج أحد ولا يعيد التحميل.
+          // يعيد { muted } بعدد من تم كتمهم، ويتجاهل صاحب البث نفسه.
+          api.muteAllVideoExcept = (exceptionName) => {
+            let muted = 0;
+            for (const [pName, pId] of participantsMap.entries()) {
+              if (matchesName(pName, displayName)) continue; // أنا (الباث)
+              if (exceptionName && matchesName(pName, exceptionName)) continue; // المستثنى
+              try {
+                api.executeCommand('muteRemoteParticipant', pId, 'video');
+                muted++;
+              } catch (_) {}
+            }
+            return { muted };
           };
 
           onApiReady(api);
@@ -305,7 +340,7 @@ export default function JitsiMeeting({
           </p>
           {!isTeacher && (
             <p className="text-xs mt-2" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              ستنضم بوضع الصوت فقط — لتوفير الإنترنت والتركيز على التلاوة
+              تدخل والكاميرا مطفأة — شغلها من زر الكاميرا متى شئت
             </p>
           )}
         </div>

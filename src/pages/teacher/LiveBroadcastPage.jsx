@@ -3,7 +3,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Radio, ClipboardList, PhoneOff, UserCheck, Mic, BookOpen,
-  CheckCircle, AlertCircle, ArrowRight
+  CheckCircle, AlertCircle, ArrowRight, VideoOff
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Navbar from '../../components/shared/Navbar';
@@ -43,6 +43,12 @@ export default function LiveBroadcastPage() {
   const [session, setSession] = useState(null);
   const [loadingLesson, setLoadingLesson] = useState(true);
   const jitsiApiRef = useRef(null);
+
+  // Mute-all-except-one panel state
+  const [showCameraPanel, setShowCameraPanel] = useState(false);
+  const [camNames, setCamNames] = useState([]);
+  const [camException, setCamException] = useState('');
+  const [camBusy, setCamBusy] = useState(false);
 
   const socket = getSocket();
 
@@ -141,6 +147,39 @@ export default function LiveBroadcastPage() {
       toast.success('انطلق البث المباشر!');
     } catch (err) {
       toast.error(err?.response?.data?.message || 'خطأ في بدء البث');
+    }
+  };
+
+  // Mute everyone's camera except one participant (moderator-only, non-disruptive:
+  // media-level mute, nobody leaves or rejoins)
+  const openCameraPanel = () => {
+    const names = jitsiApiRef.current?.getParticipantNames?.() || [];
+    setCamNames(names);
+    setCamException('');
+    setShowCameraPanel(true);
+  };
+
+  const handleMuteAllExcept = async () => {
+    const api = jitsiApiRef.current;
+    if (!api?.muteAllVideoExcept) {
+      toast.error('غرفة البث غير جاهزة بعد — انتظر ثوانٍ وحاول مجدداً');
+      return;
+    }
+    if (api.isModerator && !api.isModerator()) {
+      toast.error('يجب أن تكون مشرف الغرفة لتنفيذ الكتم (ادخل البث أولاً قبل الطلاب)');
+      return;
+    }
+    const label = camException
+      ? `إطفاء كاميرات الجميع ما عدا "${camException}"؟`
+      : 'إطفاء كاميرات الجميع (بلا استثناء)؟';
+    if (!window.confirm(label)) return;
+    setCamBusy(true);
+    try {
+      const { muted } = api.muteAllVideoExcept(camException);
+      toast.success(muted > 0 ? `تم إطفاء ${muted} كاميرا — البث مستمر` : 'لا كاميرات مشتغلة لكتمها حالياً');
+      setShowCameraPanel(false);
+    } finally {
+      setCamBusy(false);
     }
   };
 
@@ -346,6 +385,18 @@ export default function LiveBroadcastPage() {
             <span className="hidden sm:inline">كشف الحضور</span>
           </button>
 
+          {/* Mute-all-except-one cameras */}
+          <button
+            onClick={() => (showCameraPanel ? setShowCameraPanel(false) : openCameraPanel())}
+            className="hq-action"
+            aria-expanded={showCameraPanel}
+            style={{ background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK, padding: '0 14px', fontSize: 13 }}
+            title="إطفاء كاميرات الجميع ما عدا واحد"
+          >
+            <VideoOff size={16} />
+            <span className="hidden sm:inline">كاميرات الطلاب</span>
+          </button>
+
 
           <button
             onClick={handleEndBroadcast}
@@ -357,6 +408,42 @@ export default function LiveBroadcastPage() {
           </button>
         </div>
       </div>
+
+      {/* Camera mute panel — collapsible under the top bar */}
+      {showCameraPanel && (
+        <div style={{ flex: 'none', margin: '8px 16px 0', background: HQ.SURFACE, border: `1px solid ${HQ.LINE}`, borderRadius: 14, padding: 12 }}>
+          <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 800, color: HQ.INK }}>
+            إطفاء كاميرات الجميع ما عدا واحد — دون انقطاع البث
+          </p>
+          {camNames.length === 0 ? (
+            <p style={{ margin: '0 0 8px', fontSize: 13, color: HQ.MUTED }}>لا أسماء ظاهرة بعد — انتظر انضمام الطلاب ثم أعد الفتح.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8, maxHeight: 180, overflowY: 'auto' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: HQ.INK, minHeight: 44, cursor: 'pointer' }}>
+                <input type="radio" name="cam-exception" checked={camException === ''} onChange={() => setCamException('')} />
+                بدون استثناء (إطفاء الكل)
+              </label>
+              {camNames.map((n) => (
+                <label key={n} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: HQ.INK, minHeight: 44, cursor: 'pointer' }}>
+                  <input type="radio" name="cam-exception" checked={camException === n} onChange={() => setCamException(n)} />
+                  {n} (يبقى مشتغلاً)
+                </label>
+              ))}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" onClick={() => setShowCameraPanel(false)} className="hq-action"
+              style={{ flex: 1, background: HQ.PAPER, border: `1px solid ${HQ.LINE}`, color: HQ.INK, fontSize: 14 }}>
+              إلغاء
+            </button>
+            <button type="button" onClick={handleMuteAllExcept} disabled={camBusy} className="hq-action"
+              style={{ flex: 1, background: '#C2410C', color: '#fff', fontSize: 14, opacity: camBusy ? 0.6 : 1 }}>
+              <VideoOff size={16} /> تنفيذ الإطفاء
+            </button>
+          </div>
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: HQ.MUTED }}>يعمل فقط إن كنت مشرف الغرفة (بادئ البث غالباً). الكتم لمرة واحدة — من يعيد التشغيل يدوياً يُكتم مجدداً بالتكرار.</p>
+        </div>
+      )}
 
       {/* Jitsi Meeting Container — the dark stage */}
       <div style={{ flex: 1, minHeight: 0, padding: 16, paddingTop: 8 }}>
