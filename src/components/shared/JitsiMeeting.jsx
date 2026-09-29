@@ -18,6 +18,10 @@ export default function JitsiMeeting({
   displayName = 'مستخدم',
   userEmail = '',
   isTeacher = false,
+  // Optional: display name of the moderator to keep pinned on stage.
+  // When set for a student client, the stage always shows this participant
+  // and the filmstrip is hidden — the student sees this video only and hears everyone.
+  focusParticipantName = '',
   onApiReady,
   onLeave,
   height = '100%',
@@ -32,6 +36,9 @@ export default function JitsiMeeting({
   const [error, setError] = useState(null);
 
   const domain = import.meta.env.VITE_JITSI_DOMAIN || 'meet.element.io';
+
+  // Focus mode (students only): stage locked on the moderator, no filmstrip.
+  const focusMode = !isTeacher && focusParticipantName;
 
   // Sanitize room name for Jitsi compatibility
   const sanitizedRoomName = (roomName || 'quran_platform_session')
@@ -138,9 +145,10 @@ export default function JitsiMeeting({
             },
 
             // Stage View: المعلم كبير في المنتصف والطلاب شريط جانبي
+            // (في وضع التركيز: الشريط مخفي والمسرح مثبّت على المشرف)
             disableTileView: true,
             filmstrip: {
-              disabled: false,
+              disabled: focusMode ? true : false,
               minParticipantCountForFilmstrip: 2,
             },
 
@@ -177,6 +185,14 @@ export default function JitsiMeeting({
 
         api.addEventListener('participantJoined', (participant) => {
           participantsMap.set(participant.displayName, participant.id);
+          // وضع التركيز: ثبّت المشرف على المسرح فور انضمامه (أو إن كان موجوداً)
+          if (focusMode && participant.displayName) {
+            const focus = focusParticipantName;
+            const name = participant.displayName;
+            if (name === focus || name.includes(focus) || focus.includes(name)) {
+              try { api.executeCommand('setLargeVideoParticipant', participant.id); } catch (_) {}
+            }
+          }
         });
 
         api.addEventListener('participantLeft', (participant) => {

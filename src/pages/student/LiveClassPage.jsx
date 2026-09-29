@@ -461,6 +461,7 @@ export default function LiveClassPage() {
                 roomName={session?.liveRoomName || `QuranPlatform_${session._id}`}
                 displayName={`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'طالب'}
                 userEmail={user?.email}
+                focusParticipantName={session?.teacher ? `${session.teacher.firstName || ''} ${session.teacher.lastName || ''}`.trim() : ''}
                 onLeave={handleLeave}
                 onApiReady={(api) => { jitsiApiRef.current = api; }}
               />
