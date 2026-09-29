@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 /**
  * JitsiMeeting Component
@@ -10,16 +9,13 @@ import toast from 'react-hot-toast';
  * 1. Students join audio-muted by default
  * 2. Auto-pin reciting student via onApiReady (exposes pinParticipantByName)
  * 3. Noise suppression enabled by default for clear recitation
- * 4. Student cameras are admin-gated per session (allowVideo):
- *    OFF (default) = audio-only, camera button hidden and video force-muted;
- *    ON = student may enable their camera manually.
+ * 4. Students join video-off with no camera controls (audio-only experience)
  */
 export default function JitsiMeeting({
   roomName,
   displayName = 'مستخدم',
   userEmail = '',
   isTeacher = false,
-  allowVideo = false,
   onApiReady,
   onLeave,
   height = '100%',
@@ -28,10 +24,6 @@ export default function JitsiMeeting({
   const containerRef = useRef(null);
   const jitsiApiRef = useRef(null);
   const isDisposingRef = useRef(false);
-  const videoMutedRef = useRef(true);
-  const prevAllowVideoRef = useRef(null);
-  const allowVideoRef = useRef(allowVideo);
-  allowVideoRef.current = allowVideo;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -60,8 +52,8 @@ export default function JitsiMeeting({
     'videoquality',
   ];
 
-  // أزرار الطالب: صوت فقط افتراضياً + كاميرا تظهر فقط عند سماح الإدارة
-  const studentToolbarButtonsBase = [
+  // أزرار الطالب: صوت فقط مخصصة للهواتف بدون زحمة
+  const studentToolbarButtons = [
     'microphone',
     'raisehand',
     'chat',
@@ -121,7 +113,7 @@ export default function JitsiMeeting({
           configOverwrite: {
             // تحسين 1: الطلاب يدخلون صامتين
             startWithAudioMuted: !isTeacher,
-            // الكاميرا: دخول مطفأ دائماً، والتشغيل اليدوي رهن سماح الإدارة
+            // تحسين 4: الطلاب بدون كاميرا (صوت فقط)
             startWithVideoMuted: !isTeacher,
             disableDeepLinking: true,
             disableThirdPartyRequests: true,
@@ -153,12 +145,13 @@ export default function JitsiMeeting({
               enabled: true,
             },
 
-            // أزرار مختلفة حسب الدور + سماح الإدارة للكاميرا
-            toolbarButtons: isTeacher
-              ? teacherToolbarButtons
-              : (allowVideoRef.current
-                ? [...studentToolbarButtonsBase.slice(0, 1), 'camera', ...studentToolbarButtonsBase.slice(1)]
-                : studentToolbarButtonsBase),
+            // تحسين 4: منع الطلاب من تفعيل الكاميرا
+            ...(!isTeacher && {
+              videoMuted: true,
+            }),
+
+            // أزرار مختلفة حسب الدور
+            toolbarButtons: isTeacher ? teacherToolbarButtons : studentToolbarButtons,
           },
           interfaceConfigOverwrite: {
             SHOW_JITSI_WATERMARK: false,
@@ -192,16 +185,6 @@ export default function JitsiMeeting({
               participantsMap.delete(name);
               break;
             }
-          }
-        });
-
-        // تحسين 4: تتبع حالة كاميرا الطالب + منع التشغيل عند غياب السماح
-        api.addEventListener('videoMuteStatusChanged', ({ muted }) => {
-          videoMutedRef.current = muted;
-          if (!muted && !isTeacher && !allowVideoRef.current) {
-            try { api.executeCommand('toggleVideo'); } catch (_) {}
-            videoMutedRef.current = true;
-            try { toast.error('الكاميرا معطلة من الإدارة في هذه الحصة'); } catch (_) {}
           }
         });
 
@@ -286,34 +269,6 @@ export default function JitsiMeeting({
     };
   }, [sanitizedRoomName, domain, displayName, isTeacher]);
 
-  // تحسين 4: تطبيق تبديل سماح الكاميرا أثناء البث (للطلاب فقط)
-  // — إظهار/إخفاء زر الكاميرا حياً + كتم فوري عند المنع + تنبيه عند التغيير
-  useEffect(() => {
-    if (isTeacher) return;
-    const api = jitsiApiRef.current;
-    const wasFirst = prevAllowVideoRef.current === null;
-    const changed = !wasFirst && prevAllowVideoRef.current !== allowVideo;
-    prevAllowVideoRef.current = allowVideo;
-    if (!api) return;
-    try {
-      api.executeCommand('overwriteConfig', {
-        toolbarButtons: allowVideo
-          ? [...studentToolbarButtonsBase.slice(0, 1), 'camera', ...studentToolbarButtonsBase.slice(1)]
-          : studentToolbarButtonsBase,
-      });
-    } catch (_) {}
-    if (!allowVideo && !videoMutedRef.current) {
-      try { api.executeCommand('toggleVideo'); } catch (_) {}
-      videoMutedRef.current = true;
-    }
-    if (changed) {
-      try {
-        if (allowVideo) toast.success('سمح المشرف بالكاميرا — يمكنك تشغيلها من الزر');
-        else toast.error('أوقف المشرف الكاميرا — عدت لوضع الصوت فقط');
-      } catch (_) {}
-    }
-  }, [allowVideo, isTeacher]);
-
   if (error) {
     return (
       <div className="w-full h-full min-h-[400px] flex flex-col items-center justify-center p-6 rounded-2xl"
@@ -350,9 +305,7 @@ export default function JitsiMeeting({
           </p>
           {!isTeacher && (
             <p className="text-xs mt-2" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              {allowVideo
-                ? 'يمكنك تشغيل الكاميرا من زر الكاميرا'
-                : 'ستنضم بوضع الصوت فقط — لتوفير الإنترنت والتركيز على التلاوة'}
+              ستنضم بوضع الصوت فقط — لتوفير الإنترنت والتركيز على التلاوة
             </p>
           )}
         </div>
